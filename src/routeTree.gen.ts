@@ -22,6 +22,7 @@ import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
+import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
 import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
 
@@ -91,6 +92,11 @@ const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
   path: '/metas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedResultadosRoute = AuthenticatedResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTrajetoriaRoute = AuthenticatedTrajetoriaRouteImport.update({
   id: '/trajetoria',
   path: '/trajetoria',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
+  '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
+  '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
+  '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
 }
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/empresa'
     | '/inicio'
     | '/metas'
+    | '/resultados'
     | '/trajetoria'
     | '/unidades'
   fileRoutesByTo: FileRoutesByTo
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/empresa'
     | '/inicio'
     | '/metas'
+    | '/resultados'
     | '/trajetoria'
     | '/unidades'
   id:
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
     | '/_authenticated/metas'
+    | '/_authenticated/resultados'
     | '/_authenticated/trajetoria'
     | '/_authenticated/unidades'
   fileRoutesById: FileRoutesById
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMetasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/resultados': {
+      id: '/_authenticated/resultados'
+      path: '/resultados'
+      fullPath: '/resultados'
+      preLoaderRoute: typeof AuthenticatedResultadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trajetoria': {
       id: '/_authenticated/trajetoria'
       path: '/trajetoria'
@@ -331,6 +350,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
+  AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
   AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
   AuthenticatedUnidadesRoute: typeof AuthenticatedUnidadesRoute
 }
@@ -343,6 +363,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
+  AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
   AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
   AuthenticatedUnidadesRoute: AuthenticatedUnidadesRoute,
 }
