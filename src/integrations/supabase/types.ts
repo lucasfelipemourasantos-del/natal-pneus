@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_path: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      courses: {
+        Row: {
+          area: string
+          created_at: string
+          created_by: string | null
+          description: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          level: string
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          area?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          level?: string
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          level?: string
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      employee_badges: {
+        Row: {
+          awarded_at: string
+          badge_id: string
+          id: string
+          note: string
+          user_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          badge_id: string
+          id?: string
+          note?: string
+          user_id: string
+        }
+        Update: {
+          awarded_at?: string
+          badge_id?: string
+          id?: string
+          note?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           admission_date: string | null
@@ -23,6 +125,7 @@ export type Database = {
           id: string
           internal_id: string | null
           job_role: string | null
+          phone: string | null
           status: Database["public"]["Enums"]["access_status"]
           unit: string | null
           updated_at: string
@@ -35,6 +138,7 @@ export type Database = {
           id: string
           internal_id?: string | null
           job_role?: string | null
+          phone?: string | null
           status?: Database["public"]["Enums"]["access_status"]
           unit?: string | null
           updated_at?: string
@@ -47,6 +151,7 @@ export type Database = {
           id?: string
           internal_id?: string | null
           job_role?: string | null
+          phone?: string | null
           status?: Database["public"]["Enums"]["access_status"]
           unit?: string | null
           updated_at?: string
