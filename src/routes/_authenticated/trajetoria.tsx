@@ -1,6 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Award, BookOpen, CalendarHeart, Star, type LucideIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { DemoNotice, PortalShell } from "@/components/portal-shell";
+import { supabase } from "@/integrations/supabase/client";
+import { signedUrls } from "@/lib/files";
+
+function MyBadges() {
+  const { data } = useQuery({ queryKey: ["my-badges"], queryFn: async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const rows = (await supabase.from("employee_badges").select("awarded_at, badges(name, description, image_path)").eq("user_id", u.user?.id ?? "").order("awarded_at", { ascending: false })).data ?? [];
+    return { rows, urls: await signedUrls("badges", rows.map((r) => r.badges?.image_path ?? null)) };
+  } });
+  return <section className="mb-8"><h2 className="text-xl font-semibold">Minhas insígnias</h2>
+    {data?.rows.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Você ainda não recebeu insígnias. Elas aparecem aqui quando o administrador entregar.</p>}
+    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{data?.rows.map((r, i) => { const b = r.badges; if (!b) return null; return <div key={i} className="flex flex-col items-center rounded-xl border border-border bg-card p-4 text-center"><div className="grid size-20 place-items-center rounded-full bg-muted ring-2 ring-accent">{b.image_path && data.urls[b.image_path] ? <img src={data.urls[b.image_path]} alt={b.name} className="size-16 object-contain" /> : <Award className="text-accent" />}</div><p className="mt-2 text-sm font-semibold">{b.name}</p><p className="text-xs text-muted-foreground">{new Date(r.awarded_at).toLocaleDateString("pt-BR")}</p></div>; })}</div>
+  </section>;
+}
 
 export const Route = createFileRoute("/_authenticated/trajetoria")({ head: () => ({ meta: [
   { title: "Minha trajetória — Portal Natal Pneus" }, { name: "description", content: "Marcos, conquistas e tempo de empresa do colaborador." },
@@ -9,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/trajetoria")({ head: () =>
 ] }), component: TrajetoriaPage });
 
 function TrajetoriaPage() { return <PortalShell title="Minha trajetória" eyebrow="Reconhecimento">
+  <MyBadges />
   <DemoNotice />
   <section className="overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8"><div className="grid gap-8 md:grid-cols-[auto_1fr] md:items-center"><div className="grid size-36 place-items-center rounded-xl bg-accent text-5xl font-black text-accent-foreground"><span className="relative">AM<span className="absolute -right-5 -top-5 text-primary"><Star fill="currentColor" size={28} /></span></span></div><div><p className="text-sm font-bold uppercase text-accent">Desde 18 de março de 2023</p><h2 className="mt-3 text-3xl font-bold">3 anos construindo essa história</h2><p className="mt-3 max-w-xl text-sm leading-6 text-sidebar-muted">Cada marco representa um ano completo de dedicação à Natal Pneus.</p></div></div></section>
   <div className="mt-8 grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">

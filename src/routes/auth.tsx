@@ -53,10 +53,7 @@ function AuthPage() {
             emailRedirectTo: window.location.origin + "/aguardando",
             data: {
               full_name: f.get("full_name"),
-              internal_id: f.get("internal_id"),
-              job_role: f.get("job_role"),
-              unit: f.get("unit"),
-              admission_date: f.get("admission_date"),
+              phone: f.get("phone"),
             },
           },
         });
@@ -90,21 +87,20 @@ function AuthPage() {
             <Link to="/auth" search={{ perfil: "funcionario" }} className={`rounded-md py-2 text-center ${!isAdmin ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Funcionário</Link>
             <Link to="/auth" search={{ perfil: "admin" }} className={`rounded-md py-2 text-center ${isAdmin ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Administrador</Link>
           </div>
+          {!isAdmin && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => { setMode("entrar"); setError(null); }} className={`min-h-10 rounded-lg border text-sm font-semibold ${!signup ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>Entrar</button>
+              <button type="button" onClick={() => { setMode("cadastro"); setError(null); setNotice(null); }} className={`min-h-10 rounded-lg border text-sm font-semibold ${signup ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>Criar login</button>
+            </div>
+          )}
           <h1 className="mt-6 text-xl font-bold">
-            {isAdmin ? "Login do administrador" : signup ? "Solicitar cadastro" : "Login do funcionário"}
+            {isAdmin ? "Login do administrador" : signup ? "Criar login" : "Login do funcionário"}
           </h1>
           <form onSubmit={onSubmit} className="mt-5 space-y-4">
             {signup && (
               <>
                 <label className="block text-sm font-medium">Nome completo<input name="full_name" required className={input} /></label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block text-sm font-medium">Matrícula<input name="internal_id" required className={input} /></label>
-                  <label className="block text-sm font-medium">Admissão<input name="admission_date" type="date" required className={input} /></label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block text-sm font-medium">Função<input name="job_role" required className={input} /></label>
-                  <label className="block text-sm font-medium">Unidade<input name="unit" required className={input} /></label>
-                </div>
+                <label className="block text-sm font-medium">Telefone<input name="phone" type="tel" required autoComplete="tel" placeholder="(84) 90000-0000" className={input} /></label>
               </>
             )}
             <label className="block text-sm font-medium">E-mail<input name="email" type="email" required autoComplete="email" className={input} /></label>
@@ -112,12 +108,12 @@ function AuthPage() {
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             {notice && <p className="rounded-lg bg-success-soft p-3 text-sm text-success">{notice}</p>}
             <button disabled={busy} className="min-h-11 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60">
-              {busy ? "Aguarde…" : signup ? "Enviar cadastro" : "Entrar"}
+              {busy ? "Aguarde…" : signup ? "Criar login" : "Entrar"}
             </button>
           </form>
           {!isAdmin && (
             <button type="button" onClick={() => { setMode(signup ? "entrar" : "cadastro"); setError(null); }} className="mt-4 w-full text-center text-sm font-semibold text-primary hover:underline">
-              {signup ? "Já tenho cadastro — entrar" : "Primeiro acesso? Solicitar cadastro"}
+              {signup ? "Já tenho login — entrar" : "Não tem login? Criar login"}
             </button>
           )}
         </div>

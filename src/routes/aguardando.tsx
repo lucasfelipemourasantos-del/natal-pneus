@@ -38,10 +38,10 @@ function Waiting() {
         <p className="mt-2 text-sm text-muted-foreground">
           {suspended
             ? "Seu acesso foi suspenso. Procure o administrador da sua unidade."
-            : "O administrador precisa validar sua matrícula, função, unidade e data de admissão."}
+            : "O administrador recebeu seu pedido e vai liberar seu acesso em breve."}
         </p>
         <dl className="mt-5 space-y-2 text-sm">
-          {[["Nome", p?.full_name], ["E-mail", p?.email], ["Matrícula", p?.internal_id], ["Função", p?.job_role], ["Unidade", p?.unit], ["Admissão", p?.admission_date]].map(([k, v]) => (
+          {[["Nome", p?.full_name], ["E-mail", p?.email], ["Telefone", p?.phone]].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4 border-b border-border pb-2"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium">{v || "—"}</dd></div>
           ))}
         </dl>
