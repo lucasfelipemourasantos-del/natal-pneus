@@ -43,6 +43,13 @@
       "when": 1791562889364,
       "tag": "0005_units_approval_revenue_security",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791562986964,
+      "tag": "0006_scope_helpers_and_profile_validation",
+      "breakpoints": true
     }
   ]
 }

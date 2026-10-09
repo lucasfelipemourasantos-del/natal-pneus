@@ -395,6 +395,7 @@ export type Database = {
     }
     Functions: {
       can_read_all: { Args: never; Returns: boolean }
+      current_unit: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
