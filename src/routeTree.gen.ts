@@ -10,33 +10,73 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CursosRouteImport } from './routes/cursos'
+import { Route as EmpresaRouteImport } from './routes/empresa'
+import { Route as MetasRouteImport } from './routes/metas'
+import { Route as TrajetoriaRouteImport } from './routes/trajetoria'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CursosRoute = CursosRouteImport.update({
+  id: '/cursos',
+  path: '/cursos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmpresaRoute = EmpresaRouteImport.update({
+  id: '/empresa',
+  path: '/empresa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetasRoute = MetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrajetoriaRoute = TrajetoriaRouteImport.update({
+  id: '/trajetoria',
+  path: '/trajetoria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cursos': typeof CursosRoute
+  '/empresa': typeof EmpresaRoute
+  '/metas': typeof MetasRoute
+  '/trajetoria': typeof TrajetoriaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cursos': typeof CursosRoute
+  '/empresa': typeof EmpresaRoute
+  '/metas': typeof MetasRoute
+  '/trajetoria': typeof TrajetoriaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cursos': typeof CursosRoute
+  '/empresa': typeof EmpresaRoute
+  '/metas': typeof MetasRoute
+  '/trajetoria': typeof TrajetoriaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
+  id: '__root__' | '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CursosRoute: typeof CursosRoute
+  EmpresaRoute: typeof EmpresaRoute
+  MetasRoute: typeof MetasRoute
+  TrajetoriaRoute: typeof TrajetoriaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +88,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cursos': {
+      id: '/cursos'
+      path: '/cursos'
+      fullPath: '/cursos'
+      preLoaderRoute: typeof CursosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/empresa': {
+      id: '/empresa'
+      path: '/empresa'
+      fullPath: '/empresa'
+      preLoaderRoute: typeof EmpresaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metas': {
+      id: '/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof MetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trajetoria': {
+      id: '/trajetoria'
+      path: '/trajetoria'
+      fullPath: '/trajetoria'
+      preLoaderRoute: typeof TrajetoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CursosRoute: CursosRoute,
+  EmpresaRoute: EmpresaRoute,
+  MetasRoute: MetasRoute,
+  TrajetoriaRoute: TrajetoriaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
