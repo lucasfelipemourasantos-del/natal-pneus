@@ -9,5 +9,5 @@
 - [x] Cadastro, aprovação e autenticação — bloqueado até a próxima etapa com Lovable Cloud
 - [ ] Dados reais de unidades, funções, cursos e administradores — bloqueado pela validação da Natal Pneus- [x] Botão Criar login; cadastro com nome, telefone e e-mail
 - [x] Admin: todas as contas, upload de cursos, insígnias no histórico
-- [ ] Aviso por e-mail ao administrador — bloqueado: precisa de um domínio de e-mail configurado
-- [ ] Insígnias da Natal Pneus — bloqueado: o arquivo das insígnias não chegou
+- [ ] Aviso por e-mail ao RH — bloqueado: configurar o domínio natalpneus.com.br para envio
+- [x] Insígnias de fidelidade automáticas pela data de admissão

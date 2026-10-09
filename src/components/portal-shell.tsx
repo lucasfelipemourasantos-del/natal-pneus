@@ -43,7 +43,7 @@ export function PortalShell({
   const role = access.isAdmin ? "Administrador" : access.profile?.job_role || "Colaborador";
   const unit = access.profile?.unit || (access.isAdmin ? "Administração" : "");
   const links = access.isAdmin
-    ? [...navigation, { to: "/admin" as const, label: "Contas", icon: ShieldCheck }, { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen }, { to: "/admin-insignias" as const, label: "Insígnias", icon: Award }]
+    ? [...navigation, { to: "/admin" as const, label: "Contas", icon: ShieldCheck }, { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen }, { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award }]
     : navigation;
   async function signOut() {
     await queryClient.cancelQueries();
