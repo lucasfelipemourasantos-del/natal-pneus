@@ -19,3 +19,6 @@
 - [x] Adendo: 18 testes de cálculo, fidelidade e direcionamento; entrada/cadastro/recuperação verificados visualmente
 - [ ] Verificação autenticada de aprovação, leitura integral e lançamento de vendas — bloqueado: nenhuma conta cadastrada/confirmada ainda
 - [ ] Regra de atribuição individual de receita compartilhada — aguardando definição do ADM; nenhum total derivado implementado
+- [x] Tela inicial mantida como entrada (login); cadastro acessado pelo link "Criar cadastro"
+- [x] Erro de senha investigado: conta criada, mas e-mail ainda não confirmado — orientado a confirmar pelo link
+- [ ] Aprovação do RH com opção "Todas as lojas" para Administrador(a), Gestor(a) e Diretor(a)
