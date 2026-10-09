@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          id: string
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           created_at: string
@@ -48,7 +81,9 @@ export type Database = {
           file_path: string | null
           id: string
           level: string
+          target_job_role: string | null
           title: string
+          unit_code: string | null
           video_url: string | null
         }
         Insert: {
@@ -60,7 +95,9 @@ export type Database = {
           file_path?: string | null
           id?: string
           level?: string
+          target_job_role?: string | null
           title: string
+          unit_code?: string | null
           video_url?: string | null
         }
         Update: {
@@ -72,10 +109,20 @@ export type Database = {
           file_path?: string | null
           id?: string
           level?: string
+          target_job_role?: string | null
           title?: string
+          unit_code?: string | null
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "courses_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       employee_badges: {
         Row: {
@@ -116,6 +163,21 @@ export type Database = {
           },
         ]
       }
+      job_functions: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          id?: string
+          name: string
+        }
+        Update: {
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           admission_date: string | null
@@ -126,8 +188,12 @@ export type Database = {
           internal_id: string | null
           job_role: string | null
           phone: string | null
+          requested_job_role: string | null
+          requested_unit_code: string | null
+          sector_id: string | null
           status: Database["public"]["Enums"]["access_status"]
           unit: string | null
+          unit_code: string | null
           updated_at: string
         }
         Insert: {
@@ -139,8 +205,12 @@ export type Database = {
           internal_id?: string | null
           job_role?: string | null
           phone?: string | null
+          requested_job_role?: string | null
+          requested_unit_code?: string | null
+          sector_id?: string | null
           status?: Database["public"]["Enums"]["access_status"]
           unit?: string | null
+          unit_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -152,9 +222,152 @@ export type Database = {
           internal_id?: string | null
           job_role?: string | null
           phone?: string | null
+          requested_job_role?: string | null
+          requested_unit_code?: string | null
+          sector_id?: string | null
           status?: Database["public"]["Enums"]["access_status"]
           unit?: string | null
+          unit_code?: string | null
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_requested_unit_code_fkey"
+            columns: ["requested_unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "profiles_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sales_results: {
+        Row: {
+          amount_cents: number
+          competence: string
+          created_at: string
+          created_by: string | null
+          dimension: string
+          employee_id: string | null
+          id: string
+          sector_id: string | null
+          unit_code: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          competence: string
+          created_at?: string
+          created_by?: string | null
+          dimension: string
+          employee_id?: string | null
+          id?: string
+          sector_id?: string | null
+          unit_code: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          competence?: string
+          created_at?: string
+          created_by?: string | null
+          dimension?: string
+          employee_id?: string | null
+          id?: string
+          sector_id?: string | null
+          unit_code?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_results_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_results_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_results_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sectors: {
+        Row: {
+          id: string
+          name: string
+          unit_code: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          unit_code: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          unit_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sectors_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          address: string
+          cnpj: string
+          code: string
+          legal_name: string
+          postal_code: string
+          state_registration: string
+        }
+        Insert: {
+          address?: string
+          cnpj?: string
+          code: string
+          legal_name?: string
+          postal_code?: string
+          state_registration?: string
+        }
+        Update: {
+          address?: string
+          cnpj?: string
+          code?: string
+          legal_name?: string
+          postal_code?: string
+          state_registration?: string
         }
         Relationships: []
       }
@@ -181,12 +394,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_read_all: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      is_approved: { Args: never; Returns: boolean }
+      review_employee: {
+        Args: {
+          _id: string
+          _job: string
+          _producer: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+          _sector: string
+          _status: Database["public"]["Enums"]["access_status"]
+          _unit: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

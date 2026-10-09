@@ -36,6 +36,13 @@
       "when": 1791562843402,
       "tag": "0004_extend_access_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791562889364,
+      "tag": "0005_units_approval_revenue_security",
+      "breakpoints": true
     }
   ]
 }
