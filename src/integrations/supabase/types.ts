@@ -165,16 +165,22 @@ export type Database = {
       }
       job_functions: {
         Row: {
+          all_stores: boolean
           id: string
           name: string
+          sort_order: number
         }
         Insert: {
+          all_stores?: boolean
           id?: string
           name: string
+          sort_order?: number
         }
         Update: {
+          all_stores?: boolean
           id?: string
           name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -188,6 +194,7 @@ export type Database = {
           internal_id: string | null
           job_role: string | null
           phone: string | null
+          requested_all_stores: boolean
           requested_job_role: string | null
           requested_unit_code: string | null
           sector_id: string | null
@@ -205,6 +212,7 @@ export type Database = {
           internal_id?: string | null
           job_role?: string | null
           phone?: string | null
+          requested_all_stores?: boolean
           requested_job_role?: string | null
           requested_unit_code?: string | null
           sector_id?: string | null
@@ -222,6 +230,7 @@ export type Database = {
           internal_id?: string | null
           job_role?: string | null
           phone?: string | null
+          requested_all_stores?: boolean
           requested_job_role?: string | null
           requested_unit_code?: string | null
           sector_id?: string | null
