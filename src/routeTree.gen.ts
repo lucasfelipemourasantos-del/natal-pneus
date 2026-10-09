@@ -9,122 +9,128 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as CursosRouteImport } from './routes/cursos'
-import { Route as EmpresaRouteImport } from './routes/empresa'
-import { Route as MetasRouteImport } from './routes/metas'
-import { Route as TrajetoriaRouteImport } from './routes/trajetoria'
+import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
+import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
+import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
+import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
+import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CursosRoute = CursosRouteImport.update({
-  id: '/cursos',
+const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
+  id: '/_authenticated/cursos',
   path: '/cursos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmpresaRoute = EmpresaRouteImport.update({
-  id: '/empresa',
+const AuthenticatedEmpresaRoute = AuthenticatedEmpresaRouteImport.update({
+  id: '/_authenticated/empresa',
   path: '/empresa',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MetasRoute = MetasRouteImport.update({
-  id: '/metas',
+const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
+  id: '/_authenticated/inicio',
+  path: '/inicio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
+  id: '/_authenticated/metas',
   path: '/metas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TrajetoriaRoute = TrajetoriaRouteImport.update({
-  id: '/trajetoria',
+const AuthenticatedTrajetoriaRoute = AuthenticatedTrajetoriaRouteImport.update({
+  id: '/_authenticated/trajetoria',
   path: '/trajetoria',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/cursos': typeof CursosRoute
-  '/empresa': typeof EmpresaRoute
-  '/metas': typeof MetasRoute
-  '/trajetoria': typeof TrajetoriaRoute
+  '/cursos': typeof AuthenticatedCursosRoute
+  '/empresa': typeof AuthenticatedEmpresaRoute
+  '/inicio': typeof AuthenticatedInicioRoute
+  '/metas': typeof AuthenticatedMetasRoute
+  '/trajetoria': typeof AuthenticatedTrajetoriaRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/cursos': typeof CursosRoute
-  '/empresa': typeof EmpresaRoute
-  '/metas': typeof MetasRoute
-  '/trajetoria': typeof TrajetoriaRoute
+  '/cursos': typeof AuthenticatedCursosRoute
+  '/empresa': typeof AuthenticatedEmpresaRoute
+  '/inicio': typeof AuthenticatedInicioRoute
+  '/metas': typeof AuthenticatedMetasRoute
+  '/trajetoria': typeof AuthenticatedTrajetoriaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/cursos': typeof CursosRoute
-  '/empresa': typeof EmpresaRoute
-  '/metas': typeof MetasRoute
-  '/trajetoria': typeof TrajetoriaRoute
+  '/_authenticated/cursos': typeof AuthenticatedCursosRoute
+  '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
+  '/_authenticated/inicio': typeof AuthenticatedInicioRoute
+  '/_authenticated/metas': typeof AuthenticatedMetasRoute
+  '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
+  fullPaths: '/cursos' | '/empresa' | '/inicio' | '/metas' | '/trajetoria'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
-  id: '__root__' | '/' | '/cursos' | '/empresa' | '/metas' | '/trajetoria'
+  to: '/cursos' | '/empresa' | '/inicio' | '/metas' | '/trajetoria'
+  id:
+    | '__root__'
+    | '/_authenticated/cursos'
+    | '/_authenticated/empresa'
+    | '/_authenticated/inicio'
+    | '/_authenticated/metas'
+    | '/_authenticated/trajetoria'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  CursosRoute: typeof CursosRoute
-  EmpresaRoute: typeof EmpresaRoute
-  MetasRoute: typeof MetasRoute
-  TrajetoriaRoute: typeof TrajetoriaRoute
+  AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
+  AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
+  AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
+  AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
+  AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cursos': {
-      id: '/cursos'
+    '/_authenticated/cursos': {
+      id: '/_authenticated/cursos'
       path: '/cursos'
       fullPath: '/cursos'
-      preLoaderRoute: typeof CursosRouteImport
+      preLoaderRoute: typeof AuthenticatedCursosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/empresa': {
-      id: '/empresa'
+    '/_authenticated/empresa': {
+      id: '/_authenticated/empresa'
       path: '/empresa'
       fullPath: '/empresa'
-      preLoaderRoute: typeof EmpresaRouteImport
+      preLoaderRoute: typeof AuthenticatedEmpresaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/metas': {
-      id: '/metas'
+    '/_authenticated/inicio': {
+      id: '/_authenticated/inicio'
+      path: '/inicio'
+      fullPath: '/inicio'
+      preLoaderRoute: typeof AuthenticatedInicioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/metas': {
+      id: '/_authenticated/metas'
       path: '/metas'
       fullPath: '/metas'
-      preLoaderRoute: typeof MetasRouteImport
+      preLoaderRoute: typeof AuthenticatedMetasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/trajetoria': {
-      id: '/trajetoria'
+    '/_authenticated/trajetoria': {
+      id: '/_authenticated/trajetoria'
       path: '/trajetoria'
       fullPath: '/trajetoria'
-      preLoaderRoute: typeof TrajetoriaRouteImport
+      preLoaderRoute: typeof AuthenticatedTrajetoriaRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  CursosRoute: CursosRoute,
-  EmpresaRoute: EmpresaRoute,
-  MetasRoute: MetasRoute,
-  TrajetoriaRoute: TrajetoriaRoute,
+  AuthenticatedCursosRoute: AuthenticatedCursosRoute,
+  AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
+  AuthenticatedInicioRoute: AuthenticatedInicioRoute,
+  AuthenticatedMetasRoute: AuthenticatedMetasRoute,
+  AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
