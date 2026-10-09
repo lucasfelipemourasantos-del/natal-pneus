@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export function authErrorMessage(error: { code?: string; status?: number }, action: "login" | "signup" | "reset") {
+export function authErrorMessage(error: { code?: string | undefined; status?: number | undefined }, action: "login" | "signup" | "reset") {
   if (error.code === "email_not_confirmed") return "Confirme seu e-mail pelo link recebido antes de entrar.";
   if (error.code === "same_password") return "Escolha uma senha diferente da senha anterior.";
   if (error.code === "weak_password") return "Escolha uma senha mais forte, com pelo menos 8 caracteres.";
