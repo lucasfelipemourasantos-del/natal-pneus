@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
 
 const navigation = [
-  { to: "/" as const, label: "Início", icon: Home },
+  { to: "/inicio" as const, label: "Início", icon: Home },
   { to: "/cursos" as const, label: "Meus cursos", icon: BookOpen },
   { to: "/metas" as const, label: "Minhas metas", icon: Target },
   { to: "/trajetoria" as const, label: "Minha trajetória", icon: Award },
@@ -34,7 +34,7 @@ export function PortalShell({
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
-        <Link to="/" aria-label="Natal Pneus — início" className="block px-2 py-2">
+        <Link to="/inicio" aria-label="Natal Pneus — início" className="block px-2 py-2">
           <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
         <nav className="mt-10 space-y-1" aria-label="Navegação principal">
@@ -42,7 +42,7 @@ export function PortalShell({
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/" }}
+              activeOptions={{ exact: true }}
               className="group flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
               activeProps={{ className: "border-primary bg-sidebar-accent text-sidebar-foreground" }}
             >
@@ -66,7 +66,7 @@ export function PortalShell({
       <div className="min-w-0">
         <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:static">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-10">
-            <Link to="/" className="lg:hidden" aria-label="Natal Pneus — início">
+            <Link to="/inicio" className="lg:hidden" aria-label="Natal Pneus — início">
               <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[142px]" />
             </Link>
             <div className="hidden lg:block">
@@ -86,7 +86,7 @@ export function PortalShell({
               <Link
                 key={to}
                 to={to}
-                activeOptions={{ exact: to === "/" }}
+                activeOptions={{ exact: true }}
                 className="flex min-w-max flex-1 flex-col items-center gap-1 border-b-2 border-transparent px-3 py-2 text-[11px] font-medium text-muted-foreground"
                 activeProps={{ className: "border-primary text-primary" }}
               >

@@ -3,7 +3,7 @@ import { ArrowRight, Award, BookOpen, Megaphone, Target, TrendingUp } from "luci
 
 import { DemoNotice, PortalShell, ProgressBar, SectionHeading, Stat } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({ meta: [
     { title: "Início — Portal Natal Pneus" },
     { name: "description", content: "Visão inicial de cursos, metas, comunicados e trajetória do colaborador Natal Pneus." },
