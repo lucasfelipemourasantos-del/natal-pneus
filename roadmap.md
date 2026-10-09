@@ -21,4 +21,4 @@
 - [ ] Regra de atribuição individual de receita compartilhada — aguardando definição do ADM; nenhum total derivado implementado
 - [x] Tela inicial mantida como entrada (login); cadastro acessado pelo link "Criar cadastro"
 - [x] Erro de senha investigado: conta criada, mas e-mail ainda não confirmado — orientado a confirmar pelo link
-- [ ] Aprovação do RH com opção "Todas as lojas" para Administrador(a), Gestor(a) e Diretor(a)
+- [x] Aprovação do RH com opção "Todas as lojas" para Diretoria e Gestor Geral (banco valida o perfil)
