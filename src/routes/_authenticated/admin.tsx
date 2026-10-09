@@ -51,6 +51,10 @@ function AdminPage() {
     await supabase.from("profiles").update({ status }).eq("id", id);
     refresh();
   }
+  async function setAdmission(id: string, value: string) {
+    await supabase.from("profiles").update({ admission_date: value || null }).eq("id", id);
+    refresh();
+  }
   async function toggleBadge(userId: string, badgeId: string, has: boolean) {
     if (has) await supabase.from("employee_badges").delete().eq("user_id", userId).eq("badge_id", badgeId);
     else await supabase.from("employee_badges").insert({ user_id: userId, badge_id: badgeId });
@@ -77,12 +81,15 @@ function AdminPage() {
                 <div>
                   <p className="font-semibold">{p.full_name || "—"}</p>
                   <p className="text-xs text-muted-foreground">{p.email} · {p.phone || "sem telefone"}</p>
-                  <p className="mt-1 text-xs">{statusLabel[p.status]} · {mine.size} insígnia(s)</p>
+                  <p className="mt-1 text-xs">{statusLabel[p.status]} · {mine.size} reconhecimento(s)</p>
+                  <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">Admissão
+                    <input type="date" defaultValue={p.admission_date ?? ""} onBlur={(e) => setAdmission(p.id, e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-foreground" />
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   {p.status !== "approved" && <button onClick={() => setStatus(p.id, "approved")} className={`${btn} bg-primary text-primary-foreground`}>Liberar acesso</button>}
                   {p.status === "approved" && <button onClick={() => setStatus(p.id, "suspended")} className={`${btn} border border-border`}>Suspender</button>}
-                  <button onClick={() => setOpen(open === p.id ? null : p.id)} className={`${btn} border border-border`}>Insígnias</button>
+                  <button onClick={() => setOpen(open === p.id ? null : p.id)} className={`${btn} border border-border`}>Reconhecimentos</button>
                 </div>
               </div>
               {open === p.id && (

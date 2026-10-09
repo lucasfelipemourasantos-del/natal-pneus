@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Award, BookOpen, CalendarHeart, Star, type LucideIcon } from "lucide-react";
+import { Award, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { DemoNotice, PortalShell } from "@/components/portal-shell";
+import { PortalShell } from "@/components/portal-shell";
+import { completeYears, tenureStatus, TENURE_BADGES } from "@/lib/tenure";
 import { supabase } from "@/integrations/supabase/client";
 import { signedUrls } from "@/lib/files";
 
@@ -11,8 +12,8 @@ function MyBadges() {
     const rows = (await supabase.from("employee_badges").select("awarded_at, badges(name, description, image_path)").eq("user_id", u.user?.id ?? "").order("awarded_at", { ascending: false })).data ?? [];
     return { rows, urls: await signedUrls("badges", rows.map((r) => r.badges?.image_path ?? null)) };
   } });
-  return <section className="mb-8"><h2 className="text-xl font-semibold">Minhas insígnias</h2>
-    {data?.rows.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Você ainda não recebeu insígnias. Elas aparecem aqui quando o administrador entregar.</p>}
+  return <section className="mb-8"><h2 className="text-xl font-semibold">Reconhecimentos especiais</h2>
+    {data?.rows.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Nenhum reconhecimento especial ainda.</p>}
     <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{data?.rows.map((r, i) => { const b = r.badges; if (!b) return null; return <div key={i} className="flex flex-col items-center rounded-xl border border-border bg-card p-4 text-center"><div className="grid size-20 place-items-center rounded-full bg-muted ring-2 ring-accent">{b.image_path && data.urls[b.image_path] ? <img src={data.urls[b.image_path]} alt={b.name} className="size-16 object-contain" /> : <Award className="text-accent" />}</div><p className="mt-2 text-sm font-semibold">{b.name}</p><p className="text-xs text-muted-foreground">{new Date(r.awarded_at).toLocaleDateString("pt-BR")}</p></div>; })}</div>
   </section>;
 }
@@ -23,14 +24,32 @@ export const Route = createFileRoute("/_authenticated/trajetoria")({ head: () =>
   { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
 ] }), component: TrajetoriaPage });
 
-function TrajetoriaPage() { return <PortalShell title="Minha trajetória" eyebrow="Reconhecimento">
-  <MyBadges />
-  <DemoNotice />
-  <section className="overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8"><div className="grid gap-8 md:grid-cols-[auto_1fr] md:items-center"><div className="grid size-36 place-items-center rounded-xl bg-accent text-5xl font-black text-accent-foreground"><span className="relative">AM<span className="absolute -right-5 -top-5 text-primary"><Star fill="currentColor" size={28} /></span></span></div><div><p className="text-sm font-bold uppercase text-accent">Desde 18 de março de 2023</p><h2 className="mt-3 text-3xl font-bold">3 anos construindo essa história</h2><p className="mt-3 max-w-xl text-sm leading-6 text-sidebar-muted">Cada marco representa um ano completo de dedicação à Natal Pneus.</p></div></div></section>
-  <div className="mt-8 grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
-    <section><h2 className="text-xl font-semibold">Linha do tempo</h2><div className="mt-5 space-y-0">
-      {([['2026','3 anos de Natal Pneus','Terceiro marco anual conquistado.',Award],['2025','2 anos de história','Segundo marco anual conquistado.',CalendarHeart],['2024','Primeiro ano completo','Seu primeiro marco na empresa.',Star],['2023','Início da jornada','Entrada validada em 18 de março.',BookOpen]] as Array<[string,string,string,LucideIcon]>).map(([year,title,desc,Icon],i)=><div key={year} className="grid grid-cols-[48px_1fr] gap-4"><div className="flex flex-col items-center"><span className={`grid size-11 place-items-center rounded-lg ${i===0?'bg-primary text-primary-foreground':'bg-accent text-accent-foreground'}`}><Icon size={20}/></span>{i<3&&<span className="h-full w-px bg-border"/>}</div><div className="pb-8"><p className="text-xs font-bold text-primary">{year}</p><h3 className="mt-1 font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{desc}</p></div></div>)}
-    </div></section>
-    <section><h2 className="text-xl font-semibold">Conquistas de aprendizagem</h2><div className="mt-5 space-y-3">{([['Primeira trilha concluída','Integração Natal Pneus concluída',BookOpen],['Explorador do conhecimento','6 cursos concluídos',Award]] as Array<[string,string,LucideIcon]>).map(([title,desc,Icon])=><div key={title} className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-card"><span className="grid size-12 place-items-center rounded-lg bg-warning-soft"><Icon size={22}/></span><div><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{desc}</p></div></div>)}<div className="rounded-xl border border-dashed border-border bg-secondary p-5"><p className="font-semibold">Próxima conquista</p><p className="mt-1 text-sm text-muted-foreground">Conclua uma trilha intermediária para desbloquear.</p></div></div></section>
-  </div>
-</PortalShell> }
+function TrajetoriaPage() {
+  const { access } = Route.useRouteContext();
+  const admission = access.profile?.admission_date;
+  const years = admission ? completeYears(admission) : null;
+  const t = tenureStatus(years ?? 0);
+  return <PortalShell title="Minha trajetória" eyebrow="Insígnias de fidelidade">
+    <section className="overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8">
+      <div className="grid gap-8 md:grid-cols-[auto_1fr] md:items-center">
+        <div className="flex flex-col items-center">
+          <img src={t.current.img} alt={`Insígnia ${t.current.name}`} className="size-44 drop-shadow-[0_10px_30px_rgba(0,0,0,0.6)]" />
+          <div className="mt-2 flex h-6 gap-1 text-accent" aria-label={`${t.stars} estrela(s)`}>{Array.from({ length: t.stars }).map((_, i) => <Star key={i} fill="currentColor" size={22} />)}</div>
+        </div>
+        <div>
+          <p className="text-sm font-bold uppercase text-accent">{admission ? `Desde ${new Date(admission + "T12:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}` : "Data de admissão ainda não informada pelo RH"}</p>
+          <h2 className="mt-3 text-3xl font-bold">{t.current.name}{years !== null && <span className="text-sidebar-muted"> · {years} {years === 1 ? "ano" : "anos"} de casa</span>}</h2>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-sidebar-muted">{t.current.text}</p>
+          {t.next && years !== null && <p className="mt-4 text-sm">Próxima insígnia: <strong>{t.next.name}</strong> em {t.next.years - years} {t.next.years - years === 1 ? "ano" : "anos"}.</p>}
+        </div>
+      </div>
+    </section>
+    <section className="mt-8"><h2 className="text-xl font-semibold">Todas as insígnias</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Cada estrela representa um ano completo após o marco. Na troca de nível, a contagem recomeça.</p>
+      <div className="mt-5 grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-9">
+        {TENURE_BADGES.map((b) => { const got = years !== null && b.years <= years; return <div key={b.years} className="flex flex-col items-center text-center"><img src={b.img} alt={b.name} className={`size-20 ${got ? "" : "opacity-25 grayscale"}`} /><p className="mt-2 text-xs font-bold">{b.years} {b.years === 1 ? "ANO" : "ANOS"}</p><p className="text-xs text-muted-foreground">{b.name}</p></div>; })}
+      </div>
+    </section>
+    <div className="mt-8"><MyBadges /></div>
+  </PortalShell>;
+}
