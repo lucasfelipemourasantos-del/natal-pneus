@@ -14,16 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          admission_date: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          internal_id: string | null
+          job_role: string | null
+          status: Database["public"]["Enums"]["access_status"]
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          admission_date?: string | null
+          created_at?: string
+          email: string
+          full_name?: string
+          id: string
+          internal_id?: string | null
+          job_role?: string | null
+          status?: Database["public"]["Enums"]["access_status"]
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admission_date?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          internal_id?: string | null
+          job_role?: string | null
+          status?: Database["public"]["Enums"]["access_status"]
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      access_status: "pending" | "approved" | "suspended"
+      app_role: "admin" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +213,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      access_status: ["pending", "approved", "suspended"],
+      app_role: ["admin", "employee"],
+    },
   },
 } as const
