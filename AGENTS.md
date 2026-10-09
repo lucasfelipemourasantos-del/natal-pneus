@@ -16,3 +16,4 @@
 - Management and revenue reads use authenticated server functions with user-scoped RLS; review_employee performs atomic permission assignment and database triggers audit administrative mutations.
 - Store, sector and employee revenues are separate integer-cent monthly records; reports never aggregate across dimensions to prevent duplicate revenue.
 - Email link validation lives in auth-flow; public confirmation and recovery routes wait for SDK initialization and validate the auth user before proceeding, so ordinary sessions are not treated as password recovery.
+- Signup is auto-confirmed and RH approval is the only access gate; privileged admin is granted only when an existing admin approves an allowlisted account, so nobody becomes admin just by registering an email.
