@@ -1,7 +1,70 @@
-export type RevenueRow = { competence:string; amount_cents:number; dimension:string; unit_code:string; employee_id:string|null; sector_id:string|null };
-export function parseCents(value:string):number { const clean=value.trim().replace(/\./g,'');if(!/^\d+(,\d{1,2})?$/.test(clean))throw new Error('Informe um valor em reais, como 1.250,00.');const [whole,decimal='']=clean.split(',');const cents=Number(whole)*100+Number(decimal.padEnd(2,'0'));if(!Number.isSafeInteger(cents)||cents>9000000000000)throw new Error('Valor fora do limite.');return cents; }
-export function periodTotal(rows:RevenueRow[],dimension:string,start:string,end:string,units:string[]):number|null {const list=rows.filter(r=>r.dimension===dimension&&r.competence>=start+'-01'&&r.competence<=end+'-01'&&(!units.length||units.includes(r.unit_code)));if(!list.length)return null;return list.reduce((s,r)=>s+r.amount_cents,0);}
-export function compare(current:number|null,previous:number|null){if(current===null||previous===null)return {difference:null,percent:null};return {difference:current-previous,percent:previous===0?null:(current-previous)/previous*100};}
-export function monthSeries(start:string,end:string){const list:string[]=[];let [year=0,month=0]=start.split('-').map(Number);if(!year||month<1||month>12)return list;while(`${year}-${String(month).padStart(2,'0')}`<=end&&list.length<600){list.push(`${year}-${String(month).padStart(2,'0')}`);month++;if(month>12){month=1;year++;}}return list;}
-export function money(cents:number|null){return cents===null?'Sem dados':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);}
-export function rangeFor(mode:string,year:number,month:number,half:number){if(mode==='year')return {start:`${year}-01`,end:`${year}-12`};if(mode==='semester')return {start:`${year}-${half===1?'01':'07'}`,end:`${year}-${half===1?'06':'12'}`};const m=String(month).padStart(2,'0');return {start:`${year}-${m}`,end:`${year}-${m}`};}
+export type RevenueRow = {
+  competence: string;
+  amount_cents: number;
+  dimension: string;
+  unit_code: string;
+  employee_id: string | null;
+  sector_id: string | null;
+};
+export function parseCents(value: string): number {
+  const clean = value.trim().replace(/\./g, "");
+  if (!/^\d+(,\d{1,2})?$/.test(clean)) throw new Error("Informe um valor em reais, como 1.250,00.");
+  const [whole, decimal = ""] = clean.split(",");
+  const cents = Number(whole) * 100 + Number(decimal.padEnd(2, "0"));
+  if (!Number.isSafeInteger(cents) || cents > 9000000000000)
+    throw new Error("Valor fora do limite.");
+  return cents;
+}
+export function periodTotal(
+  rows: RevenueRow[],
+  dimension: string,
+  start: string,
+  end: string,
+  units: string[],
+): number | null {
+  const list = rows.filter(
+    (r) =>
+      r.dimension === dimension &&
+      r.competence >= start + "-01" &&
+      r.competence <= end + "-01" &&
+      (!units.length || units.includes(r.unit_code)),
+  );
+  if (!list.length) return null;
+  return list.reduce((s, r) => s + r.amount_cents, 0);
+}
+export function compare(current: number | null, previous: number | null) {
+  if (current === null || previous === null) return { difference: null, percent: null };
+  return {
+    difference: current - previous,
+    percent: previous === 0 ? null : ((current - previous) / previous) * 100,
+  };
+}
+export function monthSeries(start: string, end: string) {
+  const list: string[] = [];
+  let [year = 0, month = 0] = start.split("-").map(Number);
+  if (!year || month < 1 || month > 12) return list;
+  while (`${year}-${String(month).padStart(2, "0")}` <= end && list.length < 600) {
+    list.push(`${year}-${String(month).padStart(2, "0")}`);
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+  return list;
+}
+export function money(cents: number | null) {
+  return cents === null
+    ? "Sem dados"
+    : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+}
+export function rangeFor(mode: string, year: number, month: number, half: number) {
+  if (mode === "year") return { start: `${year}-01`, end: `${year}-12` };
+  if (mode === "semester")
+    return {
+      start: `${year}-${half === 1 ? "01" : "07"}`,
+      end: `${year}-${half === 1 ? "06" : "12"}`,
+    };
+  const m = String(month).padStart(2, "0");
+  return { start: `${year}-${m}`, end: `${year}-${m}` };
+}
