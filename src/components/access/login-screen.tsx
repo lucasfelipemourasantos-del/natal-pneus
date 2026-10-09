@@ -1,5 +1,6 @@
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +9,7 @@ import { fieldClass } from "@/lib/portal-data";
 export function LoginScreen() {
   const navigate = useNavigate();
   const [recover, setRecover] = useState(false);
+  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -44,16 +46,18 @@ export function LoginScreen() {
     }
   }
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-5 py-12 text-foreground">
-      <div className="w-full max-w-[380px]">
-        <img src={logoAsset.url} alt="Natal Pneus" className="mx-auto h-auto w-[210px]" />
-        <p className="mt-5 text-center text-xs font-semibold uppercase text-muted-foreground">
-          Portal Natal Pneus
-        </p>
-        <h1 className="mt-10 text-2xl font-semibold">
-          {recover ? "Recuperar senha" : "Bem-vindo de volta"}
-        </h1>
-        <form onSubmit={submit} className="mt-6 space-y-5">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6 py-12 text-foreground">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--foreground)/0.06),transparent_60%)]"
+      />
+      <div className="relative w-full max-w-[380px]">
+        <img src={logoAsset.url} alt="Natal Pneus" className="mx-auto h-auto w-[200px] object-contain" />
+        <h1 className="mt-8 text-center text-2xl font-semibold">Portal Natal Pneus</h1>
+        {recover && (
+          <p className="mt-2 text-center text-sm text-muted-foreground">Recuperar senha</p>
+        )}
+        <form onSubmit={submit} className="mt-8 space-y-5">
           <label className="block text-sm font-medium">
             E-mail
             <input
@@ -68,13 +72,23 @@ export function LoginScreen() {
           {!recover && (
             <label className="block text-sm font-medium">
               Senha
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className={fieldClass}
-              />
+              <span className="relative block">
+                <input
+                  name="password"
+                  type={show ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  className={fieldClass + " pr-11"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow(!show)}
+                  aria-label={show ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </span>
             </label>
           )}
           {error && (
@@ -87,14 +101,14 @@ export function LoginScreen() {
               {notice}
             </p>
           )}
-          <Button disabled={busy} className="min-h-11 w-full">
+          <Button disabled={busy} className="min-h-11 w-full shadow-none">
             {busy ? "Aguarde…" : recover ? "Enviar link" : "Entrar"}
           </Button>
         </form>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <Button
             variant="link"
-            className="px-0"
+            className="min-h-11 px-0 text-muted-foreground hover:text-foreground"
             onClick={() => {
               setRecover(!recover);
               setError("");
@@ -103,7 +117,7 @@ export function LoginScreen() {
           >
             {recover ? "Voltar para entrar" : "Esqueci minha senha"}
           </Button>
-          <Button asChild variant="link" className="px-0">
+          <Button asChild variant="link" className="min-h-11 px-0 text-muted-foreground hover:text-foreground">
             <Link to="/cadastro">Criar cadastro</Link>
           </Button>
         </div>
