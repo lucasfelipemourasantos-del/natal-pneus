@@ -22,7 +22,7 @@ export const TENURE_BADGES = [
 
 /** Complete years between admission (YYYY-MM-DD) and today. */
 export function completeYears(admission: string, today = new Date()) {
-  const [y, m, d] = admission.split("-").map(Number);
+  const [y = 0, m = 1, d = 1] = admission.split("-").map(Number);
   let years = today.getFullYear() - y;
   if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) years--;
   return Math.max(0, years);
