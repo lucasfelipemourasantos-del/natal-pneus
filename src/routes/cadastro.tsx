@@ -22,13 +22,17 @@ export const Route = createFileRoute("/cadastro")({
 function Signup() {
   const { data } = useSuspenseQuery(catalogOptions);
   const [unit, setUnit] = useState("");
+  const [job, setJob] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  const store = data.units.find((u) => u.code === unit);
+  const allStores = Boolean(data.jobs.find((j) => j.name === job)?.all_stores);
+  const store = allStores ? undefined : data.units.find((u) => u.code === unit);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    if (!job) return setError("Selecione a função.");
+    if (!allStores && !store) return setError("Selecione a unidade.");
     setBusy(true);
     const f = new FormData(e.currentTarget);
     try {
@@ -39,8 +43,8 @@ function Signup() {
           emailRedirectTo: window.location.origin + "/aguardando",
           data: {
             full_name: String(f.get("full_name")).trim(),
-            unit_code: unit,
-            job_role: f.get("job_role"),
+            unit_code: allStores ? "ALL" : unit,
+            job_role: job,
           },
         },
       });
@@ -70,21 +74,51 @@ function Signup() {
         ) : (
           <form onSubmit={submit} className="mt-6 space-y-4">
             <label className="block text-sm font-medium">
-              Unidade
+              Função exercida ou que irá exercer
               <select
+                name="job_role"
                 required
-                name="unit_code"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
+                value={job}
+                onChange={(e) => {
+                  setJob(e.target.value);
+                  setUnit("");
+                }}
                 className={fieldClass}
               >
-                <option value="">Selecione a unidade</option>
-                {data.units.map((u) => (
-                  <option key={u.code} value={u.code}>
-                    Natal Pneus · {u.code}
+                <option value="">Selecione a função</option>
+                {data.jobs.map((j) => (
+                  <option key={j.id} value={j.name}>
+                    {j.name}
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block text-sm font-medium">
+              Unidade
+              {allStores ? (
+                <input
+                  readOnly
+                  aria-readonly
+                  value="Todas as lojas — NP1, NP2, NP3 e NP4"
+                  className={fieldClass + " cursor-not-allowed opacity-80"}
+                />
+              ) : (
+                <select
+                  required
+                  disabled={!job}
+                  name="unit_code"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className={fieldClass + " disabled:opacity-60"}
+                >
+                  <option value="">{job ? "Selecione a unidade" : "Escolha a função primeiro"}</option>
+                  {data.units.map((u) => (
+                    <option key={u.code} value={u.code}>
+                      Natal Pneus · {u.code}
+                    </option>
+                  ))}
+                </select>
+              )}
             </label>
             {store && (
               <div className="border-l-2 border-primary pl-3">
@@ -109,15 +143,6 @@ function Signup() {
                 required
                 className={fieldClass}
               />
-            </label>
-            <label className="block text-sm font-medium">
-              Função exercida ou que irá exercer
-              <select name="job_role" required className={fieldClass}>
-                <option value="">Selecione a função</option>
-                {data.jobs.map((j) => (
-                  <option key={j.id}>{j.name}</option>
-                ))}
-              </select>
             </label>
             <label className="block text-sm font-medium">
               E-mail

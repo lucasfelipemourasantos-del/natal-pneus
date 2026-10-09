@@ -57,6 +57,13 @@
       "when": 1791563302577,
       "tag": "0007_validate_revenue_producer_history",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791567223932,
+      "tag": "0008_job_functions_scope",
+      "breakpoints": true
     }
   ]
 }
