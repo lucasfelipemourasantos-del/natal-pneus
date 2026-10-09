@@ -34,7 +34,7 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const isAdmin = perfil === "admin";
-  const signup = !isAdmin && mode === "cadastro";
+  const signup = mode === "cadastro";
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,14 +87,14 @@ function AuthPage() {
             <Link to="/auth" search={{ perfil: "funcionario" }} className={`rounded-md py-2 text-center ${!isAdmin ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Funcionário</Link>
             <Link to="/auth" search={{ perfil: "admin" }} className={`rounded-md py-2 text-center ${isAdmin ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Administrador</Link>
           </div>
-          {!isAdmin && (
+          {(
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => { setMode("entrar"); setError(null); }} className={`min-h-10 rounded-lg border text-sm font-semibold ${!signup ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>Entrar</button>
               <button type="button" onClick={() => { setMode("cadastro"); setError(null); setNotice(null); }} className={`min-h-10 rounded-lg border text-sm font-semibold ${signup ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>Criar login</button>
             </div>
           )}
           <h1 className="mt-6 text-xl font-bold">
-            {isAdmin ? "Login do administrador" : signup ? "Criar login" : "Login do funcionário"}
+            {signup ? "Criar login" : isAdmin ? "Login do administrador" : "Login do funcionário"}
           </h1>
           <form onSubmit={onSubmit} className="mt-5 space-y-4">
             {signup && (
@@ -111,7 +111,7 @@ function AuthPage() {
               {busy ? "Aguarde…" : signup ? "Criar login" : "Entrar"}
             </button>
           </form>
-          {!isAdmin && (
+          {(
             <button type="button" onClick={() => { setMode(signup ? "entrar" : "cadastro"); setError(null); }} className="mt-4 w-full text-center text-sm font-semibold text-primary hover:underline">
               {signup ? "Já tenho login — entrar" : "Não tem login? Criar login"}
             </button>
