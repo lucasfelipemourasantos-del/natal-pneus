@@ -11,3 +11,6 @@
 
 - Keep shared portal navigation and employee presentation in `PortalShell` so every feature route stays visually consistent.
 - Employee portal pages live under the _authenticated layout, which redirects unapproved users to /aguardando; admin rights come only from the user_roles table (never profile fields) to prevent privilege escalation.
+- Public entry routes share LoginScreen; store/legal catalogs are read from Cloud so signup and internal identity stay synchronized.
+- Management and revenue reads use authenticated server functions with user-scoped RLS; review_employee performs atomic permission assignment and database triggers audit administrative mutations.
+- Store, sector and employee revenues are separate integer-cent monthly records; reports never aggregate across dimensions to prevent duplicate revenue.
