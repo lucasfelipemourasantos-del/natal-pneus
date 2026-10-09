@@ -46,7 +46,7 @@ export const reviewAccess = createServerFn({ method: "POST" })
     const { error } = await context.supabase.rpc("review_employee", {
       _id: data.id,
       _status: data.status,
-      _unit: data.unit,
+      _unit: data.unit as unknown as string,
       _job: data.job,
       _sector: data.sector as unknown as string,
       _role: data.role,
