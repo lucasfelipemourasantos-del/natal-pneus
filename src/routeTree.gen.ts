@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AguardandoRouteImport } from './routes/aguardando'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
@@ -48,6 +49,11 @@ const AuthRoute = AuthRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmarEmailRoute = ConfirmarEmailRouteImport.update({
+  id: '/confirmar-email',
+  path: '/confirmar-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovaSenhaRoute = NovaSenhaRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
   '/cadastro': typeof CadastroRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
   '/cadastro': typeof CadastroRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
   '/cadastro': typeof CadastroRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/aguardando'
     | '/auth'
     | '/cadastro'
+    | '/confirmar-email'
     | '/nova-senha'
     | '/admin'
     | '/admin-cursos'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/aguardando'
     | '/auth'
     | '/cadastro'
+    | '/confirmar-email'
     | '/nova-senha'
     | '/admin'
     | '/admin-cursos'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/aguardando'
     | '/auth'
     | '/cadastro'
+    | '/confirmar-email'
     | '/nova-senha'
     | '/_authenticated/admin'
     | '/_authenticated/admin-cursos'
@@ -222,6 +234,7 @@ export interface RootRouteChildren {
   AguardandoRoute: typeof AguardandoRoute
   AuthRoute: typeof AuthRoute
   CadastroRoute: typeof CadastroRoute
+  ConfirmarEmailRoute: typeof ConfirmarEmailRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
 }
 
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmar-email': {
+      id: '/confirmar-email'
+      path: '/confirmar-email'
+      fullPath: '/confirmar-email'
+      preLoaderRoute: typeof ConfirmarEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nova-senha': {
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   AguardandoRoute: AguardandoRoute,
   AuthRoute: AuthRoute,
   CadastroRoute: CadastroRoute,
+  ConfirmarEmailRoute: ConfirmarEmailRoute,
   NovaSenhaRoute: NovaSenhaRoute,
 }
 export const routeTree = rootRouteImport

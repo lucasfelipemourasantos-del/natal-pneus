@@ -22,3 +22,7 @@
 - [x] Tela inicial mantida como entrada (login); cadastro acessado pelo link "Criar cadastro"
 - [x] Erro de senha investigado: conta criada, mas e-mail ainda não confirmado — orientado a confirmar pelo link
 - [x] Aprovação do RH com opção "Todas as lojas" para Diretoria e Gestor Geral (banco valida o perfil)
+- [x] Adendo ADM RH: cargo Administrador retirado, perfil ADM RH exibido e acesso administrativo conferido antes do reinício
+- [x] Conta de Lucas excluída pela operação oficial, após autorização e conferência sem vínculos; zero contas, perfis, sessões e links antigos; lojas e dados empresariais preservados
+- [x] Confirmação pública, reenvio de confirmação e recuperação com validação de sessão ajustados; sessão comum recusada na página de nova senha; 22 testes passando
+- [ ] Validar novo cadastro, confirmação e nova senha com link real — aguarda novo cadastro do responsável e acesso ao e-mail; não criar credenciais em seu nome

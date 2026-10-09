@@ -121,7 +121,7 @@ function Admin() {
   return (
     <PortalShell
       title="Colaboradores e acessos"
-      eyebrow={access.isAdmin ? "Administração" : "Consulta · somente leitura"}
+      eyebrow={access.isAdmin ? "ADM RH" : "Consulta · somente leitura"}
     >
       <p role="status" className="text-sm text-muted-foreground">
         {data.people.filter((p) => p.status === "pending").length} pedido(s) pendente(s) de

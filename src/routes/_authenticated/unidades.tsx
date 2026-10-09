@@ -91,7 +91,7 @@ function Units() {
   return (
     <PortalShell
       title="Lojas, setores e funções"
-      eyebrow={access.isAdmin ? "Administração" : "Consulta · somente leitura"}
+      eyebrow={access.isAdmin ? "ADM RH" : "Consulta · somente leitura"}
     >
       {error && (
         <p role="alert" className="mb-4 text-destructive">

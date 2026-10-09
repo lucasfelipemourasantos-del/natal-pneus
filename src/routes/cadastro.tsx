@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
 import { catalogOptions, fieldClass } from "@/lib/portal-data";
 import { supabase } from "@/integrations/supabase/client";
+import { authErrorMessage } from "@/lib/auth-flow";
 export const Route = createFileRoute("/cadastro")({
   loader: ({ context }) => context.queryClient.ensureQueryData(catalogOptions),
   head: () => ({
@@ -40,7 +41,7 @@ function Signup() {
         email: String(f.get("email")).trim(),
         password: String(f.get("password")),
         options: {
-          emailRedirectTo: window.location.origin + "/aguardando",
+          emailRedirectTo: window.location.origin + "/confirmar-email",
           data: {
             full_name: String(f.get("full_name")).trim(),
             unit_code: allStores ? "ALL" : unit,
@@ -48,7 +49,7 @@ function Signup() {
           },
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(authErrorMessage(error, "signup"));
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível solicitar o cadastro.");

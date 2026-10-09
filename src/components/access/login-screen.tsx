@@ -6,6 +6,7 @@ import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { homeFor, loadAccess } from "@/lib/access";
 import { fieldClass } from "@/lib/portal-data";
+import { authErrorMessage } from "@/lib/auth-flow";
 export function LoginScreen() {
   const navigate = useNavigate();
   const [recover, setRecover] = useState(false);
@@ -13,11 +14,25 @@ export function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  async function resendConfirmation() {
+    setBusy(true);
+    setError("");
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: confirmationEmail,
+        options: { emailRedirectTo: window.location.origin + "/confirmar-email" } });
+      if (error) throw error;
+      setNotice("Se houver um cadastro aguardando confirmação, enviaremos um novo link para este e-mail.");
+    } catch {
+      setError("Não foi possível reenviar agora. Aguarde alguns minutos e tente novamente.");
+    } finally { setBusy(false); }
+  }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
     setNotice("");
+    setConfirmationEmail("");
     const f = new FormData(e.currentTarget);
     try {
       const email = String(f.get("email")).trim();
@@ -25,7 +40,7 @@ export function LoginScreen() {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin + "/nova-senha",
         });
-        if (error) throw error;
+        if (error) throw new Error(authErrorMessage(error, "reset"));
         setNotice(
           "Se houver uma conta com este e-mail, enviaremos um link para recuperar a senha.",
         );
@@ -35,7 +50,10 @@ export function LoginScreen() {
         email,
         password: String(f.get("password")),
       });
-      if (error) throw new Error("E-mail ou senha incorretos, ou e-mail ainda não confirmado.");
+      if (error) {
+        if (error.code === "email_not_confirmed") setConfirmationEmail(email);
+        throw new Error(authErrorMessage(error, "login"));
+      }
       const access = await loadAccess();
       if (!access) throw new Error("Não foi possível entrar.");
       await navigate({ to: homeFor(access), replace: true });
@@ -79,14 +97,16 @@ export function LoginScreen() {
                   required
                   className={fieldClass + " pr-11"}
                 />
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   type="button"
                   onClick={() => setShow(!show)}
                   aria-label={show ? "Ocultar senha" : "Mostrar senha"}
                   className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                </Button>
               </span>
             </label>
           )}
@@ -100,6 +120,7 @@ export function LoginScreen() {
               {notice}
             </p>
           )}
+          {confirmationEmail && <Button type="button" variant="outline" disabled={busy} onClick={resendConfirmation} className="w-full">Reenviar confirmação de e-mail</Button>}
           <Button disabled={busy} className="min-h-11 w-full shadow-none">
             {busy ? "Aguarde…" : recover ? "Enviar link" : "Entrar"}
           </Button>
