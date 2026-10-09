@@ -53,9 +53,8 @@ export function LoginScreen() {
       />
       <div className="relative w-full max-w-[380px]">
         <img src={logoAsset.url} alt="Natal Pneus" className="mx-auto h-auto w-[200px] object-contain" />
-        <h1 className="mt-8 text-center text-2xl font-semibold">Portal Natal Pneus</h1>
         {recover && (
-          <p className="mt-2 text-center text-sm text-muted-foreground">Recuperar senha</p>
+          <p className="mt-8 text-center text-sm text-muted-foreground">Recuperar senha</p>
         )}
         <form onSubmit={submit} className="mt-8 space-y-5">
           <label className="block text-sm font-medium">
