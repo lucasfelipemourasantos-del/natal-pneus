@@ -9,39 +9,72 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AguardandoRouteImport } from './routes/aguardando'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
 
-const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
-  id: '/_authenticated/cursos',
-  path: '/cursos',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AguardandoRoute = AguardandoRouteImport.update({
+  id: '/aguardando',
+  path: '/aguardando',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
+  id: '/cursos',
+  path: '/cursos',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEmpresaRoute = AuthenticatedEmpresaRouteImport.update({
-  id: '/_authenticated/empresa',
+  id: '/empresa',
   path: '/empresa',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
-  id: '/_authenticated/inicio',
+  id: '/inicio',
   path: '/inicio',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
-  id: '/_authenticated/metas',
+  id: '/metas',
   path: '/metas',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTrajetoriaRoute = AuthenticatedTrajetoriaRouteImport.update({
-  id: '/_authenticated/trajetoria',
+  id: '/trajetoria',
   path: '/trajetoria',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/aguardando': typeof AguardandoRoute
+  '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -49,6 +82,10 @@ export interface FileRoutesByFullPath {
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/aguardando': typeof AguardandoRoute
+  '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -57,6 +94,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/aguardando': typeof AguardandoRoute
+  '/auth': typeof AuthRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/cursos': typeof AuthenticatedCursosRoute
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
@@ -65,11 +107,34 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/cursos' | '/empresa' | '/inicio' | '/metas' | '/trajetoria'
+  fullPaths:
+    | '/'
+    | '/aguardando'
+    | '/auth'
+    | '/admin'
+    | '/cursos'
+    | '/empresa'
+    | '/inicio'
+    | '/metas'
+    | '/trajetoria'
   fileRoutesByTo: FileRoutesByTo
-  to: '/cursos' | '/empresa' | '/inicio' | '/metas' | '/trajetoria'
+  to:
+    | '/'
+    | '/aguardando'
+    | '/auth'
+    | '/admin'
+    | '/cursos'
+    | '/empresa'
+    | '/inicio'
+    | '/metas'
+    | '/trajetoria'
   id:
     | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/aguardando'
+    | '/auth'
+    | '/_authenticated/admin'
     | '/_authenticated/cursos'
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
@@ -78,6 +143,89 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AguardandoRoute: typeof AguardandoRoute
+  AuthRoute: typeof AuthRoute
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aguardando': {
+      id: '/aguardando'
+      path: '/aguardando'
+      fullPath: '/aguardando'
+      preLoaderRoute: typeof AguardandoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cursos': {
+      id: '/_authenticated/cursos'
+      path: '/cursos'
+      fullPath: '/cursos'
+      preLoaderRoute: typeof AuthenticatedCursosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/empresa': {
+      id: '/_authenticated/empresa'
+      path: '/empresa'
+      fullPath: '/empresa'
+      preLoaderRoute: typeof AuthenticatedEmpresaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/inicio': {
+      id: '/_authenticated/inicio'
+      path: '/inicio'
+      fullPath: '/inicio'
+      preLoaderRoute: typeof AuthenticatedInicioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/metas': {
+      id: '/_authenticated/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AuthenticatedMetasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trajetoria': {
+      id: '/_authenticated/trajetoria'
+      path: '/trajetoria'
+      fullPath: '/trajetoria'
+      preLoaderRoute: typeof AuthenticatedTrajetoriaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+  }
+}
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
@@ -85,52 +233,23 @@ export interface RootRouteChildren {
   AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
 }
 
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/_authenticated/cursos': {
-      id: '/_authenticated/cursos'
-      path: '/cursos'
-      fullPath: '/cursos'
-      preLoaderRoute: typeof AuthenticatedCursosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/empresa': {
-      id: '/_authenticated/empresa'
-      path: '/empresa'
-      fullPath: '/empresa'
-      preLoaderRoute: typeof AuthenticatedEmpresaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/inicio': {
-      id: '/_authenticated/inicio'
-      path: '/inicio'
-      fullPath: '/inicio'
-      preLoaderRoute: typeof AuthenticatedInicioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/metas': {
-      id: '/_authenticated/metas'
-      path: '/metas'
-      fullPath: '/metas'
-      preLoaderRoute: typeof AuthenticatedMetasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/trajetoria': {
-      id: '/_authenticated/trajetoria'
-      path: '/trajetoria'
-      fullPath: '/trajetoria'
-      preLoaderRoute: typeof AuthenticatedTrajetoriaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-  }
-}
-
-const rootRouteChildren: RootRouteChildren = {
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedCursosRoute: AuthenticatedCursosRoute,
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AguardandoRoute: AguardandoRoute,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
