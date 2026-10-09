@@ -23,6 +23,7 @@ import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
+import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -95,6 +96,11 @@ const AuthenticatedTrajetoriaRoute = AuthenticatedTrajetoriaRouteImport.update({
   path: '/trajetoria',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUnidadesRoute = AuthenticatedUnidadesRouteImport.update({
+  id: '/unidades',
+  path: '/unidades',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/metas'
     | '/trajetoria'
+    | '/unidades'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/metas'
     | '/trajetoria'
+    | '/unidades'
   id:
     | '__root__'
     | '/'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inicio'
     | '/_authenticated/metas'
     | '/_authenticated/trajetoria'
+    | '/_authenticated/unidades'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrajetoriaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/unidades': {
+      id: '/_authenticated/unidades'
+      path: '/unidades'
+      fullPath: '/unidades'
+      preLoaderRoute: typeof AuthenticatedUnidadesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -313,6 +332,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
+  AuthenticatedUnidadesRoute: typeof AuthenticatedUnidadesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -324,6 +344,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
+  AuthenticatedUnidadesRoute: AuthenticatedUnidadesRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
