@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/inicio")({
 
 function Index() {
   return (
-    <PortalShell title="Olá, André. Bom dia!" eyebrow="Portal do colaborador">
+    <PortalShell title="Olá. Seja bem-vindo(a)!" eyebrow="Portal do colaborador">
       <DemoNotice />
       <section className="relative overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8">
         <div className="relative z-10 max-w-2xl">
