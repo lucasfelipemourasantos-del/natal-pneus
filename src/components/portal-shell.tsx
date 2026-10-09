@@ -32,7 +32,7 @@ export function PortalShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background lg:grid lg:grid-cols-[240px_1fr]">
+    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/" aria-label="Natal Pneus — início" className="block px-2 py-2">
           <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[168px]" />
