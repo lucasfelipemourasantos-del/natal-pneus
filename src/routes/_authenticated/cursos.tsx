@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BookOpen, CheckCircle2, Clock3, LockKeyhole, Search } from "lucide-react";
 import { DemoNotice, PortalShell, ProgressBar } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/cursos")({
+export const Route = createFileRoute("/_authenticated/cursos")({
   head: () => ({ meta: [
     { title: "Meus cursos — Portal Natal Pneus" }, { name: "description", content: "Trilhas de capacitação atribuídas ao colaborador Natal Pneus." },
     { property: "og:title", content: "Meus cursos — Portal Natal Pneus" }, { property: "og:description", content: "Capacitação por função, nível e especialidade." },

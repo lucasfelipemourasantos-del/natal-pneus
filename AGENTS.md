@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep shared portal navigation and employee presentation in `PortalShell` so every feature route stays visually consistent.
+- Employee portal pages live under the _authenticated layout, which redirects unapproved users to /aguardando; admin rights come only from the user_roles table (never profile fields) to prevent privilege escalation.

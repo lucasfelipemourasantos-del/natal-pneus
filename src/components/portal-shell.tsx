@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Award,
   BookOpen,
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   Gauge,
   Home,
+  ShieldCheck,
   LogOut,
   Target,
   UserRound,
@@ -13,9 +15,11 @@ import {
 import type { ReactNode } from "react";
 
 import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
+import { supabase } from "@/integrations/supabase/client";
+import { initials } from "@/lib/access";
 
 const navigation = [
-  { to: "/" as const, label: "Início", icon: Home },
+  { to: "/inicio" as const, label: "Início", icon: Home },
   { to: "/cursos" as const, label: "Meus cursos", icon: BookOpen },
   { to: "/metas" as const, label: "Minhas metas", icon: Target },
   { to: "/trajetoria" as const, label: "Minha trajetória", icon: Award },
@@ -31,18 +35,34 @@ export function PortalShell({
   eyebrow?: string;
   children: ReactNode;
 }) {
+  const context = useRouteContext({ strict: false }) as { access?: import("@/lib/access").Access };
+  const access = context.access ?? { userId: "", profile: null, isAdmin: false };
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const name = access.profile?.full_name || access.profile?.email || "Colaborador";
+  const role = access.isAdmin ? "Administrador" : access.profile?.job_role || "Colaborador";
+  const unit = access.profile?.unit || (access.isAdmin ? "Administração" : "");
+  const links = access.isAdmin
+    ? [...navigation, { to: "/admin" as const, label: "Acessos", icon: ShieldCheck }]
+    : navigation;
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", search: { perfil: access.isAdmin ? "admin" : "funcionario" }, replace: true });
+  }
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
-        <Link to="/" aria-label="Natal Pneus — início" className="block px-2 py-2">
+        <Link to="/inicio" aria-label="Natal Pneus — início" className="block px-2 py-2">
           <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
         <nav className="mt-10 space-y-1" aria-label="Navegação principal">
-          {navigation.map(({ to, label, icon: Icon }) => (
+          {links.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeOptions={{ exact: to === "/" }}
+              activeOptions={{ exact: true }}
               className="group flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
               activeProps={{ className: "border-primary bg-sidebar-accent text-sidebar-foreground" }}
             >
@@ -53,12 +73,12 @@ export function PortalShell({
         </nav>
         <div className="mt-auto border-t border-sidebar-border pt-4">
           <div className="flex items-center gap-3 px-3 py-2">
-            <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">AM</span>
+            <span className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{initials(name)}</span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">André Martins</p>
-              <p className="truncate text-xs text-sidebar-muted">Consultor de vendas</p>
+              <p className="truncate text-sm font-semibold">{name}</p>
+              <p className="truncate text-xs text-sidebar-muted">{role}</p>
             </div>
-            <LogOut size={17} className="text-sidebar-muted" aria-label="Sair" />
+            <button type="button" onClick={signOut} aria-label="Sair" className="grid size-9 place-items-center rounded-lg text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"><LogOut size={17} /></button>
           </div>
         </div>
       </aside>
@@ -66,7 +86,7 @@ export function PortalShell({
       <div className="min-w-0">
         <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:static">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-10">
-            <Link to="/" className="lg:hidden" aria-label="Natal Pneus — início">
+            <Link to="/inicio" className="lg:hidden" aria-label="Natal Pneus — início">
               <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[142px]" />
             </Link>
             <div className="hidden lg:block">
@@ -75,18 +95,19 @@ export function PortalShell({
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-semibold text-foreground">André Martins</p>
-                <p className="text-xs text-muted-foreground">Unidade Tirol</p>
+                <p className="text-sm font-semibold text-foreground">{name}</p>
+                <p className="text-xs text-muted-foreground">{unit}</p>
               </div>
-              <span className="grid size-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">AM</span>
+              <span className="grid size-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{initials(name)}</span>
+              <button type="button" onClick={signOut} aria-label="Sair" className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:hidden"><LogOut size={18} /></button>
             </div>
           </div>
           <nav className="flex overflow-x-auto border-t border-border px-2 lg:hidden" aria-label="Navegação principal">
-            {navigation.map(({ to, label, icon: Icon }) => (
+            {links.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
-                activeOptions={{ exact: to === "/" }}
+                activeOptions={{ exact: true }}
                 className="flex min-w-max flex-1 flex-col items-center gap-1 border-b-2 border-transparent px-3 py-2 text-[11px] font-medium text-muted-foreground"
                 activeProps={{ className: "border-primary text-primary" }}
               >

@@ -15,3 +15,14 @@ describe("App routing", () => {
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
 });
+
+describe("Access rules", () => {
+  it("sends pending employees to the status page and admins to the admin area", async () => {
+    const { homeFor } = await import("@/lib/access");
+    const base = { userId: "u", profile: null } as const;
+    expect(homeFor({ ...base, isAdmin: true })).toBe("/admin");
+    expect(homeFor({ ...base, isAdmin: false, profile: { status: "pending" } as never })).toBe("/aguardando");
+    expect(homeFor({ ...base, isAdmin: false, profile: { status: "suspended" } as never })).toBe("/aguardando");
+    expect(homeFor({ ...base, isAdmin: false, profile: { status: "approved" } as never })).toBe("/inicio");
+  });
+});

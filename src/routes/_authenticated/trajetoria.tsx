@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Award, BookOpen, CalendarHeart, Star, type LucideIcon } from "lucide-react";
 import { DemoNotice, PortalShell } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/trajetoria")({ head: () => ({ meta: [
+export const Route = createFileRoute("/_authenticated/trajetoria")({ head: () => ({ meta: [
   { title: "Minha trajetória — Portal Natal Pneus" }, { name: "description", content: "Marcos, conquistas e tempo de empresa do colaborador." },
   { property: "og:title", content: "Minha trajetória — Portal Natal Pneus" }, { property: "og:description", content: "Reconhecimento da história de cada colaborador." },
   { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },

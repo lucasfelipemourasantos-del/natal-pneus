@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, CircleDollarSign, Target, TrendingUp } from "lucide-react";
 import { DemoNotice, PortalShell, ProgressBar, Stat } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/metas")({ head: () => ({ meta: [
+export const Route = createFileRoute("/_authenticated/metas")({ head: () => ({ meta: [
   { title: "Minhas metas — Portal Natal Pneus" }, { name: "description", content: "Acompanhamento individual de metas e resultados publicados." },
   { property: "og:title", content: "Minhas metas — Portal Natal Pneus" }, { property: "og:description", content: "Resultados semanais individuais do colaborador." },
   { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },

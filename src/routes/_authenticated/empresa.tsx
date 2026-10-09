@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Boxes, BriefcaseBusiness, CircleHelp, Landmark, Megaphone, PackageSearch, UsersRound, Wrench, type LucideIcon } from "lucide-react";
 import { DemoNotice, PortalShell } from "@/components/portal-shell";
 
-export const Route = createFileRoute("/empresa")({ head: () => ({ meta: [
+export const Route = createFileRoute("/_authenticated/empresa")({ head: () => ({ meta: [
   { title: "Empresa — Portal Natal Pneus" }, { name: "description", content: "Conteúdos institucionais, setores, produtos, serviços e comunicados Natal Pneus." },
   { property: "og:title", content: "Empresa — Portal Natal Pneus" }, { property: "og:description", content: "Conheça os setores e acompanhe comunicados internos." },
   { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
