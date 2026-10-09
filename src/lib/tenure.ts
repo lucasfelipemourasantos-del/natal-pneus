@@ -31,7 +31,7 @@ export function completeYears(admission: string, today = new Date()) {
 /** Current badge, one star per complete year after it (reset on level change, max 4), and earned history. */
 export function tenureStatus(years: number) {
   const earned = TENURE_BADGES.filter((b) => b.years <= years);
-  const current = earned[earned.length - 1];
+  const current = earned[earned.length - 1] ?? TENURE_BADGES[0]!;
   const stars = current.years === 30 ? 0 : Math.min(4, years - current.years);
   const next = TENURE_BADGES.find((b) => b.years > years) ?? null;
   return { current, stars, earned, next };
