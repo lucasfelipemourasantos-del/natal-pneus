@@ -11,3 +11,7 @@
 - [x] Admin: todas as contas, upload de cursos, insígnias no histórico
 - [ ] Aviso por e-mail ao RH — bloqueado: configurar o domínio natalpneus.com.br para envio
 - [x] Insígnias de fidelidade automáticas pela data de admissão
+- [ ] Adendo: entrada única, cadastro por unidade/função e recuperação de senha
+- [ ] Adendo: quatro unidades, dois administradores confirmados, aprovação e perfis protegidos com auditoria
+- [ ] Adendo: vendas mensais, filtros e comparativos por nível e acesso individual
+- [ ] Adendo: testes de permissões e verificação dos fluxos
