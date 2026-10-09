@@ -74,16 +74,19 @@ function Admin() {
         nextStatus !== "suspended"
       )
         return;
-      const unit = String(f.get("unit"));
-      if (unit !== "NP1" && unit !== "NP2" && unit !== "NP3" && unit !== "NP4")
+      const rawUnit = String(f.get("unit"));
+      const unit = rawUnit === "ALL" ? null : rawUnit;
+      if (unit !== null && unit !== "NP1" && unit !== "NP2" && unit !== "NP3" && unit !== "NP4")
         throw new Error("Selecione uma unidade.");
+      if (unit === null && role !== "director" && role !== "general_manager")
+        throw new Error("Todas as lojas vale apenas para Diretoria ou Gestor Geral.");
       await review({
         data: {
           id: p.id,
           status: nextStatus,
           unit,
           job: String(f.get("job")),
-          sector: String(f.get("sector")) || null,
+          sector: unit === null ? null : String(f.get("sector")) || null,
           role,
           producer: f.get("producer") === "on",
         },
