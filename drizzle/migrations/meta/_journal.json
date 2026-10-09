@@ -71,6 +71,13 @@
       "when": 1791567764610,
       "tag": "0009_all_stores_review",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791570344935,
+      "tag": "0010_simple_signup_admin_by_approval",
+      "breakpoints": true
     }
   ]
 }
