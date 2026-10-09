@@ -180,8 +180,12 @@ function Admin() {
                   <h2 className="font-semibold">{p.full_name || "Sem nome"}</h2>
                   <p className="break-all text-sm text-muted-foreground">{p.email}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {labels[p.status]} · {p.unit_code ?? p.requested_unit_code ?? "Sem loja"} ·{" "}
-                    {p.job_role ?? p.requested_job_role ?? "Sem função"}
+                    {labels[p.status]} ·{" "}
+                    {p.unit_code ??
+                      (p.requested_all_stores
+                        ? "Todas as lojas"
+                        : (p.requested_unit_code ?? "Sem loja"))}{" "}
+                    · {p.job_role ?? p.requested_job_role ?? "Sem função"}
                   </p>
                 </div>
                 <Button variant="outline" onClick={() => setOpen(open === p.id ? null : p.id)}>
@@ -201,10 +205,16 @@ function Admin() {
                         <select
                           name="unit"
                           required
-                          defaultValue={p.unit_code ?? p.requested_unit_code ?? ""}
+                          defaultValue={
+                            p.unit_code ??
+                            (p.requested_all_stores ? "ALL" : (p.requested_unit_code ?? ""))
+                          }
                           className={fieldClass}
                         >
                           <option value="">Selecione</option>
+                          <option value="ALL">
+                            Todas as lojas · Diretoria ou Gestor Geral
+                          </option>
                           {catalog.units.map((u) => (
                             <option key={u.code}>{u.code}</option>
                           ))}
