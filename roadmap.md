@@ -1,5 +1,7 @@
 # Roadmap — Plataforma Natal Pneus
 
+- [x] RH no cadastro mostra NP1–NP4; ADM RH exibe abrangência global mesmo com unidade profissional. Cadastro e teste conferidos; acesso autenticado aguarda conta confirmada.
+
 - [x] Base visual e navegação do portal do colaborador
 - [x] Início com cursos, metas, comunicados e reconhecimento
 - [x] Páginas de cursos, metas, trajetória e empresa

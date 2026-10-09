@@ -17,6 +17,12 @@ describe("App routing", () => {
 });
 
 describe("Access rules", () => {
+  it("gives ADM RH all-store scope even when the professional profile has a store", async () => {
+    const { hasAllStoresAccess } = await import("@/lib/access");
+    const access = { isAdmin: true, canReadAll: false, profile: { unit_code: "NP1" } };
+    expect(hasAllStoresAccess(access)).toBe(true);
+    expect(hasAllStoresAccess({ isAdmin: false, canReadAll: false })).toBe(false);
+  });
   it("sends pending employees to the status page and admins to the admin area", async () => {
     const { homeFor } = await import("@/lib/access");
     const base = { userId: "u", profile: null } as const;

@@ -11,6 +11,11 @@ export type Access = {
   isProducer?: boolean;
 };
 
+/** Administrative and leadership scope overrides a professional unit assignment. */
+export function hasAllStoresAccess(access: Pick<Access, "isAdmin" | "canReadAll">): boolean {
+  return access.isAdmin || Boolean(access.canReadAll);
+}
+
 /** Reads the signed-in user's profile and admin role (validated by the auth server). */
 export async function loadAccess(): Promise<Access | null> {
   const { data } = await supabase.auth.getUser();
