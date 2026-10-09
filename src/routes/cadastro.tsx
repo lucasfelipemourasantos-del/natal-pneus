@@ -37,7 +37,7 @@ function Signup() {
     setBusy(true);
     const f = new FormData(e.currentTarget);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: signed, error } = await supabase.auth.signUp({
         email: String(f.get("email")).trim(),
         password: String(f.get("password")),
         options: {
@@ -50,6 +50,10 @@ function Signup() {
         },
       });
       if (error) throw new Error(authErrorMessage(error, "signup"));
+      if (signed.session) {
+        window.location.assign("/aguardando");
+        return;
+      }
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível solicitar o cadastro.");
@@ -65,8 +69,7 @@ function Signup() {
         {done ? (
           <div className="mt-6">
             <p role="status" className="text-success">
-              Cadastro enviado. Confirme seu e-mail pelo link recebido e entre para acompanhar seu
-              acesso.
+              Cadastro enviado. Entre com seu e-mail e senha para acompanhar a liberação pelo RH.
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/">Voltar para entrar</Link>
