@@ -14,11 +14,25 @@ export function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  async function resendConfirmation() {
+    setBusy(true);
+    setError("");
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: confirmationEmail,
+        options: { emailRedirectTo: window.location.origin + "/confirmar-email" } });
+      if (error) throw error;
+      setNotice("Se houver um cadastro aguardando confirmação, enviaremos um novo link para este e-mail.");
+    } catch {
+      setError("Não foi possível reenviar agora. Aguarde alguns minutos e tente novamente.");
+    } finally { setBusy(false); }
+  }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
     setNotice("");
+    setConfirmationEmail("");
     const f = new FormData(e.currentTarget);
     try {
       const email = String(f.get("email")).trim();
@@ -36,7 +50,10 @@ export function LoginScreen() {
         email,
         password: String(f.get("password")),
       });
-      if (error) throw new Error(authErrorMessage(error, "login"));
+      if (error) {
+        if (error.code === "email_not_confirmed") setConfirmationEmail(email);
+        throw new Error(authErrorMessage(error, "login"));
+      }
       const access = await loadAccess();
       if (!access) throw new Error("Não foi possível entrar.");
       await navigate({ to: homeFor(access), replace: true });
@@ -103,6 +120,7 @@ export function LoginScreen() {
               {notice}
             </p>
           )}
+          {confirmationEmail && <Button type="button" variant="outline" disabled={busy} onClick={resendConfirmation} className="w-full">Reenviar confirmação de e-mail</Button>}
           <Button disabled={busy} className="min-h-11 w-full shadow-none">
             {busy ? "Aguarde…" : recover ? "Enviar link" : "Entrar"}
           </Button>
