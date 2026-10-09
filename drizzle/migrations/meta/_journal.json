@@ -50,6 +50,13 @@
       "when": 1791562986964,
       "tag": "0006_scope_helpers_and_profile_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791563302577,
+      "tag": "0007_validate_revenue_producer_history",
+      "breakpoints": true
     }
   ]
 }
