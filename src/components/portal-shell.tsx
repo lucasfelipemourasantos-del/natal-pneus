@@ -35,7 +35,8 @@ export function PortalShell({
   eyebrow?: string;
   children: ReactNode;
 }) {
-  const { access } = useRouteContext({ from: "/_authenticated" });
+  const context = useRouteContext({ strict: false }) as { access?: import("@/lib/access").Access };
+  const access = context.access ?? { userId: "", profile: null, isAdmin: false };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const name = access.profile?.full_name || access.profile?.email || "Colaborador";
