@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Boxes, BriefcaseBusiness, CircleHelp, Landmark, Megaphone, PackageSearch, UsersRound, Wrench } from "lucide-react";
+import { ArrowRight, Boxes, BriefcaseBusiness, CircleHelp, Landmark, Megaphone, PackageSearch, UsersRound, Wrench, type LucideIcon } from "lucide-react";
 import { DemoNotice, PortalShell } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/empresa")({ head: () => ({ meta: [
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/empresa")({ head: () => ({ meta: [
   { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
 ] }), component: EmpresaPage });
 
-const sectors = [[UsersRound,'RH / Departamento Pessoal','Integração, políticas e orientação'],[BriefcaseBusiness,'Comercial / Vendas','Produtos, atendimento e materiais'],[Wrench,'Operações / Oficina','Serviços, segurança e qualidade'],[Boxes,'Estoque / Logística','Fluxos, materiais e movimentação'],[Landmark,'Financeiro','Orientações e atendimento interno'],[PackageSearch,'Marketing / Comunicação','Campanhas, identidade e comunicados']];
+const sectors: Array<[LucideIcon, string, string]> = [[UsersRound,'RH / Departamento Pessoal','Integração, políticas e orientação'],[BriefcaseBusiness,'Comercial / Vendas','Produtos, atendimento e materiais'],[Wrench,'Operações / Oficina','Serviços, segurança e qualidade'],[Boxes,'Estoque / Logística','Fluxos, materiais e movimentação'],[Landmark,'Financeiro','Orientações e atendimento interno'],[PackageSearch,'Marketing / Comunicação','Campanhas, identidade e comunicados']];
 function EmpresaPage() { return <PortalShell title="Empresa" eyebrow="Cultura Natal Pneus">
   <DemoNotice />
   <section className="rounded-xl border border-border bg-card p-6 shadow-card sm:p-8"><p className="text-xs font-bold uppercase text-primary">Você faz parte desta história</p><h2 className="mt-3 max-w-2xl text-2xl font-bold">Conheça a empresa, sua equipe e os setores</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Os textos oficiais de história, missão, visão e valores serão publicados após aprovação da Natal Pneus.</p><span className="mt-5 inline-flex rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold">Conteúdo institucional em preparação</span></section>
