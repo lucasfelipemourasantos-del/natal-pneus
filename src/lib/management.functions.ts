@@ -35,7 +35,7 @@ export const reviewAccess = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       status: z.enum(["pending", "approved", "suspended", "rejected"]),
-      unit: z.enum(["NP1", "NP2", "NP3", "NP4"]),
+      unit: z.enum(["NP1", "NP2", "NP3", "NP4"]).nullable(),
       job: z.string().min(1).max(100),
       sector: z.string().uuid().nullable(),
       role: z.enum(["employee", "director", "general_manager", "supervisor"]),
@@ -46,7 +46,7 @@ export const reviewAccess = createServerFn({ method: "POST" })
     const { error } = await context.supabase.rpc("review_employee", {
       _id: data.id,
       _status: data.status,
-      _unit: data.unit,
+      _unit: data.unit as unknown as string,
       _job: data.job,
       _sector: data.sector as unknown as string,
       _role: data.role,
