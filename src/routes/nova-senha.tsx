@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/lib/portal-data";
+import { authErrorMessage, resolveEmailLink } from "@/lib/auth-flow";
 export const Route = createFileRoute("/nova-senha")({
   head: () => ({
     meta: [
@@ -21,15 +22,19 @@ function Reset() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setReady(Boolean(data.session)));
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
-    });
-    return () => data.subscription.unsubscribe();
+    let active = true;
+    resolveEmailLink(true).then(() => {
+      if (active) setReady(true);
+    }).catch(() => {
+      if (active) setError("O link expirou ou já foi utilizado. Solicite um novo link de recuperação.");
+    }).finally(() => { if (active) setChecking(false); });
+    return () => { active = false; };
   }, []);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!ready || busy) return;
     setBusy(true);
     setError("");
     const f = new FormData(e.currentTarget);
@@ -38,13 +43,19 @@ function Reset() {
       setBusy(false);
       return;
     }
-    const { error } = await supabase.auth.updateUser({ password: String(f.get("password")) });
-    if (error) setError("Não foi possível redefinir a senha. Solicite um novo link.");
-    else {
-      setDone(true);
-      await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.updateUser({ password: String(f.get("password")) });
+      if (error) setError(authErrorMessage(error, "reset"));
+      else {
+        setDone(true);
+        setReady(false);
+        await supabase.auth.signOut();
+      }
+    } catch {
+      setError("Não foi possível conectar. Tente salvar novamente.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
   return (
     <main className="grid min-h-screen place-items-center bg-background px-5">
@@ -88,7 +99,7 @@ function Reset() {
           </form>
         ) : (
           <p className="mt-5 text-muted-foreground">
-            Abra o link de recuperação recebido por e-mail.
+            {checking ? "Verificando link…" : error || "Abra o link de recuperação recebido por e-mail."}
           </p>
         )}
         <Button asChild variant="link" className="mt-4 px-0">

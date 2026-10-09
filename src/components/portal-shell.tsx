@@ -44,7 +44,7 @@ export function PortalShell({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const name = access.profile?.full_name || access.profile?.email || "Colaborador";
-  const role = access.isAdmin ? "Administrador" : access.profile?.job_role || "Colaborador";
+  const role = access.isAdmin ? "ADM RH" : access.profile?.job_role || "Colaborador";
   const { data: catalog } = useQuery(catalogOptions);
   const store = catalog?.units.find(u => u.code === access.profile?.unit_code);
   const unit = store ? `Natal Pneus · ${store.code}` : (access.canReadAll ? "Todas as lojas" : "");
@@ -56,7 +56,7 @@ export function PortalShell({
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", search: { perfil: access.isAdmin ? "admin" : "funcionario" }, replace: true });
+    navigate({ to: "/", replace: true });
   }
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
