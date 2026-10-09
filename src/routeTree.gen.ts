@@ -26,7 +26,6 @@ import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
 import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
-import { Route as ApiPublicResetAccessRouteImport } from './routes/api/public/reset-access'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -114,11 +113,6 @@ const AuthenticatedUnidadesRoute = AuthenticatedUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicResetAccessRoute = ApiPublicResetAccessRouteImport.update({
-  id: '/api/public/reset-access',
-  path: '/api/public/reset-access',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -137,7 +131,6 @@ export interface FileRoutesByFullPath {
   '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
-  '/api/public/reset-access': typeof ApiPublicResetAccessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -156,7 +149,6 @@ export interface FileRoutesByTo {
   '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
-  '/api/public/reset-access': typeof ApiPublicResetAccessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,7 +169,6 @@ export interface FileRoutesById {
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
-  '/api/public/reset-access': typeof ApiPublicResetAccessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,7 +189,6 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/trajetoria'
     | '/unidades'
-    | '/api/public/reset-access'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,7 +207,6 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/trajetoria'
     | '/unidades'
-    | '/api/public/reset-access'
   id:
     | '__root__'
     | '/'
@@ -237,7 +226,6 @@ export interface FileRouteTypes {
     | '/_authenticated/resultados'
     | '/_authenticated/trajetoria'
     | '/_authenticated/unidades'
-    | '/api/public/reset-access'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,7 +236,6 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   ConfirmarEmailRoute: typeof ConfirmarEmailRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
-  ApiPublicResetAccessRoute: typeof ApiPublicResetAccessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,13 +359,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUnidadesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/reset-access': {
-      id: '/api/public/reset-access'
-      path: '/api/public/reset-access'
-      fullPath: '/api/public/reset-access'
-      preLoaderRoute: typeof ApiPublicResetAccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -419,7 +399,6 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   ConfirmarEmailRoute: ConfirmarEmailRoute,
   NovaSenhaRoute: NovaSenhaRoute,
-  ApiPublicResetAccessRoute: ApiPublicResetAccessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
