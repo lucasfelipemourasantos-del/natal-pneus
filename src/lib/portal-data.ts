@@ -5,7 +5,7 @@ export const catalogOptions = queryOptions({
   queryFn: async () => {
     const [u, j] = await Promise.all([
       supabase.from("units").select("*").order("code"),
-      supabase.from("job_functions").select("*").order("name"),
+      supabase.from("job_functions").select("*").order("sort_order").order("name"),
     ]);
     if (u.error) throw u.error;
     if (j.error) throw j.error;
