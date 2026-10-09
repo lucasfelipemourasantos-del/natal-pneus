@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AguardandoRouteImport } from './routes/aguardando'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
@@ -20,7 +22,9 @@ import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
+import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
+import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,6 +43,16 @@ const AguardandoRoute = AguardandoRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovaSenhaRoute = NovaSenhaRouteImport.update({
+  id: '/nova-senha',
+  path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -78,9 +92,19 @@ const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
   path: '/metas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedResultadosRoute = AuthenticatedResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTrajetoriaRoute = AuthenticatedTrajetoriaRouteImport.update({
   id: '/trajetoria',
   path: '/trajetoria',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUnidadesRoute = AuthenticatedUnidadesRouteImport.update({
+  id: '/unidades',
+  path: '/unidades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -88,6 +112,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
+  '/cadastro': typeof CadastroRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
@@ -95,12 +121,16 @@ export interface FileRoutesByFullPath {
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
+  '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
+  '/cadastro': typeof CadastroRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
@@ -108,7 +138,9 @@ export interface FileRoutesByTo {
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
+  '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +148,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/aguardando': typeof AguardandoRoute
   '/auth': typeof AuthRoute
+  '/cadastro': typeof CadastroRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
@@ -123,7 +157,9 @@ export interface FileRoutesById {
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
+  '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
+  '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +167,8 @@ export interface FileRouteTypes {
     | '/'
     | '/aguardando'
     | '/auth'
+    | '/cadastro'
+    | '/nova-senha'
     | '/admin'
     | '/admin-cursos'
     | '/admin-insignias'
@@ -138,12 +176,16 @@ export interface FileRouteTypes {
     | '/empresa'
     | '/inicio'
     | '/metas'
+    | '/resultados'
     | '/trajetoria'
+    | '/unidades'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/aguardando'
     | '/auth'
+    | '/cadastro'
+    | '/nova-senha'
     | '/admin'
     | '/admin-cursos'
     | '/admin-insignias'
@@ -151,13 +193,17 @@ export interface FileRouteTypes {
     | '/empresa'
     | '/inicio'
     | '/metas'
+    | '/resultados'
     | '/trajetoria'
+    | '/unidades'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/aguardando'
     | '/auth'
+    | '/cadastro'
+    | '/nova-senha'
     | '/_authenticated/admin'
     | '/_authenticated/admin-cursos'
     | '/_authenticated/admin-insignias'
@@ -165,7 +211,9 @@ export interface FileRouteTypes {
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
     | '/_authenticated/metas'
+    | '/_authenticated/resultados'
     | '/_authenticated/trajetoria'
+    | '/_authenticated/unidades'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,6 +221,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AguardandoRoute: typeof AguardandoRoute
   AuthRoute: typeof AuthRoute
+  CadastroRoute: typeof CadastroRoute
+  NovaSenhaRoute: typeof NovaSenhaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -203,6 +253,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nova-senha': {
+      id: '/nova-senha'
+      path: '/nova-senha'
+      fullPath: '/nova-senha'
+      preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -254,11 +318,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMetasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/resultados': {
+      id: '/_authenticated/resultados'
+      path: '/resultados'
+      fullPath: '/resultados'
+      preLoaderRoute: typeof AuthenticatedResultadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trajetoria': {
       id: '/_authenticated/trajetoria'
       path: '/trajetoria'
       fullPath: '/trajetoria'
       preLoaderRoute: typeof AuthenticatedTrajetoriaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/unidades': {
+      id: '/_authenticated/unidades'
+      path: '/unidades'
+      fullPath: '/unidades'
+      preLoaderRoute: typeof AuthenticatedUnidadesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -272,7 +350,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
+  AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
   AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
+  AuthenticatedUnidadesRoute: typeof AuthenticatedUnidadesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -283,7 +363,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
+  AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
   AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
+  AuthenticatedUnidadesRoute: AuthenticatedUnidadesRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -294,6 +376,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AguardandoRoute: AguardandoRoute,
   AuthRoute: AuthRoute,
+  CadastroRoute: CadastroRoute,
+  NovaSenhaRoute: NovaSenhaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

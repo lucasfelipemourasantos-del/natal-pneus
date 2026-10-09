@@ -23,6 +23,7 @@ describe("Access rules", () => {
     expect(homeFor({ ...base, isAdmin: true })).toBe("/admin");
     expect(homeFor({ ...base, isAdmin: false, profile: { status: "pending" } as never })).toBe("/aguardando");
     expect(homeFor({ ...base, isAdmin: false, profile: { status: "suspended" } as never })).toBe("/aguardando");
+    expect(homeFor({ ...base, isAdmin: false, profile: { status: "rejected" } as never })).toBe("/aguardando");
     expect(homeFor({ ...base, isAdmin: false, profile: { status: "approved" } as never })).toBe("/inicio");
   });
 });

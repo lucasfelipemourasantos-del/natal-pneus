@@ -29,6 +29,34 @@
       "when": 1791560841637,
       "tag": "0003_rh_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791562843402,
+      "tag": "0004_extend_access_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791562889364,
+      "tag": "0005_units_approval_revenue_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791562986964,
+      "tag": "0006_scope_helpers_and_profile_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791563302577,
+      "tag": "0007_validate_revenue_producer_history",
+      "breakpoints": true
     }
   ]
 }

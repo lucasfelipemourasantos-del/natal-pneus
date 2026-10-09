@@ -30,13 +30,14 @@ function Waiting() {
   const navigate = useNavigate();
   const p = access.profile;
   const suspended = p?.status === "suspended";
+  const rejected = p?.status === "rejected";
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
         <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[150px]" />
-        <h1 className="mt-6 text-xl font-bold">{suspended ? "Acesso suspenso" : "Cadastro em análise"}</h1>
+        <h1 className="mt-6 text-xl font-bold">{suspended ? "Acesso suspenso" : rejected ? "Cadastro não aprovado" : "Pendente de aprovação"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {suspended
+          {rejected ? "Seu pedido não foi aprovado. Entre em contato com o RH." : suspended
             ? "Seu acesso foi suspenso. Procure o administrador da sua unidade."
             : "O administrador recebeu seu pedido e vai liberar seu acesso em breve."}
         </p>

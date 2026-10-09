@@ -5,6 +5,8 @@ import { useState, type FormEvent } from "react";
 import { PortalShell } from "@/components/portal-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile } from "@/lib/files";
+import { catalogOptions, fieldClass } from "@/lib/portal-data";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin-cursos")({
   beforeLoad: ({ context }) => {
@@ -29,6 +31,7 @@ function AdminCursos() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: catalog } = useQuery(catalogOptions);
   const { data: courses = [] } = useQuery({
     queryKey: ["courses"],
     queryFn: async () => (await supabase.from("courses").select("*").order("created_at", { ascending: false })).data ?? [],
@@ -48,6 +51,8 @@ function AdminCursos() {
         description: String(f.get("description") ?? ""),
         area: String(f.get("area") ?? ""),
         level: String(f.get("level") ?? ""),
+        target_job_role: String(f.get("target_job_role") ?? "") || null,
+        unit_code: String(f.get("unit_code") ?? "") || null,
         video_url: String(f.get("video_url") ?? "") || null,
         file_path,
         file_name: file && file.size ? file.name : null,
@@ -81,9 +86,11 @@ function AdminCursos() {
             <label className="block text-sm font-medium">Nível<input name="level" placeholder="Iniciante" className={input} /></label>
           </div>
           <label className="block text-sm font-medium">Material (PDF, vídeo, apresentação — até 50 MB)<input name="file" type="file" className={`${input} py-2`} /></label>
+          <label className="block text-sm font-medium">Função destinatária<select name="target_job_role" className={fieldClass}><option value="">Todas as funções</option>{catalog?.jobs.map(j=><option key={j.id}>{j.name}</option>)}</select></label>
+          <label className="block text-sm font-medium">Unidade destinatária<select name="unit_code" className={fieldClass}><option value="">Todas as lojas</option>{catalog?.units.map(u=><option key={u.code}>{u.code}</option>)}</select></label>
           <label className="block text-sm font-medium">Link de vídeo (opcional)<input name="video_url" type="url" placeholder="https://" className={input} /></label>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <button disabled={busy} className="min-h-11 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-60">{busy ? "Enviando…" : "Publicar curso"}</button>
+          <Button disabled={busy} className="min-h-11 w-full">{busy ? "Enviando…" : "Publicar curso"}</Button>
         </form>
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Cursos publicados ({courses.length})</h2>
@@ -95,7 +102,7 @@ function AdminCursos() {
                 <h3 className="font-semibold">{c.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{c.file_name ?? "Sem arquivo"}{c.video_url ? " · com vídeo" : ""}</p>
               </div>
-              <button onClick={() => remove(c.id, c.file_path)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold">Excluir</button>
+              <Button variant="outline" size="sm" onClick={() => remove(c.id, c.file_path)}>Excluir</Button>
             </article>
           ))}
         </section>
