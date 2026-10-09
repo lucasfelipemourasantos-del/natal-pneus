@@ -181,7 +181,7 @@ function Admin() {
                   <p className="break-all text-sm text-muted-foreground">{p.email}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {labels[p.status]} ·{" "}
-                    {p.unit_code ??
+                     {admin ? "Todas as lojas" : p.unit_code ??
                       (p.requested_all_stores
                         ? "Todas as lojas"
                         : (p.requested_unit_code ?? "Sem loja"))}{" "}

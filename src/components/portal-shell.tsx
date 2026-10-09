@@ -46,8 +46,8 @@ export function PortalShell({
   const name = access.profile?.full_name || access.profile?.email || "Colaborador";
   const role = access.isAdmin ? "ADM RH" : access.profile?.job_role || "Colaborador";
   const { data: catalog } = useQuery(catalogOptions);
-  const store = catalog?.units.find(u => u.code === access.profile?.unit_code);
-  const unit = store ? `Natal Pneus · ${store.code}` : (access.canReadAll ? "Todas as lojas" : "");
+   const store = access.isAdmin || access.canReadAll ? undefined : catalog?.units.find(u => u.code === access.profile?.unit_code);
+   const unit = access.isAdmin || access.canReadAll ? "Todas as lojas" : store ? `Natal Pneus · ${store.code}` : "";
   const links = access.isAdmin
     ? [...navigation, { to: "/admin" as const, label: "Contas", icon: ShieldCheck }, { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen }, { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award }]
     : access.canReadAll ? [...navigation, { to: "/admin" as const, label: "Colaboradores", icon: ShieldCheck }] : navigation;
