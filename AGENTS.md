@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Keep shared portal navigation and employee presentation in `PortalShell` so every feature route stays visually consistent.
+- Resolve portal-wide store scope through access roles before professional unit assignments so administrative identity is never presented as store-limited.
 - Employee portal pages live under the _authenticated layout, which redirects unapproved users to /aguardando; admin rights come only from the user_roles table (never profile fields) to prevent privilege escalation.
 - Public entry routes share LoginScreen; store/legal catalogs are read from Cloud so signup and internal identity stay synchronized.
 - Management and revenue reads use authenticated server functions with user-scoped RLS; review_employee performs atomic permission assignment and database triggers audit administrative mutations.
