@@ -9,7 +9,7 @@ type Perfil = "funcionario" | "admin";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>): { perfil: Perfil } => ({
-    perfil: s.perfil === "admin" ? "admin" : "funcionario",
+    perfil: s["perfil"] === "admin" ? "admin" : "funcionario",
   }),
   head: () => ({
     meta: [

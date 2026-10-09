@@ -8,7 +8,7 @@ export const Route = createFileRoute("/aguardando")({
   ssr: false,
   beforeLoad: async () => {
     const access = await loadAccess();
-    if (!access) throw redirect({ to: "/auth" });
+    if (!access) throw redirect({ to: "/auth", search: { perfil: "funcionario" } });
     if (homeFor(access) !== "/aguardando") throw redirect({ to: homeFor(access) });
     return { access };
   },
