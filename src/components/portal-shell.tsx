@@ -17,6 +17,10 @@ import type { ReactNode } from "react";
 import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { initials } from "@/lib/access";
+import { useQuery } from "@tanstack/react-query";
+import { catalogOptions } from "@/lib/portal-data";
+import { Button } from "@/components/ui/button";
+import { ChartNoAxesCombined } from "lucide-react";
 
 const navigation = [
   { to: "/inicio" as const, label: "Início", icon: Home },
@@ -41,10 +45,13 @@ export function PortalShell({
   const queryClient = useQueryClient();
   const name = access.profile?.full_name || access.profile?.email || "Colaborador";
   const role = access.isAdmin ? "Administrador" : access.profile?.job_role || "Colaborador";
-  const unit = access.profile?.unit || (access.isAdmin ? "Administração" : "");
+  const { data: catalog } = useQuery(catalogOptions);
+  const store = catalog?.units.find(u => u.code === access.profile?.unit_code);
+  const unit = store ? `Natal Pneus · ${store.code}` : (access.canReadAll ? "Todas as lojas" : "");
   const links = access.isAdmin
     ? [...navigation, { to: "/admin" as const, label: "Contas", icon: ShieldCheck }, { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen }, { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award }]
-    : navigation;
+    : access.canReadAll ? [...navigation, { to: "/admin" as const, label: "Colaboradores", icon: ShieldCheck }] : navigation;
+  const visibleLinks = (access.canReadAll || access.isProducer) ? [...links, { to: "/resultados" as const, label: access.canReadAll ? "Vendas e resultados" : "Meus resultados", icon: ChartNoAxesCombined }, ...(access.canReadAll ? [{ to: "/unidades" as const, label: "Lojas e funções", icon: Building2 }] : [])] : links;
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -58,7 +65,7 @@ export function PortalShell({
           <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
         <nav className="mt-10 space-y-1" aria-label="Navegação principal">
-          {links.map(({ to, label, icon: Icon }) => (
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -78,7 +85,7 @@ export function PortalShell({
               <p className="truncate text-sm font-semibold">{name}</p>
               <p className="truncate text-xs text-sidebar-muted">{role}</p>
             </div>
-            <button type="button" onClick={signOut} aria-label="Sair" className="grid size-9 place-items-center rounded-lg text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"><LogOut size={17} /></button>
+            <Button variant="ghost" size="icon" type="button" onClick={signOut} aria-label="Sair" title="Sair"><LogOut size={17} /></Button>
           </div>
         </div>
       </aside>
@@ -96,14 +103,14 @@ export function PortalShell({
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-foreground">{name}</p>
-                <p className="text-xs text-muted-foreground">{unit}</p>
+               <p className="text-xs text-muted-foreground">{unit}</p>
               </div>
               <span className="grid size-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{initials(name)}</span>
-              <button type="button" onClick={signOut} aria-label="Sair" className="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:hidden"><LogOut size={18} /></button>
+              <Button variant="ghost" size="icon" type="button" onClick={signOut} aria-label="Sair" title="Sair" className="lg:hidden"><LogOut size={18} /></Button>
             </div>
           </div>
           <nav className="flex overflow-x-auto border-t border-border px-2 lg:hidden" aria-label="Navegação principal">
-            {links.map(({ to, label, icon: Icon }) => (
+            {visibleLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
@@ -123,6 +130,7 @@ export function PortalShell({
             <h1 className="mt-1 text-2xl font-bold text-foreground">{title}</h1>
           </div>
           {children}
+          {store && <footer className="mt-10 border-t border-border pt-4 text-xs leading-5 text-muted-foreground"><p className="font-semibold">Natal Pneus <span className="font-normal">· {store.code}</span></p><p>{store.legal_name} · CNPJ {store.cnpj}</p><p>{store.address}</p></footer>}
         </main>
       </div>
     </div>

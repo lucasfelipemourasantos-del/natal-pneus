@@ -7,6 +7,8 @@ export type Access = {
   userId: string;
   profile: Profile | null;
   isAdmin: boolean;
+  canReadAll?: boolean;
+  isProducer?: boolean;
 };
 
 /** Reads the signed-in user's profile and admin role (validated by the auth server). */
@@ -14,11 +16,13 @@ export async function loadAccess(): Promise<Access | null> {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   if (!user) return null;
-  const [{ data: profile }, { data: isAdmin }] = await Promise.all([
+  const [{ data: profile }, { data: isAdmin }, { data: canReadAll }, { data: isProducer }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+    supabase.rpc("can_read_all"),
+    supabase.rpc("has_role", { _user_id: user.id, _role: "producer" }),
   ]);
-  return { userId: user.id, profile: profile ?? null, isAdmin: Boolean(isAdmin) };
+  return { userId: user.id, profile: profile ?? null, isAdmin: Boolean(isAdmin), canReadAll: Boolean(canReadAll), isProducer: Boolean(isProducer) };
 }
 
 /** Where a signed-in user belongs: pending/suspended employees only see their status page. */
