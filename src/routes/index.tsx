@@ -19,7 +19,7 @@ function Index() {
   return (
     <PortalShell title="Olá, André. Bom dia!" eyebrow="Portal do colaborador">
       <DemoNotice />
-      <section className="relative overflow-hidden rounded-xl bg-foreground p-6 text-card sm:p-8">
+      <section className="relative overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8">
         <div className="relative z-10 max-w-2xl">
           <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground"><Megaphone size={14} /> COMUNICADO</span>
           <h2 className="mt-5 text-2xl font-bold sm:text-3xl">Semana da Segurança começa na próxima segunda</h2>
@@ -41,7 +41,7 @@ function Index() {
           <SectionHeading title="Continue aprendendo" action="Ver todos" to="/cursos" />
           <div className="rounded-xl border border-border bg-card p-5 shadow-card sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-              <div className="grid aspect-[4/3] w-full place-items-center rounded-lg bg-foreground text-primary sm:w-44"><BookOpen size={44} /></div>
+              <div className="grid aspect-[4/3] w-full place-items-center rounded-lg bg-sidebar text-primary sm:w-44"><BookOpen size={44} /></div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold text-accent-foreground">Iniciante</span><span className="text-xs text-muted-foreground">Produtos e serviços</span></div>
                 <h3 className="mt-3 text-lg font-semibold">Fundamentos de pneus e serviços</h3>
