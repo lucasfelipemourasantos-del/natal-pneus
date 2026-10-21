@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
+import logo from "@/assets/natal-pneus-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAllStoresAccess, initials } from "@/lib/access";
 import { useQuery } from "@tanstack/react-query";
@@ -63,7 +63,7 @@ export function PortalShell({
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
         <Link to="/inicio" aria-label="Natal Pneus — início" className="block px-2 py-2">
-          <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[168px]" />
+          <img src={logo} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
         <nav className="mt-10 space-y-1" aria-label="Navegação principal">
           {visibleLinks.map(({ to, label, icon: Icon }) => (
@@ -95,7 +95,7 @@ export function PortalShell({
         <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:static">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-10">
             <Link to="/inicio" className="lg:hidden" aria-label="Natal Pneus — início">
-              <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[142px]" />
+              <img src={logo} alt="Natal Pneus" className="h-auto w-[142px]" />
             </Link>
             <div className="hidden lg:block">
               {eyebrow && <p className="text-xs font-bold uppercase text-primary">{eyebrow}</p>}

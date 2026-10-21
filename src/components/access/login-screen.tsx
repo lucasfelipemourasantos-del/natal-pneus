@@ -2,7 +2,7 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
+import logo from "@/assets/natal-pneus-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { homeFor, loadAccess } from "@/lib/access";
 import { fieldClass } from "@/lib/portal-data";
@@ -70,7 +70,7 @@ export function LoginScreen() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--foreground)/0.06),transparent_60%)]"
       />
       <div className="relative w-full max-w-[380px]">
-        <img src={logoAsset.url} alt="Natal Pneus" className="mx-auto h-auto w-[200px] object-contain" />
+        <img src={logo} alt="Natal Pneus" className="mx-auto h-auto w-[200px] object-contain" />
         {recover && (
           <p className="mt-8 text-center text-sm text-muted-foreground">Recuperar senha</p>
         )}

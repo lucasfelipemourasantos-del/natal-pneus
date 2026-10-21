@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 
-import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
+import logo from "@/assets/natal-pneus-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { homeFor, loadAccess } from "@/lib/access";
 
@@ -34,7 +34,7 @@ function Waiting() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
-        <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[150px]" />
+        <img src={logo} alt="Natal Pneus" className="h-auto w-[150px]" />
         <h1 className="mt-6 text-xl font-bold">{suspended ? "Acesso suspenso" : rejected ? "Cadastro não aprovado" : "Pendente de aprovação"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {rejected ? "Seu pedido não foi aprovado. Entre em contato com o RH." : suspended

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import logoAsset from "@/assets/natal-pneus-logo.png.asset.json";
+import logo from "@/assets/natal-pneus-logo.png";
 import { catalogOptions, fieldClass } from "@/lib/portal-data";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage } from "@/lib/auth-flow";
@@ -64,7 +64,7 @@ function Signup() {
   return (
     <main className="min-h-screen bg-background px-5 py-10 text-foreground">
       <div className="mx-auto w-full max-w-md">
-        <img src={logoAsset.url} alt="Natal Pneus" className="h-auto w-[175px]" />
+        <img src={logo} alt="Natal Pneus" className="h-auto w-[175px]" />
         <h1 className="mt-8 text-2xl font-semibold">Criar cadastro</h1>
         {done ? (
           <div className="mt-6">
