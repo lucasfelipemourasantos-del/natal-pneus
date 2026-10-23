@@ -64,6 +64,10 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning-soft: var(--warning-soft);
+  --color-sales-tires: var(--sales-tires);
+  --color-sales-services: var(--sales-services);
+  --color-sales-parts: var(--sales-parts);
+  --color-sales-oils: var(--sales-oils);
   --shadow-card: var(--shadow-card);
 }
 
@@ -105,6 +109,10 @@
   --success: oklch(0.59 0.15 151);
   --success-soft: oklch(0.95 0.04 151);
   --warning-soft: oklch(0.97 0.13 102.2);
+  --sales-tires: oklch(0.577 0.236 28.7);
+  --sales-services: oklch(0.47 0.085 222);
+  --sales-parts: oklch(0.82 0.17 95);
+  --sales-oils: oklch(0.74 0.015 253.9);
   --shadow-card: 0 1px 2px oklch(0.182 0.011 253.9 / 5%), 0 8px 22px oklch(0.182 0.011 253.9 / 4%);
 }
 
@@ -145,6 +153,10 @@
   --success: oklch(0.72 0.17 151);
   --success-soft: oklch(0.24 0.05 151);
   --warning-soft: oklch(0.29 0.065 102.2);
+  --sales-tires: oklch(0.577 0.236 28.7);
+  --sales-services: oklch(0.64 0.09 222);
+  --sales-parts: oklch(0.82 0.17 95);
+  --sales-oils: oklch(0.48 0.012 253.9);
   --shadow-card: 0 1px 2px oklch(0 0 0 / 24%), 0 12px 30px oklch(0 0 0 / 20%);
 }
 

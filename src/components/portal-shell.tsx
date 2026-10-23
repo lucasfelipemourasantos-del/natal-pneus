@@ -5,30 +5,73 @@ import {
   BookOpen,
   Building2,
   ChevronRight,
+  FileUp,
   Gauge,
   Home,
   ShieldCheck,
   LogOut,
   Target,
   UserRound,
+  Wallet,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import logo from "@/assets/natal-pneus-logo.png";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAllStoresAccess, initials } from "@/lib/access";
+import { canSeeCommissions, hasAllStoresAccess, initials, type Access } from "@/lib/access";
 import { useQuery } from "@tanstack/react-query";
 import { catalogOptions } from "@/lib/portal-data";
 import { Button } from "@/components/ui/button";
 import { ChartNoAxesCombined } from "lucide-react";
 
-const navigation = [
-  { to: "/inicio" as const, label: "Início", icon: Home },
-  { to: "/cursos" as const, label: "Meus cursos", icon: BookOpen },
-  { to: "/metas" as const, label: "Minhas metas", icon: Target },
-  { to: "/trajetoria" as const, label: "Minha trajetória", icon: Award },
-  { to: "/empresa" as const, label: "Empresa", icon: Building2 },
-];
+type NavLink = {
+  to:
+    | "/inicio"
+    | "/cursos"
+    | "/metas"
+    | "/comissoes"
+    | "/trajetoria"
+    | "/empresa"
+    | "/resultados"
+    | "/unidades"
+    | "/admin"
+    | "/admin-cursos"
+    | "/admin-insignias"
+    | "/admin-comissoes";
+  label: string;
+  icon: typeof Home;
+};
+
+/** "Meu espaço" is personal; "Gestão" holds leadership and ADM RH tools. */
+function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" | "sellerCode">) {
+  const personal: NavLink[] = [
+    { to: "/inicio", label: "Início", icon: Home },
+    { to: "/cursos", label: "Meus cursos", icon: BookOpen },
+    { to: "/metas", label: "Minhas metas", icon: Target },
+    ...(canSeeCommissions(access) ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }] : []),
+    ...(access.isProducer && !access.canReadAll ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }] : []),
+    { to: "/trajetoria", label: "Minha trajetória", icon: Award },
+    { to: "/empresa", label: "Empresa", icon: Building2 },
+  ];
+  const management: NavLink[] = access.canReadAll
+    ? [
+        { to: "/resultados", label: "Vendas e resultados", icon: ChartNoAxesCombined },
+        { to: "/unidades", label: "Lojas e funções", icon: Building2 },
+        { to: "/admin", label: access.isAdmin ? "Contas" : "Colaboradores", icon: ShieldCheck },
+        ...(access.isAdmin
+          ? [
+              { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
+              { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
+              { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },
+            ]
+          : []),
+      ]
+    : [];
+  return [
+    { label: "Meu espaço", links: personal },
+    ...(management.length ? [{ label: "Gestão", links: management }] : []),
+  ];
+}
 
 export function PortalShell({
   title,
@@ -39,7 +82,7 @@ export function PortalShell({
   eyebrow?: string;
   children: ReactNode;
 }) {
-  const context = useRouteContext({ strict: false }) as { access?: import("@/lib/access").Access };
+  const context = useRouteContext({ strict: false }) as { access?: Access };
   const access = context.access ?? { userId: "", profile: null, isAdmin: false };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -49,10 +92,8 @@ export function PortalShell({
    const allStores = hasAllStoresAccess(access);
    const store = allStores ? undefined : catalog?.units.find(u => u.code === access.profile?.unit_code);
    const unit = allStores ? "Todas as lojas" : store ? `Natal Pneus · ${store.code}` : "";
-  const links = access.isAdmin
-    ? [...navigation, { to: "/admin" as const, label: "Contas", icon: ShieldCheck }, { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen }, { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award }]
-    : access.canReadAll ? [...navigation, { to: "/admin" as const, label: "Colaboradores", icon: ShieldCheck }] : navigation;
-  const visibleLinks = (access.canReadAll || access.isProducer) ? [...links, { to: "/resultados" as const, label: access.canReadAll ? "Vendas e resultados" : "Meus resultados", icon: ChartNoAxesCombined }, ...(access.canReadAll ? [{ to: "/unidades" as const, label: "Lojas e funções", icon: Building2 }] : [])] : links;
+  const groups = navGroups(access);
+  const visibleLinks = groups.flatMap((g) => g.links);
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -65,18 +106,23 @@ export function PortalShell({
         <Link to="/inicio" aria-label="Natal Pneus — início" className="block px-2 py-2">
           <img src={logo} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
-        <nav className="mt-10 space-y-1" aria-label="Navegação principal">
-          {visibleLinks.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              activeOptions={{ exact: true }}
-              className="group flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              activeProps={{ className: "border-primary bg-sidebar-accent text-sidebar-foreground" }}
-            >
-              <Icon size={19} aria-hidden="true" />
-              {label}
-            </Link>
+        <nav className="mt-10 space-y-6" aria-label="Navegação principal">
+          {groups.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70">{group.label}</p>
+              {group.links.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  activeOptions={{ exact: true }}
+                  className="group flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  activeProps={{ className: "border-primary bg-sidebar-accent text-sidebar-foreground" }}
+                >
+                  <Icon size={19} aria-hidden="true" />
+                  {label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="mt-auto border-t border-sidebar-border pt-4">

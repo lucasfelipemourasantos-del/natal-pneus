@@ -14,6 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      commission_report_groups: {
+        Row: {
+          commission_cents: number
+          group_name: string
+          id: string
+          position: number
+          rate_bp: number
+          report_id: string
+          sold_cents: number
+        }
+        Insert: {
+          commission_cents: number
+          group_name: string
+          id?: string
+          position: number
+          rate_bp: number
+          report_id: string
+          sold_cents: number
+        }
+        Update: {
+          commission_cents?: number
+          group_name?: string
+          id?: string
+          position?: number
+          rate_bp?: number
+          report_id?: string
+          sold_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_report_groups_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_report_items: {
+        Row: {
+          commission_cents: number
+          description: string
+          id: string
+          position: number
+          product_code: string
+          quantity: number
+          rate_bp: number
+          report_id: string
+          rule: string | null
+          sale_number: string
+          sold_at: string | null
+          total_cents: number
+          unit_discount_cents: number | null
+          unit_price_cents: number | null
+          unit_surcharge_cents: number | null
+        }
+        Insert: {
+          commission_cents: number
+          description: string
+          id?: string
+          position: number
+          product_code: string
+          quantity: number
+          rate_bp: number
+          report_id: string
+          rule?: string | null
+          sale_number: string
+          sold_at?: string | null
+          total_cents: number
+          unit_discount_cents?: number | null
+          unit_price_cents?: number | null
+          unit_surcharge_cents?: number | null
+        }
+        Update: {
+          commission_cents?: number
+          description?: string
+          id?: string
+          position?: number
+          product_code?: string
+          quantity?: number
+          rate_bp?: number
+          report_id?: string
+          rule?: string | null
+          sale_number?: string
+          sold_at?: string | null
+          total_cents?: number
+          unit_discount_cents?: number | null
+          unit_price_cents?: number | null
+          unit_surcharge_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_report_items_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_reports: {
+        Row: {
+          allowance_cents: number
+          competence: string
+          content_hash: string | null
+          file_name: string | null
+          id: string
+          imported_at: string
+          imported_by: string | null
+          kind: string
+          period_end: string
+          period_start: string
+          seller_code: number
+          source: string
+          total_commission_cents: number
+          total_sold_cents: number
+          unit_code: string
+        }
+        Insert: {
+          allowance_cents?: number
+          competence: string
+          content_hash?: string | null
+          file_name?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          kind: string
+          period_end: string
+          period_start: string
+          seller_code: number
+          source?: string
+          total_commission_cents: number
+          total_sold_cents: number
+          unit_code: string
+        }
+        Update: {
+          allowance_cents?: number
+          competence?: string
+          content_hash?: string | null
+          file_name?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          kind?: string
+          period_end?: string
+          period_start?: string
+          seller_code?: number
+          source?: string
+          total_commission_cents?: number
+          total_sold_cents?: number
+          unit_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_reports_seller_code_fkey"
+            columns: ["seller_code"]
+            isOneToOne: false
+            referencedRelation: "decision_sellers"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "commission_reports_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      decision_sync_status: {
+        Row: {
+          scope: string
+          synced_at: string
+        }
+        Insert: {
+          scope: string
+          synced_at?: string
+        }
+        Update: {
+          scope?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      decision_sellers: {
+        Row: {
+          code: number
+          created_at: string
+          ignored: boolean
+          min_average: boolean
+          name: string
+          parts_goal: boolean
+          profile_id: string | null
+        }
+        Insert: {
+          code: number
+          created_at?: string
+          ignored?: boolean
+          min_average?: boolean
+          name: string
+          parts_goal?: boolean
+          profile_id?: string | null
+        }
+        Update: {
+          code?: number
+          created_at?: string
+          ignored?: boolean
+          min_average?: boolean
+          name?: string
+          parts_goal?: boolean
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_sellers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_audit: {
         Row: {
           action: string
@@ -404,6 +626,30 @@ export type Database = {
     }
     Functions: {
       can_read_all: { Args: never; Returns: boolean }
+      commission_os_summary: {
+        Args: { _competence: string }
+        Returns: {
+          os_count: number
+          report_id: string
+          seller_code: number
+          unit_code: string
+        }[]
+      }
+      import_commission_report: { Args: { _report: Json }; Returns: string }
+      parts_goal_reference_base: {
+        Args: { _competence: string }
+        Returns: {
+          base_cents: number
+          dropped_month: string | null
+          months: number
+          ref_code: number
+          seller_code: number
+        }[]
+      }
+      replace_api_commissions: {
+        Args: { _competence: string; _reports: Json; _unit: string }
+        Returns: number
+      }
       current_unit: { Args: never; Returns: string }
       has_role: {
         Args: {

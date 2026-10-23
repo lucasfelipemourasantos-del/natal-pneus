@@ -17,8 +17,10 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authenticated/admin-comissoes'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
+import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -66,6 +68,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminComissoesRoute =
+  AuthenticatedAdminComissoesRouteImport.update({
+    id: '/admin-comissoes',
+    path: '/admin-comissoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminCursosRoute =
   AuthenticatedAdminCursosRouteImport.update({
     id: '/admin-cursos',
@@ -78,6 +86,11 @@ const AuthenticatedAdminInsigniasRoute =
     path: '/admin-insignias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
+  id: '/comissoes',
+  path: '/comissoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
   id: '/cursos',
   path: '/cursos',
@@ -122,8 +135,10 @@ export interface FileRoutesByFullPath {
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
+  '/comissoes': typeof AuthenticatedComissoesRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -140,8 +155,10 @@ export interface FileRoutesByTo {
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
+  '/comissoes': typeof AuthenticatedComissoesRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -160,8 +177,10 @@ export interface FileRoutesById {
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
+  '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/cursos': typeof AuthenticatedCursosRoute
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
@@ -180,8 +199,10 @@ export interface FileRouteTypes {
     | '/confirmar-email'
     | '/nova-senha'
     | '/admin'
+    | '/admin-comissoes'
     | '/admin-cursos'
     | '/admin-insignias'
+    | '/comissoes'
     | '/cursos'
     | '/empresa'
     | '/inicio'
@@ -198,8 +219,10 @@ export interface FileRouteTypes {
     | '/confirmar-email'
     | '/nova-senha'
     | '/admin'
+    | '/admin-comissoes'
     | '/admin-cursos'
     | '/admin-insignias'
+    | '/comissoes'
     | '/cursos'
     | '/empresa'
     | '/inicio'
@@ -217,8 +240,10 @@ export interface FileRouteTypes {
     | '/confirmar-email'
     | '/nova-senha'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-comissoes'
     | '/_authenticated/admin-cursos'
     | '/_authenticated/admin-insignias'
+    | '/_authenticated/comissoes'
     | '/_authenticated/cursos'
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
@@ -296,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-comissoes': {
+      id: '/_authenticated/admin-comissoes'
+      path: '/admin-comissoes'
+      fullPath: '/admin-comissoes'
+      preLoaderRoute: typeof AuthenticatedAdminComissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-cursos': {
       id: '/_authenticated/admin-cursos'
       path: '/admin-cursos'
@@ -308,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/admin-insignias'
       fullPath: '/admin-insignias'
       preLoaderRoute: typeof AuthenticatedAdminInsigniasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comissoes': {
+      id: '/_authenticated/comissoes'
+      path: '/comissoes'
+      fullPath: '/comissoes'
+      preLoaderRoute: typeof AuthenticatedComissoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cursos': {
@@ -364,8 +403,10 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminComissoesRoute: typeof AuthenticatedAdminComissoesRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
   AuthenticatedAdminInsigniasRoute: typeof AuthenticatedAdminInsigniasRoute
+  AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
@@ -377,8 +418,10 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminComissoesRoute: AuthenticatedAdminComissoesRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
   AuthenticatedAdminInsigniasRoute: AuthenticatedAdminInsigniasRoute,
+  AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedCursosRoute: AuthenticatedCursosRoute,
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,

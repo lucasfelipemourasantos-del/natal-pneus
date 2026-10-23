@@ -9,7 +9,14 @@ export type Access = {
   isAdmin: boolean;
   canReadAll?: boolean;
   isProducer?: boolean;
+  /** Decision seller code linked to this account, when there is one. */
+  sellerCode?: number | null;
 };
+
+/** Commission screens: leadership sees every seller, a linked seller sees only himself. */
+export function canSeeCommissions(access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode">): boolean {
+  return hasAllStoresAccess(access) || Boolean(access.sellerCode);
+}
 
 /** Administrative and leadership scope overrides a professional unit assignment. */
 export function hasAllStoresAccess(access: Pick<Access, "isAdmin" | "canReadAll">): boolean {
@@ -21,13 +28,14 @@ export async function loadAccess(): Promise<Access | null> {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   if (!user) return null;
-  const [{ data: profile }, { data: isAdmin }, { data: canReadAll }, { data: isProducer }] = await Promise.all([
+  const [{ data: profile }, { data: isAdmin }, { data: canReadAll }, { data: isProducer }, { data: seller }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
     supabase.rpc("can_read_all"),
     supabase.rpc("has_role", { _user_id: user.id, _role: "producer" }),
+    supabase.from("decision_sellers").select("code").eq("profile_id", user.id).maybeSingle(),
   ]);
-  return { userId: user.id, profile: profile ?? null, isAdmin: Boolean(isAdmin), canReadAll: Boolean(canReadAll), isProducer: Boolean(isProducer) };
+  return { userId: user.id, profile: profile ?? null, isAdmin: Boolean(isAdmin), canReadAll: Boolean(canReadAll), isProducer: Boolean(isProducer), sellerCode: seller?.code ?? null };
 }
 
 /** Where a signed-in user belongs: pending/suspended employees only see their status page. */
