@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AlertTriangle, CarFront, FileText, Lock, PackageCheck, Warehouse } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
+import { demoDate, demoDay } from "@/lib/demo-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-estoque")({
   beforeLoad: ({ context }) => {
@@ -49,7 +50,7 @@ const steps = [
 const example = {
   supplier: "Fornecedor Exemplo Autopeças LTDA",
   invoice: "NF 004.512",
-  date: "23/10/2026",
+  date: demoDate(1),
   unit: "NP2",
   item: "Pastilha de freio dianteira (cód. 40853)",
   qty: 10,
@@ -61,7 +62,7 @@ const example = {
       os: "169950",
       car: "Gol 1.6 2015",
       plate: "ABC1D23",
-      date: "23/10",
+      date: demoDay(1),
     },
     {
       kind: "os" as const,
@@ -69,7 +70,7 @@ const example = {
       os: "169958",
       car: "Onix 1.0 2020",
       plate: "QWE4R56",
-      date: "23/10",
+      date: demoDay(1),
     },
     {
       kind: "os" as const,
@@ -77,7 +78,7 @@ const example = {
       os: "169971",
       car: "HB20 1.0 2019",
       plate: "RTY7U89",
-      date: "24/10",
+      date: demoDay(),
     },
     { kind: "stock" as const, qty: 4 },
   ],

@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ArrowRight, BadgePercent, BellRing, Lock, UserPlus } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
+import { demoDay } from "@/lib/demo-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-alertas")({
   beforeLoad: ({ context }) => {
@@ -48,21 +49,33 @@ const rules = [
 
 const examples = [
   [
-    "24/10 · 11:20",
+    `${demoDay()} · 11:20`,
     "Desconto de 18% (limite 10%)",
     "OS 169950 · Pneu 205/55R16",
     "NP3",
     "Vendedor 105",
   ],
   [
-    "24/10 · 10:42",
+    `${demoDay()} · 10:42`,
     "Novo cliente de atacado",
     "Cód. 58213 · Transportes Exemplo LTDA",
     "NP2",
     "Vendedor 111",
   ],
-  ["24/10 · 09:15", "Varejo → Atacado", "Cód. 40177 · Cliente Exemplo", "NP1", "Vendedor 36"],
-  ["23/10 · 16:03", "Varejo → Frota", "Cód. 39920 · Locadora Exemplo", "NP4", "Vendedor 185"],
+  [
+    `${demoDay()} · 09:15`,
+    "Varejo → Atacado",
+    "Cód. 40177 · Cliente Exemplo",
+    "NP1",
+    "Vendedor 36",
+  ],
+  [
+    `${demoDay(1)} · 16:03`,
+    "Varejo → Frota",
+    "Cód. 39920 · Locadora Exemplo",
+    "NP4",
+    "Vendedor 185",
+  ],
 ];
 
 function AdminAlertas() {

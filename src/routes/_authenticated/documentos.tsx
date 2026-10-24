@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FileText, Lock } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
+import { demoMonth } from "@/lib/demo-dates";
 
 export const Route = createFileRoute("/_authenticated/documentos")({
   head: () => ({
@@ -20,8 +21,8 @@ export const Route = createFileRoute("/_authenticated/documentos")({
 });
 
 const examples = [
-  ["Recibo de pagamento", "Outubro de 2026"],
-  ["Cartão de ponto", "Outubro de 2026"],
+  ["Recibo de pagamento", demoMonth()],
+  ["Cartão de ponto", demoMonth()],
   ["Recibo de férias", "Quando houver"],
 ];
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileText, Lock, ShieldCheck, Upload } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 import { supabase } from "@/integrations/supabase/client";
+import { demoMonthValue } from "@/lib/demo-dates";
 import { catalogOptions, fieldClass } from "@/lib/portal-data";
 
 export const Route = createFileRoute("/_authenticated/admin-documentos")({
@@ -175,7 +176,12 @@ function AdminDocumentos() {
               </label>
               <label className="text-sm">
                 Competência
-                <input id="doc-month" type="month" className={fieldClass} />
+                <input
+                  id="doc-month"
+                  type="month"
+                  defaultValue={demoMonthValue()}
+                  className={fieldClass}
+                />
               </label>
               <label className="text-sm">
                 Arquivo PDF (todos os recibos em um único arquivo)
