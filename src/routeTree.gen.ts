@@ -21,10 +21,12 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authenticated/admin-comissoes'
 import { Route as AuthenticatedAdminComunicadosRouteImport } from './routes/_authenticated/admin-comunicados'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
+import { Route as AuthenticatedAdminDocumentosRouteImport } from './routes/_authenticated/admin-documentos'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedComunicadosRouteImport } from './routes/_authenticated/comunicados'
 import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
+import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
@@ -94,6 +96,12 @@ const AuthenticatedAdminCursosRoute =
     path: '/admin-cursos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminDocumentosRoute =
+  AuthenticatedAdminDocumentosRouteImport.update({
+    id: '/admin-documentos',
+    path: '/admin-documentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminInsigniasRoute =
   AuthenticatedAdminInsigniasRouteImport.update({
     id: '/admin-insignias',
@@ -114,6 +122,11 @@ const AuthenticatedComunicadosRoute =
 const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
   id: '/cursos',
   path: '/cursos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEmpresaRoute = AuthenticatedEmpresaRouteImport.update({
@@ -159,10 +172,12 @@ export interface FileRoutesByFullPath {
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
+  '/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
@@ -182,10 +197,12 @@ export interface FileRoutesByTo {
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
+  '/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
@@ -207,10 +224,12 @@ export interface FileRoutesById {
   '/_authenticated/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/_authenticated/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
+  '/_authenticated/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/comunicados': typeof AuthenticatedComunicadosRoute
   '/_authenticated/cursos': typeof AuthenticatedCursosRoute
+  '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
@@ -232,10 +251,12 @@ export interface FileRouteTypes {
     | '/admin-comissoes'
     | '/admin-comunicados'
     | '/admin-cursos'
+    | '/admin-documentos'
     | '/admin-insignias'
     | '/comissoes'
     | '/comunicados'
     | '/cursos'
+    | '/documentos'
     | '/empresa'
     | '/inicio'
     | '/metas'
@@ -255,10 +276,12 @@ export interface FileRouteTypes {
     | '/admin-comissoes'
     | '/admin-comunicados'
     | '/admin-cursos'
+    | '/admin-documentos'
     | '/admin-insignias'
     | '/comissoes'
     | '/comunicados'
     | '/cursos'
+    | '/documentos'
     | '/empresa'
     | '/inicio'
     | '/metas'
@@ -279,10 +302,12 @@ export interface FileRouteTypes {
     | '/_authenticated/admin-comissoes'
     | '/_authenticated/admin-comunicados'
     | '/_authenticated/admin-cursos'
+    | '/_authenticated/admin-documentos'
     | '/_authenticated/admin-insignias'
     | '/_authenticated/comissoes'
     | '/_authenticated/comunicados'
     | '/_authenticated/cursos'
+    | '/_authenticated/documentos'
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
     | '/_authenticated/metas'
@@ -387,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCursosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-documentos': {
+      id: '/_authenticated/admin-documentos'
+      path: '/admin-documentos'
+      fullPath: '/admin-documentos'
+      preLoaderRoute: typeof AuthenticatedAdminDocumentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-insignias': {
       id: '/_authenticated/admin-insignias'
       path: '/admin-insignias'
@@ -413,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/cursos'
       fullPath: '/cursos'
       preLoaderRoute: typeof AuthenticatedCursosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/documentos': {
+      id: '/_authenticated/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/empresa': {
@@ -466,10 +505,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminComissoesRoute: typeof AuthenticatedAdminComissoesRoute
   AuthenticatedAdminComunicadosRoute: typeof AuthenticatedAdminComunicadosRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
+  AuthenticatedAdminDocumentosRoute: typeof AuthenticatedAdminDocumentosRoute
   AuthenticatedAdminInsigniasRoute: typeof AuthenticatedAdminInsigniasRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedComunicadosRoute: typeof AuthenticatedComunicadosRoute
   AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
+  AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
@@ -484,10 +525,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminComissoesRoute: AuthenticatedAdminComissoesRoute,
   AuthenticatedAdminComunicadosRoute: AuthenticatedAdminComunicadosRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
+  AuthenticatedAdminDocumentosRoute: AuthenticatedAdminDocumentosRoute,
   AuthenticatedAdminInsigniasRoute: AuthenticatedAdminInsigniasRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedComunicadosRoute: AuthenticatedComunicadosRoute,
   AuthenticatedCursosRoute: AuthenticatedCursosRoute,
+  AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,

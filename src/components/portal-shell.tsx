@@ -6,7 +6,9 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  FileText,
   FileUp,
+  FolderLock,
   Gauge,
   Home,
   ShieldCheck,
@@ -36,6 +38,8 @@ type NavLink = {
     | "/comissoes"
     | "/abrir-os"
     | "/comunicados"
+    | "/documentos"
+    | "/admin-documentos"
     | "/admin-comunicados"
     | "/trajetoria"
     | "/empresa"
@@ -58,6 +62,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
     ...(canSeeCommissions(access) ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }] : []),
     ...(canSeeCommissions(access) ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }] : []),
     ...(access.isProducer && !access.canReadAll ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }] : []),
+    { to: "/documentos", label: "Meus documentos", icon: FileText },
     { to: "/trajetoria", label: "Minha trajetória", icon: Award },
     { to: "/empresa", label: "Empresa", icon: Building2 },
   ];
@@ -69,6 +74,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
         ...(access.isAdmin
           ? [
               { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
+              { to: "/admin-documentos" as const, label: "Documentos", icon: FolderLock },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
               { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
               { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },
