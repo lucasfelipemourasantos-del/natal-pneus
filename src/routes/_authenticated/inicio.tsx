@@ -10,6 +10,7 @@ import {
   SectionHeading,
   Stat,
 } from "@/components/portal-shell";
+import { demoShortDate } from "@/lib/demo-dates";
 import { phraseOfWeek } from "@/lib/weekly-phrases";
 import { CategoryTag } from "@/components/announcements";
 import { myAnnouncementsOptions } from "@/lib/announcements";
@@ -104,7 +105,12 @@ function Index() {
           detail="1 atividade nesta semana"
         />
         <Stat icon={Award} label="Cursos concluídos" value="6" detail="Desde sua entrada" />
-        <Stat icon={Target} label="Meta semanal" value="84%" detail="Atualizado em 09 out. 2026" />
+        <Stat
+          icon={Target}
+          label="Meta semanal"
+          value="84%"
+          detail={`Atualizado em ${demoShortDate()}`}
+        />
         <Stat
           icon={TrendingUp}
           label="Sequência de estudo"

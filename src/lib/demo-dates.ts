@@ -33,3 +33,15 @@ export function demoMonth(now = new Date()) {
 export function demoMonthValue(now = new Date()) {
   return now.toLocaleDateString("sv-SE", { timeZone: TIME_ZONE }).slice(0, 7);
 }
+
+/** "24 out. 2026" for today (0) or N days ago. */
+export function demoShortDate(daysAgo = 0, now?: Date) {
+  return shifted(daysAgo, now)
+    .toLocaleDateString("pt-BR", {
+      timeZone: TIME_ZONE,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    .replaceAll(" de ", " ");
+}
