@@ -1,21 +1,23 @@
-import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Award,
   BookOpen,
   Building2,
+  ChevronDown,
   ChevronRight,
   FileUp,
   Gauge,
   Home,
   ShieldCheck,
   LogOut,
+  Megaphone,
   Mic,
   Target,
   UserRound,
   Wallet,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import logo from "@/assets/natal-pneus-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +25,7 @@ import { canSeeCommissions, hasAllStoresAccess, initials, type Access } from "@/
 import { useQuery } from "@tanstack/react-query";
 import { catalogOptions } from "@/lib/portal-data";
 import { Button } from "@/components/ui/button";
+import { AnnouncementBell, AnnouncementGate } from "@/components/announcements";
 import { ChartNoAxesCombined } from "lucide-react";
 
 type NavLink = {
@@ -32,6 +35,8 @@ type NavLink = {
     | "/metas"
     | "/comissoes"
     | "/abrir-os"
+    | "/comunicados"
+    | "/admin-comunicados"
     | "/trajetoria"
     | "/empresa"
     | "/resultados"
@@ -63,6 +68,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
         { to: "/admin", label: access.isAdmin ? "Contas" : "Colaboradores", icon: ShieldCheck },
         ...(access.isAdmin
           ? [
+              { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
               { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
               { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },
@@ -96,7 +102,13 @@ export function PortalShell({
    const store = allStores ? undefined : catalog?.units.find(u => u.code === access.profile?.unit_code);
    const unit = allStores ? "Todas as lojas" : store ? `Natal Pneus · ${store.code}` : "";
   const groups = navGroups(access);
-  const visibleLinks = groups.flatMap((g) => g.links);
+  const pathname = useLocation({ select: (l) => l.pathname });
+  const management = groups.find((g) => g.label === "Gestão");
+  const inManagement = Boolean(management?.links.some((l) => l.to === pathname));
+  /** "Gestão" stays closed to keep the menu short; it opens on click, or by itself when one of its screens is open. */
+  const [managementOpen, setManagementOpen] = useState(inManagement);
+  const showManagement = managementOpen || inManagement;
+  const personalLinks = groups.find((g) => g.label === "Meu espaço")?.links ?? [];
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -110,9 +122,26 @@ export function PortalShell({
           <img src={logo} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
         <nav className="mt-10 space-y-6" aria-label="Navegação principal">
-          {groups.map((group) => (
+          {groups.map((group) => {
+            const collapsible = group.label === "Gestão";
+            const open = !collapsible || showManagement;
+            return (
             <div key={group.label} className="space-y-1">
-              <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70">{group.label}</p>
+              {collapsible ? (
+                <button
+                  type="button"
+                  onClick={() => setManagementOpen(!showManagement)}
+                  aria-expanded={open}
+                  aria-controls="nav-gestao"
+                  className="flex w-full items-center justify-between rounded-md px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70 hover:text-sidebar-foreground"
+                >
+                  {group.label}
+                  <ChevronDown size={15} aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`} />
+                </button>
+              ) : (
+                <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70">{group.label}</p>
+              )}
+              <div id={collapsible ? "nav-gestao" : undefined} hidden={!open} className="space-y-1">
               {group.links.map(({ to, label, icon: Icon }) => (
                 <Link
                   key={to}
@@ -125,8 +154,10 @@ export function PortalShell({
                   {label}
                 </Link>
               ))}
+              </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
         <div className="mt-auto border-t border-sidebar-border pt-4">
           <div className="flex items-center gap-3 px-3 py-2">
@@ -155,12 +186,13 @@ export function PortalShell({
                 <p className="text-sm font-semibold text-foreground">{name}</p>
                <p className="text-xs text-muted-foreground">{unit}</p>
               </div>
+              {access.userId && <AnnouncementBell userId={access.userId} />}
               <span className="grid size-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{initials(name)}</span>
               <Button variant="ghost" size="icon" type="button" onClick={signOut} aria-label="Sair" title="Sair" className="lg:hidden"><LogOut size={18} /></Button>
             </div>
           </div>
           <nav className="flex overflow-x-auto border-t border-border px-2 lg:hidden" aria-label="Navegação principal">
-            {visibleLinks.map(({ to, label, icon: Icon }) => (
+            {[...personalLinks, ...(showManagement ? (management?.links ?? []) : [])].map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}
@@ -172,8 +204,20 @@ export function PortalShell({
                 {label}
               </Link>
             ))}
+            {management && (
+              <button
+                type="button"
+                onClick={() => setManagementOpen(!showManagement)}
+                aria-expanded={showManagement}
+                className="flex min-w-max flex-1 flex-col items-center gap-1 border-b-2 border-transparent px-3 py-2 text-[11px] font-medium text-muted-foreground"
+              >
+                <ChevronDown size={18} aria-hidden="true" className={showManagement ? "rotate-180" : ""} />
+                {showManagement ? "Fechar gestão" : "Gestão"}
+              </button>
+            )}
           </nav>
         </header>
+        {access.userId && <AnnouncementGate userId={access.userId} isAdmin={access.isAdmin} />}
         <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
           <div className="mb-7 lg:hidden">
             {eyebrow && <p className="text-xs font-bold uppercase text-primary">{eyebrow}</p>}

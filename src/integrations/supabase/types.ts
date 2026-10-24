@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcement_reads: {
+        Row: { announcement_id: string; read_at: string; user_id: string }
+        Insert: { announcement_id: string; read_at?: string; user_id: string }
+        Update: { announcement_id?: string; read_at?: string; user_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          active: boolean
+          attachment_name: string | null
+          attachment_path: string | null
+          audience_job: string | null
+          audience_unit: string | null
+          body: string
+          category: string
+          created_at: string
+          created_by: string | null
+          ends_on: string | null
+          id: string
+          starts_on: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          attachment_name?: string | null
+          attachment_path?: string | null
+          audience_job?: string | null
+          audience_unit?: string | null
+          body: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          starts_on?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          attachment_name?: string | null
+          attachment_path?: string | null
+          audience_job?: string | null
+          audience_unit?: string | null
+          body?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          starts_on?: string
+          title?: string
+        }
+        Relationships: []
+      }
       commission_report_groups: {
         Row: {
           commission_cents: number

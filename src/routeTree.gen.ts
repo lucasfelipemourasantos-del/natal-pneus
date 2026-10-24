@@ -19,9 +19,11 @@ import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as AuthenticatedAbrirOsRouteImport } from './routes/_authenticated/abrir-os'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authenticated/admin-comissoes'
+import { Route as AuthenticatedAdminComunicadosRouteImport } from './routes/_authenticated/admin-comunicados'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
+import { Route as AuthenticatedComunicadosRouteImport } from './routes/_authenticated/comunicados'
 import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -80,6 +82,12 @@ const AuthenticatedAdminComissoesRoute =
     path: '/admin-comissoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminComunicadosRoute =
+  AuthenticatedAdminComunicadosRouteImport.update({
+    id: '/admin-comunicados',
+    path: '/admin-comunicados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminCursosRoute =
   AuthenticatedAdminCursosRouteImport.update({
     id: '/admin-cursos',
@@ -97,6 +105,12 @@ const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
   path: '/comissoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedComunicadosRoute =
+  AuthenticatedComunicadosRouteImport.update({
+    id: '/comunicados',
+    path: '/comunicados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
   id: '/cursos',
   path: '/cursos',
@@ -143,9 +157,11 @@ export interface FileRoutesByFullPath {
   '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
+  '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -164,9 +180,11 @@ export interface FileRoutesByTo {
   '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
+  '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -187,9 +205,11 @@ export interface FileRoutesById {
   '/_authenticated/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
+  '/_authenticated/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
+  '/_authenticated/comunicados': typeof AuthenticatedComunicadosRoute
   '/_authenticated/cursos': typeof AuthenticatedCursosRoute
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
@@ -210,9 +230,11 @@ export interface FileRouteTypes {
     | '/abrir-os'
     | '/admin'
     | '/admin-comissoes'
+    | '/admin-comunicados'
     | '/admin-cursos'
     | '/admin-insignias'
     | '/comissoes'
+    | '/comunicados'
     | '/cursos'
     | '/empresa'
     | '/inicio'
@@ -231,9 +253,11 @@ export interface FileRouteTypes {
     | '/abrir-os'
     | '/admin'
     | '/admin-comissoes'
+    | '/admin-comunicados'
     | '/admin-cursos'
     | '/admin-insignias'
     | '/comissoes'
+    | '/comunicados'
     | '/cursos'
     | '/empresa'
     | '/inicio'
@@ -253,9 +277,11 @@ export interface FileRouteTypes {
     | '/_authenticated/abrir-os'
     | '/_authenticated/admin'
     | '/_authenticated/admin-comissoes'
+    | '/_authenticated/admin-comunicados'
     | '/_authenticated/admin-cursos'
     | '/_authenticated/admin-insignias'
     | '/_authenticated/comissoes'
+    | '/_authenticated/comunicados'
     | '/_authenticated/cursos'
     | '/_authenticated/empresa'
     | '/_authenticated/inicio'
@@ -347,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminComissoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-comunicados': {
+      id: '/_authenticated/admin-comunicados'
+      path: '/admin-comunicados'
+      fullPath: '/admin-comunicados'
+      preLoaderRoute: typeof AuthenticatedAdminComunicadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-cursos': {
       id: '/_authenticated/admin-cursos'
       path: '/admin-cursos'
@@ -366,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/comissoes'
       fullPath: '/comissoes'
       preLoaderRoute: typeof AuthenticatedComissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comunicados': {
+      id: '/_authenticated/comunicados'
+      path: '/comunicados'
+      fullPath: '/comunicados'
+      preLoaderRoute: typeof AuthenticatedComunicadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cursos': {
@@ -424,9 +464,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAbrirOsRoute: typeof AuthenticatedAbrirOsRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminComissoesRoute: typeof AuthenticatedAdminComissoesRoute
+  AuthenticatedAdminComunicadosRoute: typeof AuthenticatedAdminComunicadosRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
   AuthenticatedAdminInsigniasRoute: typeof AuthenticatedAdminInsigniasRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
+  AuthenticatedComunicadosRoute: typeof AuthenticatedComunicadosRoute
   AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
@@ -440,9 +482,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAbrirOsRoute: AuthenticatedAbrirOsRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminComissoesRoute: AuthenticatedAdminComissoesRoute,
+  AuthenticatedAdminComunicadosRoute: AuthenticatedAdminComunicadosRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
   AuthenticatedAdminInsigniasRoute: AuthenticatedAdminInsigniasRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
+  AuthenticatedComunicadosRoute: AuthenticatedComunicadosRoute,
   AuthenticatedCursosRoute: AuthenticatedCursosRoute,
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
