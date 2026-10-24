@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate, useRouteContext } from "@tanstack/react
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Award,
+  BellRing,
   BookOpen,
   Building2,
   ChevronDown,
@@ -40,6 +41,7 @@ type NavLink = {
     | "/comunicados"
     | "/documentos"
     | "/admin-documentos"
+    | "/admin-alertas"
     | "/admin-comunicados"
     | "/trajetoria"
     | "/empresa"
@@ -75,6 +77,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
           ? [
               { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
               { to: "/admin-documentos" as const, label: "Documentos", icon: FolderLock },
+              { to: "/admin-alertas" as const, label: "Alertas de clientes", icon: BellRing },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
               { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
               { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },

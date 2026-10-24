@@ -18,6 +18,7 @@ import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as AuthenticatedAbrirOsRouteImport } from './routes/_authenticated/abrir-os'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminAlertasRouteImport } from './routes/_authenticated/admin-alertas'
 import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authenticated/admin-comissoes'
 import { Route as AuthenticatedAdminComunicadosRouteImport } from './routes/_authenticated/admin-comunicados'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
@@ -78,6 +79,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminAlertasRoute =
+  AuthenticatedAdminAlertasRouteImport.update({
+    id: '/admin-alertas',
+    path: '/admin-alertas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminComissoesRoute =
   AuthenticatedAdminComissoesRouteImport.update({
     id: '/admin-comissoes',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/nova-senha': typeof NovaSenhaRoute
   '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-alertas': typeof AuthenticatedAdminAlertasRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -194,6 +202,7 @@ export interface FileRoutesByTo {
   '/nova-senha': typeof NovaSenhaRoute
   '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-alertas': typeof AuthenticatedAdminAlertasRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -221,6 +230,7 @@ export interface FileRoutesById {
   '/nova-senha': typeof NovaSenhaRoute
   '/_authenticated/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-alertas': typeof AuthenticatedAdminAlertasRoute
   '/_authenticated/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/_authenticated/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/abrir-os'
     | '/admin'
+    | '/admin-alertas'
     | '/admin-comissoes'
     | '/admin-comunicados'
     | '/admin-cursos'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/abrir-os'
     | '/admin'
+    | '/admin-alertas'
     | '/admin-comissoes'
     | '/admin-comunicados'
     | '/admin-cursos'
@@ -299,6 +311,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/_authenticated/abrir-os'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-alertas'
     | '/_authenticated/admin-comissoes'
     | '/_authenticated/admin-comunicados'
     | '/_authenticated/admin-cursos'
@@ -389,6 +402,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-alertas': {
+      id: '/_authenticated/admin-alertas'
+      path: '/admin-alertas'
+      fullPath: '/admin-alertas'
+      preLoaderRoute: typeof AuthenticatedAdminAlertasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin-comissoes': {
@@ -502,6 +522,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAbrirOsRoute: typeof AuthenticatedAbrirOsRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminAlertasRoute: typeof AuthenticatedAdminAlertasRoute
   AuthenticatedAdminComissoesRoute: typeof AuthenticatedAdminComissoesRoute
   AuthenticatedAdminComunicadosRoute: typeof AuthenticatedAdminComunicadosRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
@@ -522,6 +543,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAbrirOsRoute: AuthenticatedAbrirOsRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminAlertasRoute: AuthenticatedAdminAlertasRoute,
   AuthenticatedAdminComissoesRoute: AuthenticatedAdminComissoesRoute,
   AuthenticatedAdminComunicadosRoute: AuthenticatedAdminComunicadosRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
