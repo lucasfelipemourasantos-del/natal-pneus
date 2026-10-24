@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Award, BookOpen, Megaphone, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, Award, BookOpen, Target, TrendingUp } from "lucide-react";
 
+import cityAtNight from "@/assets/cidade-noturna.jpg";
 import { DemoNotice, PortalShell, ProgressBar, SectionHeading, Stat } from "@/components/portal-shell";
+import { phraseOfWeek } from "@/lib/weekly-phrases";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({ meta: [
@@ -19,14 +21,23 @@ function Index() {
   return (
     <PortalShell title="Olá. Seja bem-vindo(a)!" eyebrow="Portal do colaborador">
       <DemoNotice />
-      <section className="relative overflow-hidden rounded-xl border border-border bg-sidebar p-6 text-sidebar-foreground sm:p-8">
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground"><Megaphone size={14} /> COMUNICADO</span>
-          <h2 className="mt-5 text-2xl font-bold sm:text-3xl">Semana da Segurança começa na próxima segunda</h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-sidebar-muted">Confira a programação da sua unidade e participe das atividades de prevenção.</p>
-          <Link to="/empresa" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground hover:opacity-90">Ler comunicado <ArrowRight size={17} /></Link>
-        </div>
-        <div className="absolute -bottom-10 right-8 hidden size-52 rotate-12 rounded-xl border-[22px] border-primary opacity-25 md:block" />
+      <section
+        aria-label="Frase da semana"
+        className="relative flex min-h-56 items-center overflow-hidden rounded-xl border border-border bg-black p-6 text-white sm:p-10"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${cityAtNight})`, filter: "saturate(0.55) brightness(0.48) contrast(1.08)" }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20"
+        />
+        <blockquote className="relative z-10 max-w-[30ch] text-2xl font-bold leading-tight text-balance sm:text-3xl">
+          <span aria-hidden="true" className="mb-5 block h-px w-11 bg-[oklch(0.86_0.005_255)]" />
+          {phraseOfWeek()}
+        </blockquote>
       </section>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
