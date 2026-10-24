@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
+import { Route as AuthenticatedAbrirOsRouteImport } from './routes/_authenticated/abrir-os'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authenticated/admin-comissoes'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
@@ -62,6 +63,11 @@ const NovaSenhaRoute = NovaSenhaRouteImport.update({
   id: '/nova-senha',
   path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAbrirOsRoute = AuthenticatedAbrirOsRouteImport.update({
+  id: '/abrir-os',
+  path: '/abrir-os',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/confirmar-email': typeof ConfirmarEmailRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/_authenticated/abrir-os': typeof AuthenticatedAbrirOsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-comissoes': typeof AuthenticatedAdminComissoesRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/confirmar-email'
     | '/nova-senha'
+    | '/abrir-os'
     | '/admin'
     | '/admin-comissoes'
     | '/admin-cursos'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/confirmar-email'
     | '/nova-senha'
+    | '/abrir-os'
     | '/admin'
     | '/admin-comissoes'
     | '/admin-cursos'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/confirmar-email'
     | '/nova-senha'
+    | '/_authenticated/abrir-os'
     | '/_authenticated/admin'
     | '/_authenticated/admin-comissoes'
     | '/_authenticated/admin-cursos'
@@ -313,6 +325,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/nova-senha'
       preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/abrir-os': {
+      id: '/_authenticated/abrir-os'
+      path: '/abrir-os'
+      fullPath: '/abrir-os'
+      preLoaderRoute: typeof AuthenticatedAbrirOsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -402,6 +421,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAbrirOsRoute: typeof AuthenticatedAbrirOsRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminComissoesRoute: typeof AuthenticatedAdminComissoesRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
@@ -417,6 +437,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAbrirOsRoute: AuthenticatedAbrirOsRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminComissoesRoute: AuthenticatedAdminComissoesRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,

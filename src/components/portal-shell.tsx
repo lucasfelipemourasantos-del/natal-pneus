@@ -10,6 +10,7 @@ import {
   Home,
   ShieldCheck,
   LogOut,
+  Mic,
   Target,
   UserRound,
   Wallet,
@@ -30,6 +31,7 @@ type NavLink = {
     | "/cursos"
     | "/metas"
     | "/comissoes"
+    | "/abrir-os"
     | "/trajetoria"
     | "/empresa"
     | "/resultados"
@@ -49,6 +51,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
     { to: "/cursos", label: "Meus cursos", icon: BookOpen },
     { to: "/metas", label: "Minhas metas", icon: Target },
     ...(canSeeCommissions(access) ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }] : []),
+    ...(canSeeCommissions(access) ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }] : []),
     ...(access.isProducer && !access.canReadAll ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }] : []),
     { to: "/trajetoria", label: "Minha trajetória", icon: Award },
     { to: "/empresa", label: "Empresa", icon: Building2 },
