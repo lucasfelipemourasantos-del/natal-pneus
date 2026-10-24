@@ -57,12 +57,12 @@ type NavLink = {
 function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" | "sellerCode">) {
   const personal: NavLink[] = [
     { to: "/inicio", label: "Início", icon: Home },
-    ...(canSeeCommissions(access) ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }] : []),
-    ...(canSeeCommissions(access) ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }] : []),
     { to: "/metas", label: "Minhas metas", icon: Target },
+    ...(canSeeCommissions(access) ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }] : []),
     ...(access.isProducer && !access.canReadAll ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }] : []),
-    { to: "/documentos", label: "Meus documentos", icon: FileText },
     { to: "/cursos", label: "Meus cursos", icon: BookOpen },
+    ...(canSeeCommissions(access) ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }] : []),
+    { to: "/documentos", label: "Meus documentos", icon: FileText },
     { to: "/trajetoria", label: "Minha trajetória", icon: Award },
     { to: "/empresa", label: "Empresa", icon: Building2 },
   ];
