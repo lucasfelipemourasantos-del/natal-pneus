@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ArrowRight, BellRing, Lock, UserPlus } from "lucide-react";
+import { ArrowRight, BadgePercent, BellRing, Lock, UserPlus } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/_authenticated/admin-alertas")({
@@ -39,9 +39,21 @@ const rules = [
     text: "Cliente que passou de varejo para atacado.",
   },
   { icon: ArrowRight, title: "Frota → Atacado", text: "Cliente que passou de frota para atacado." },
+  {
+    icon: BadgePercent,
+    title: "Desconto acima do limite",
+    text: "Item vendido com desconto maior que o limite permitido ao vendedor.",
+  },
 ];
 
 const examples = [
+  [
+    "24/10 · 11:20",
+    "Desconto de 18% (limite 10%)",
+    "OS 169950 · Pneu 205/55R16",
+    "NP3",
+    "Vendedor 105",
+  ],
   [
     "24/10 · 10:42",
     "Novo cliente de atacado",
@@ -60,8 +72,8 @@ function AdminAlertas() {
         <Lock size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
           <b>Em preparação.</b> Os alertas começam a funcionar quando a API do Decision liberar os
-          dados de clientes (tipo varejo, frota ou atacado e as alterações). Os exemplos abaixo são
-          ilustrativos.
+          dados de clientes (tipo varejo, frota ou atacado e as alterações) e o limite de desconto
+          de cada vendedor estiver definido. Os exemplos abaixo são ilustrativos.
         </span>
       </p>
 
@@ -69,7 +81,7 @@ function AdminAlertas() {
         <h2 id="regras" className="text-lg font-bold">
           O que gera alerta
         </h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {rules.map(({ icon: Icon, title, text }) => (
             <li
               key={title}

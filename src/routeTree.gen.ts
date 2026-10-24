@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminComissoesRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminComunicadosRouteImport } from './routes/_authenticated/admin-comunicados'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin-cursos'
 import { Route as AuthenticatedAdminDocumentosRouteImport } from './routes/_authenticated/admin-documentos'
+import { Route as AuthenticatedAdminEstoqueRouteImport } from './routes/_authenticated/admin-estoque'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
 import { Route as AuthenticatedComunicadosRouteImport } from './routes/_authenticated/comunicados'
@@ -109,6 +110,12 @@ const AuthenticatedAdminDocumentosRoute =
     path: '/admin-documentos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminEstoqueRoute =
+  AuthenticatedAdminEstoqueRouteImport.update({
+    id: '/admin-estoque',
+    path: '/admin-estoque',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminInsigniasRoute =
   AuthenticatedAdminInsigniasRouteImport.update({
     id: '/admin-insignias',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
+  '/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
@@ -207,6 +215,7 @@ export interface FileRoutesByTo {
   '/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
+  '/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/admin-comunicados': typeof AuthenticatedAdminComunicadosRoute
   '/_authenticated/admin-cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin-documentos': typeof AuthenticatedAdminDocumentosRoute
+  '/_authenticated/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
   '/_authenticated/comunicados': typeof AuthenticatedComunicadosRoute
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/admin-comunicados'
     | '/admin-cursos'
     | '/admin-documentos'
+    | '/admin-estoque'
     | '/admin-insignias'
     | '/comissoes'
     | '/comunicados'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin-comunicados'
     | '/admin-cursos'
     | '/admin-documentos'
+    | '/admin-estoque'
     | '/admin-insignias'
     | '/comissoes'
     | '/comunicados'
@@ -316,6 +328,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin-comunicados'
     | '/_authenticated/admin-cursos'
     | '/_authenticated/admin-documentos'
+    | '/_authenticated/admin-estoque'
     | '/_authenticated/admin-insignias'
     | '/_authenticated/comissoes'
     | '/_authenticated/comunicados'
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-estoque': {
+      id: '/_authenticated/admin-estoque'
+      path: '/admin-estoque'
+      fullPath: '/admin-estoque'
+      preLoaderRoute: typeof AuthenticatedAdminEstoqueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-insignias': {
       id: '/_authenticated/admin-insignias'
       path: '/admin-insignias'
@@ -527,6 +547,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminComunicadosRoute: typeof AuthenticatedAdminComunicadosRoute
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
   AuthenticatedAdminDocumentosRoute: typeof AuthenticatedAdminDocumentosRoute
+  AuthenticatedAdminEstoqueRoute: typeof AuthenticatedAdminEstoqueRoute
   AuthenticatedAdminInsigniasRoute: typeof AuthenticatedAdminInsigniasRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
   AuthenticatedComunicadosRoute: typeof AuthenticatedComunicadosRoute
@@ -548,6 +569,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminComunicadosRoute: AuthenticatedAdminComunicadosRoute,
   AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
   AuthenticatedAdminDocumentosRoute: AuthenticatedAdminDocumentosRoute,
+  AuthenticatedAdminEstoqueRoute: AuthenticatedAdminEstoqueRoute,
   AuthenticatedAdminInsigniasRoute: AuthenticatedAdminInsigniasRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
   AuthenticatedComunicadosRoute: AuthenticatedComunicadosRoute,

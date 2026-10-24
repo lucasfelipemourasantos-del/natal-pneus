@@ -19,6 +19,7 @@ import {
   Target,
   UserRound,
   Wallet,
+  Warehouse,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -42,6 +43,7 @@ type NavLink = {
     | "/documentos"
     | "/admin-documentos"
     | "/admin-alertas"
+    | "/admin-estoque"
     | "/admin-comunicados"
     | "/trajetoria"
     | "/empresa"
@@ -78,6 +80,7 @@ function navGroups(access: Pick<Access, "isAdmin" | "canReadAll" | "isProducer" 
               { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
               { to: "/admin-documentos" as const, label: "Documentos", icon: FolderLock },
               { to: "/admin-alertas" as const, label: "Alertas de clientes", icon: BellRing },
+              { to: "/admin-estoque" as const, label: "Controle de estoque", icon: Warehouse },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
               { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
               { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },
