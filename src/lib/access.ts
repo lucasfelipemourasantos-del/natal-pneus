@@ -11,10 +11,28 @@ export type Access = {
   isProducer?: boolean;
   /** Decision seller code linked to this account, when there is one. */
   sellerCode?: number | null;
+  /** The linked Decision code has sales commissions (seller reports). */
+  hasSales?: boolean;
+  /** The linked Decision code has service commissions (technician reports). */
+  hasService?: boolean;
 };
 
+/** Linked to a technician-only code: sees service commissions, not the sellers' sales and peças goal. */
+export function isTechnicianOnly(access: Pick<Access, "hasSales" | "hasService">): boolean {
+  return Boolean(access.hasService) && !access.hasSales;
+}
+
+/** Peças goal and voice OS are for sellers; a technician-only account does not get them. */
+export function isSeller(
+  access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode" | "hasSales" | "hasService">,
+): boolean {
+  return hasAllStoresAccess(access) || (Boolean(access.sellerCode) && !isTechnicianOnly(access));
+}
+
 /** Commission screens: leadership sees every seller, a linked seller sees only himself. */
-export function canSeeCommissions(access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode">): boolean {
+export function canSeeCommissions(
+  access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode" | "hasSales" | "hasService">,
+): boolean {
   return hasAllStoresAccess(access) || Boolean(access.sellerCode);
 }
 
@@ -28,14 +46,45 @@ export async function loadAccess(): Promise<Access | null> {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   if (!user) return null;
-  const [{ data: profile }, { data: isAdmin }, { data: canReadAll }, { data: isProducer }, { data: seller }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: isAdmin },
+    { data: canReadAll },
+    { data: isProducer },
+    { data: seller },
+  ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
     supabase.rpc("can_read_all"),
     supabase.rpc("has_role", { _user_id: user.id, _role: "producer" }),
     supabase.from("decision_sellers").select("code").eq("profile_id", user.id).maybeSingle(),
   ]);
-  return { userId: user.id, profile: profile ?? null, isAdmin: Boolean(isAdmin), canReadAll: Boolean(canReadAll), isProducer: Boolean(isProducer), sellerCode: seller?.code ?? null };
+  let hasSales = false;
+  let hasService = false;
+  if (seller?.code) {
+    // RLS limits these to the person's own reports; before migration 0015 the technician check simply counts zero.
+    const own = () =>
+      supabase
+        .from("commission_reports")
+        .select("id", { count: "exact", head: true })
+        .eq("seller_code", seller.code);
+    const [sales, service] = await Promise.all([
+      own().neq("kind", "tecnico"),
+      own().eq("kind", "tecnico"),
+    ]);
+    hasSales = (sales.count ?? 0) > 0;
+    hasService = (service.count ?? 0) > 0;
+  }
+  return {
+    userId: user.id,
+    profile: profile ?? null,
+    isAdmin: Boolean(isAdmin),
+    canReadAll: Boolean(canReadAll),
+    isProducer: Boolean(isProducer),
+    sellerCode: seller?.code ?? null,
+    hasSales,
+    hasService,
+  };
 }
 
 /** Where a signed-in user belongs: pending/suspended employees only see their status page. */

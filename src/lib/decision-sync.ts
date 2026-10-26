@@ -28,6 +28,15 @@ export type ApiCommissionTotal = {
   base: number;
   comissao: number;
 };
+/** Item of the "Comissão de Técnicos" response (VENDAS_R21): same as a seller item, but keyed by technician. */
+export type ApiTechnicianItem = Omit<ApiCommissionItem, "vendedor" | "vendedorNome"> & {
+  tecnico: number;
+  tecnicoNome: string | null;
+};
+export type ApiTechnicianCommissions = Omit<ApiCommissions, "itens"> & {
+  itens: ApiTechnicianItem[];
+};
+
 export type ApiCommissions = {
   periodo: { de: string; ate: string };
   lojas: number[];
@@ -128,6 +137,18 @@ export async function buildApiReports(api: ApiCommissions): Promise<Map<string, 
     });
   }
   return out;
+}
+
+/** Technician items keyed like seller items, so the same report builder (and its totals check) serves both. */
+export function technicianAsSeller(api: ApiTechnicianCommissions): ApiCommissions {
+  return {
+    ...api,
+    itens: api.itens.map(({ tecnico, tecnicoNome, ...item }) => ({
+      ...item,
+      vendedor: tecnico,
+      vendedorNome: tecnicoNome,
+    })),
+  };
 }
 
 /** "2026-04" → first and last day of the month. */

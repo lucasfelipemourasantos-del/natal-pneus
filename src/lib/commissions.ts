@@ -47,7 +47,7 @@ export type UnitCheck = "conferido" | "falta-analitico" | "falta-sintetico" | "d
  * and items), otherwise the PDF sintético (groups) and analítico (OS). Never both, so nothing is counted twice.
  */
 function storeSources(list: ReportRow[], unit: string) {
-  const api = list.find((r) => r.unit_code === unit && r.kind === "api");
+  const api = list.find((r) => r.unit_code === unit && (r.kind === "api" || r.kind === "tecnico"));
   if (api) return { groups: api, sales: api, check: "conferido" as UnitCheck };
   const s = list.find((r) => r.unit_code === unit && r.kind === "sintetico");
   const a = list.find((r) => r.unit_code === unit && r.kind === "analitico");
@@ -346,4 +346,21 @@ export function monthLabel(competence: string) {
 
 export function rateLabel(bp: number | null) {
   return bp === null ? "vários" : (bp / 100).toFixed(2).replace(".", ",");
+}
+
+/** First day of the current month in Natal (UTC-3), as "AAAA-MM-01". */
+export function currentCompetence() {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" }));
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** Month totals of one seller over the last 12 months plus the viewed one (ascending), for the charts. */
+export function sellerSeries(reports: ReportRow[], sellerCode: number, competence: string) {
+  return [...monthsBefore(competence, GOAL_HISTORY_MONTHS)]
+    .reverse()
+    .concat(competence)
+    .map((month) => {
+      const v = sellerMonth(reports, [], sellerCode, month);
+      return { competence: month, soldCents: v.soldCents, commissionCents: v.commissionCents };
+    });
 }

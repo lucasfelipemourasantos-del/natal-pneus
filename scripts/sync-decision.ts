@@ -6,7 +6,13 @@
  * SUPABASE_URL, SUPABASE_SECRET_KEY.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { buildApiReports, monthRange, type ApiCommissions } from "../src/lib/decision-sync.ts";
+import {
+  buildApiReports,
+  monthRange,
+  technicianAsSeller,
+  type ApiCommissions,
+  type ApiTechnicianCommissions,
+} from "../src/lib/decision-sync.ts";
 
 /** Network blips (timeouts, resets) are retried a few times; HTTP errors are returned as-is. */
 async function fetchRetry(url: string, init?: RequestInit, attempts = 3): Promise<Response> {
@@ -89,9 +95,10 @@ async function saveMonth(
   competence: string,
   unit: string,
   reports: unknown[],
+  rpc = "replace_api_commissions",
 ) {
   const key = env.SUPABASE_SECRET_KEY!;
-  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/replace_api_commissions`, {
+  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/${rpc}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -108,6 +115,32 @@ async function saveMonth(
   return body as number;
 }
 
+/** Job function of each Decision employee, so the portal can group technicians (MECANICO 2, BALANCEADOR 1...). */
+async function syncRoles(env: Record<string, string>, token: string) {
+  type Employee = { funcionario: number; funcaoNome: string | null };
+  const body = await decisionGet<Employee[] | { data?: Employee[]; funcionarios?: Employee[] }>(
+    env,
+    token,
+    "/funcionarios",
+  );
+  const list = Array.isArray(body) ? body : (body.data ?? body.funcionarios ?? []);
+  const roles = Object.fromEntries(
+    list.filter((f) => f.funcaoNome).map((f) => [String(f.funcionario), f.funcaoNome]),
+  );
+  const key = env.SUPABASE_SECRET_KEY!;
+  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/set_decision_roles`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: key,
+      ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}),
+    },
+    body: JSON.stringify({ _roles: roles }),
+  });
+  if (!res.ok) throw new Error(`Supabase recusou as funções (${res.status})`);
+  return (await res.json()) as number;
+}
+
 function monthsToSync() {
   const asked = process.argv.filter((a) => a.startsWith("--mes=")).map((a) => a.slice(6));
   if (asked.some((m) => !/^\d{4}-\d{2}$/.test(m))) throw new Error("Use --mes=AAAA-MM");
@@ -121,6 +154,7 @@ function monthsToSync() {
 
 const env = loadConfig();
 const token = await decisionToken(env);
+const withTechnicians = !process.argv.includes("--sem-tecnicos");
 for (const month of monthsToSync()) {
   const { competence, de, ate } = monthRange(month);
   const started = Date.now();
@@ -135,7 +169,41 @@ for (const month of monthsToSync()) {
     changes.push(
       `${unit}: ${await saveMonth(env, competence, unit, reports)} atualizado(s) de ${reports.length}`,
     );
+  let techs = "";
+  if (withTechnicians) {
+    // Technicians are optional: a failure here must not hide the seller sync above.
+    try {
+      const tapi = await decisionGet<ApiTechnicianCommissions>(
+        env,
+        token,
+        `/comissoes/tecnicos?de=${de}&ate=${ate}`,
+      );
+      const tUnits = await buildApiReports(technicianAsSeller(tapi));
+      let changed = 0;
+      let total = 0;
+      for (const [unit, reports] of tUnits) {
+        changed += await saveMonth(
+          env,
+          competence,
+          unit,
+          reports,
+          "replace_technician_commissions",
+        );
+        total += reports.length;
+      }
+      techs = ` · técnicos: ${changed} atualizado(s) de ${total}`;
+    } catch (err) {
+      techs = ` · técnicos: ERRO ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
   console.log(
-    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
+    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
+}
+if (withTechnicians) {
+  try {
+    console.log(`funções do Decision atualizadas: ${await syncRoles(env, token)}`);
+  } catch (err) {
+    console.log(`funções: ERRO ${err instanceof Error ? err.message : String(err)}`);
+  }
 }

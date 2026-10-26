@@ -264,6 +264,7 @@ export type Database = {
         Row: {
           code: number
           created_at: string
+          decision_role: string | null
           ignored: boolean
           min_average: boolean
           name: string
@@ -273,6 +274,7 @@ export type Database = {
         Insert: {
           code: number
           created_at?: string
+          decision_role?: string | null
           ignored?: boolean
           min_average?: boolean
           name: string
@@ -282,6 +284,7 @@ export type Database = {
         Update: {
           code?: number
           created_at?: string
+          decision_role?: string | null
           ignored?: boolean
           min_average?: boolean
           name?: string
@@ -698,6 +701,20 @@ export type Database = {
         }[]
       }
       import_commission_report: { Args: { _report: Json }; Returns: string }
+      replace_technician_commissions: {
+        Args: { _competence: string; _reports: Json; _unit: string }
+        Returns: number
+      }
+      set_decision_roles: { Args: { _roles: Json }; Returns: number }
+      technician_os_summary: {
+        Args: { _competence: string }
+        Returns: {
+          os_count: number
+          report_id: string
+          seller_code: number
+          unit_code: string
+        }[]
+      }
       parts_goal_reference_base: {
         Args: { _competence: string }
         Returns: {

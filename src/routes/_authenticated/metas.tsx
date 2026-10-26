@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Award, CircleDollarSign, Target, TrendingUp } from "lucide-react";
 import { PortalShell, Stat } from "@/components/portal-shell";
-import { canSeeCommissions } from "@/lib/access";
+import { isSeller } from "@/lib/access";
 import { readCommissions } from "@/lib/commission.functions";
 import { monthLabel, partsGoal, referenceFor } from "@/lib/commissions";
 import { fieldClass } from "@/lib/portal-data";
@@ -48,7 +48,7 @@ function MetasPage() {
   const { access } = Route.useRouteContext();
   const [competence, setCompetence] = useState<string | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
-  const allowed = canSeeCommissions(access);
+  const allowed = isSeller(access);
   const { data, isPending, error } = useQuery({
     queryKey: ["commissions", competence],
     queryFn: () => readCommissions({ data: { competence } }),

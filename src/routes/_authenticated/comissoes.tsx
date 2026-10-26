@@ -2,16 +2,25 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CircleCheck, TriangleAlert } from "lucide-react";
+import { CommissionCharts } from "@/components/commission-charts";
 import { PortalShell } from "@/components/portal-shell";
-import { canSeeCommissions } from "@/lib/access";
-import { readCommissionItems, readCommissions } from "@/lib/commission.functions";
+import { canSeeCommissions, hasAllStoresAccess } from "@/lib/access";
+import {
+  readCommissionItems,
+  readCommissions,
+  readTechCommissions,
+} from "@/lib/commission.functions";
+import { isTechnicianOnly } from "@/lib/access";
+import { ROLE_ORDER, roleGroup, roleLabel, type TechRole } from "@/lib/technician-commissions";
 import {
   categoryLabels,
   monthLabel,
   partsGoal,
   referenceFor,
   rateLabel,
+  currentCompetence,
   sellerMonth,
+  sellerSeries,
   storeMonth,
   type Category,
   type UnitCheck,
@@ -56,6 +65,35 @@ const checkText: Record<UnitCheck, string> = {
   divergente: "sintético e analítico não batem",
 };
 
+type Team = "vendedores" | "operadores";
+
+/** Sellers and operators (mechanics, aligners, balancers...) are never listed together. */
+function TeamSwitch({ team, onChange }: { team: Team; onChange: (t: Team) => void }) {
+  const options: { key: Team; label: string }[] = [
+    { key: "vendedores", label: "Vendedores" },
+    { key: "operadores", label: "Operadores" },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label="Equipe"
+      className="mb-5 inline-flex rounded-lg border border-border p-0.5"
+    >
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          aria-pressed={team === o.key}
+          onClick={() => onChange(o.key)}
+          className={`min-h-10 rounded-md px-4 text-sm font-semibold ${team === o.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function percent(part: number, total: number) {
   return total ? `${((part / total) * 100).toFixed(1).replace(".", ",")}%` : "—";
 }
@@ -66,20 +104,30 @@ function Comissoes() {
   const [picked, setPicked] = useState<number | null>(null);
   const [unit, setUnit] = useState("");
   const [mode, setMode] = useState<"vendedor" | "loja">("vendedor");
+  const [team, setTeam] = useState<Team>(isTechnicianOnly(access) ? "operadores" : "vendedores");
+  const [role, setRole] = useState<TechRole | "">("");
+  const operators = team === "operadores";
+  const canPickTeam = hasAllStoresAccess(access) || Boolean(access.hasSales && access.hasService);
+  const teamSwitch = canPickTeam ? <TeamSwitch team={team} onChange={setTeam} /> : null;
   const { data, isPending, error } = useQuery({
-    queryKey: ["commissions", competence],
-    queryFn: () => readCommissions({ data: { competence } }),
+    queryKey: [operators ? "tech-commissions" : "commissions", competence],
+    queryFn: () =>
+      operators
+        ? readTechCommissions({ data: { competence } })
+        : readCommissions({ data: { competence } }),
   });
 
   if (isPending)
     return (
-      <PortalShell title="Comissões" eyebrow="Vendedores">
+      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+        {teamSwitch}
         <p className="text-muted-foreground">Carregando…</p>
       </PortalShell>
     );
   if (error)
     return (
-      <PortalShell title="Comissões" eyebrow="Vendedores">
+      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+        {teamSwitch}
         <p role="alert" className="text-destructive">
           {error.message}
         </p>
@@ -87,7 +135,8 @@ function Comissoes() {
     );
   if (!data.competence)
     return (
-      <PortalShell title="Comissões" eyebrow="Vendedores">
+      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+        {teamSwitch}
         <section className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold">Nenhum relatório de comissão importado ainda</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -108,7 +157,11 @@ function Comissoes() {
   const month = data.competence;
   const ignored = new Set(data.sellers.filter((s) => s.ignored).map((s) => s.code));
   const inMonth = data.reports.filter((r) => r.competence === month && !ignored.has(r.seller_code));
-  const sellerCodes = [...new Set(inMonth.map((r) => r.seller_code))];
+  const sellerCodes = [...new Set(inMonth.map((r) => r.seller_code))].filter((code) => {
+    if (!operators || !role) return true;
+    const p = data.sellers.find((s) => s.code === code);
+    return roleGroup(p?.decision_role, p?.name) === role;
+  });
   const sellers =
     access.canReadAll || access.isAdmin
       ? sellerCodes
@@ -141,17 +194,20 @@ function Comissoes() {
       : sellerMonth(data.reports, data.os, sellerCode, month, unit || undefined);
   const goalOff = data.sellers.find((s) => s.code === sellerCode)?.parts_goal === false;
   const goal =
-    sellerCode === null || goalOff
+    sellerCode === null || goalOff || operators
       ? null
       : partsGoal(data.reports, sellerCode, month, referenceFor(data.goalRefs, sellerCode));
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
   return (
-    <PortalShell title="Comissões" eyebrow="Vendedores">
+    <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+      {teamSwitch}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary">
-            {byStore ? "Comissões · Vendas da equipe por loja" : "Comissões · Vendedores"}
+            {byStore
+              ? `Comissões · ${operators ? "Equipe de operadores" : "Vendas da equipe"} por loja`
+              : `Comissões · ${operators ? "Operadores" : "Vendedores"}`}
           </p>
           <h2 className="mt-1 text-2xl font-extrabold text-balance">
             {byStore
@@ -214,6 +270,27 @@ function Comissoes() {
               ))}
             </select>
           </label>
+          {operators && leader && (
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Função
+              <select
+                id="commission-role"
+                value={role}
+                onChange={(e) => {
+                  setRole(e.target.value as TechRole | "");
+                  setPicked(null);
+                }}
+                className={fieldClass}
+              >
+                <option value="">Todas as funções</option>
+                {ROLE_ORDER.map((g) => (
+                  <option key={g} value={g}>
+                    {roleLabel(g)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {!byStore && sellers.length > 1 && (
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Vendedor
@@ -507,7 +584,17 @@ function Comissoes() {
             </div>
           </div>
 
-          <SoldItems key={view.reportIds.join(",")} reportIds={view.reportIds} />
+          <SoldItems
+            key={view.reportIds.join(",")}
+            reportIds={view.reportIds}
+            showPlate={operators}
+          />
+          {sellerCode !== null && (
+            <CommissionCharts
+              points={sellerSeries(data.reports, sellerCode, month)}
+              partialCompetence={currentCompetence()}
+            />
+          )}
         </div>
       )}
     </PortalShell>
@@ -694,7 +781,7 @@ function StoreView({
 }
 
 /** Item list behind the month (like the analítico), filterable by group, product/description or OS. */
-function SoldItems({ reportIds }: { reportIds: string[] }) {
+function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: boolean }) {
   const [group, setGroup] = useState("");
   const [search, setSearch] = useState("");
   const {
@@ -774,6 +861,7 @@ function SoldItems({ reportIds }: { reportIds: string[] }) {
             <thead className="sticky top-0 bg-card">
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th className="py-2 pr-2 font-semibold">OS</th>
+                {showPlate && <th className="px-2 font-semibold">Placa</th>}
                 {multiStore && <th className="px-2 font-semibold">Loja</th>}
                 <th className="px-2 font-semibold">Data</th>
                 <th className="px-2 font-semibold">Produto</th>
@@ -788,6 +876,7 @@ function SoldItems({ reportIds }: { reportIds: string[] }) {
               {shown.map((i) => (
                 <tr key={`${i.report_id}-${i.position}`} className="border-t border-border">
                   <td className="py-2 pr-2">{i.sale_number}</td>
+                  {showPlate && <td className="px-2 text-muted-foreground">Em breve</td>}
                   {multiStore && <td className="px-2">{i.unit_code}</td>}
                   <td className="whitespace-nowrap px-2">
                     {i.sold_at ? new Date(i.sold_at).toLocaleDateString("pt-BR") : "—"}

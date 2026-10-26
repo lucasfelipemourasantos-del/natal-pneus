@@ -5,7 +5,9 @@ import { ArrowRight, Award, Bell, BookOpen, Target, Wallet } from "lucide-react"
 import cityAtNight from "@/assets/cidade-noturna.jpg";
 import { PortalShell, SectionHeading, Stat } from "@/components/portal-shell";
 import { supabase } from "@/integrations/supabase/client";
-import { readCommissions } from "@/lib/commission.functions";
+import { isTechnicianOnly } from "@/lib/access";
+import { readCommissions, readTechCommissions } from "@/lib/commission.functions";
+import { techMonth } from "@/lib/technician-commissions";
 import { partsGoal, referenceFor, sellerMonth } from "@/lib/commissions";
 import { money } from "@/lib/results";
 import { completeYears, tenureStatus } from "@/lib/tenure";
@@ -48,7 +50,12 @@ function Index() {
   const { data: commissions } = useQuery({
     queryKey: ["commissions", null],
     queryFn: () => readCommissions({ data: { competence: null } }),
-    enabled: Boolean(access.sellerCode),
+    enabled: Boolean(access.sellerCode) && !isTechnicianOnly(access),
+  });
+  const { data: tech } = useQuery({
+    queryKey: ["tech-commissions", null],
+    queryFn: () => readTechCommissions({ data: { competence: null } }),
+    enabled: isTechnicianOnly(access),
   });
   const admission = access.profile?.admission_date ?? null;
   const years = admission ? completeYears(admission) : null;
@@ -58,13 +65,24 @@ function Index() {
   let goalDetail = "Metas para a sua função em breve";
   let commissionValue = "Em breve";
   let commissionDetail = "Comissões para a sua função em breve";
-  if (access.sellerCode) {
+  if (isTechnicianOnly(access)) {
+    goalValue = "Sem meta";
+    goalDetail = "A meta de peças vale para vendedores";
+    commissionValue = "—";
+    commissionDetail = "Carregando seus dados";
+    if (tech?.competence && access.sellerCode) {
+      commissionValue = money(
+        techMonth(tech.reports, access.sellerCode, tech.competence).commissionCents,
+      );
+      commissionDetail = "Comissão de serviços";
+    }
+  } else if (access.sellerCode) {
     goalValue = "—";
     goalDetail = "Carregando seus dados";
     commissionValue = "—";
     commissionDetail = "Carregando seus dados";
   }
-  if (access.sellerCode && commissions?.competence) {
+  if (access.sellerCode && !isTechnicianOnly(access) && commissions?.competence) {
     const code = access.sellerCode;
     const month = commissions.competence;
     const updated = commissions.syncedAt

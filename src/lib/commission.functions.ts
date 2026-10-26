@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { GOAL_HISTORY_MONTHS, monthsBefore } from "@/lib/commissions";
+
+type GoalRefs = Database["public"]["Functions"]["parts_goal_reference_base"]["Returns"];
 
 const month = z.string().regex(/^\d{4}-\d{2}-01$/);
 
@@ -14,6 +17,7 @@ export const readCommissions = createServerFn({ method: "GET" })
       context.supabase
         .from("commission_reports")
         .select("competence")
+        .neq("kind", "tecnico")
         .order("competence", { ascending: false }),
       context.supabase
         .from("decision_sync_status")
@@ -34,6 +38,7 @@ export const readCommissions = createServerFn({ method: "GET" })
         .select(
           "id,kind,unit_code,seller_code,competence,total_sold_cents,total_commission_cents,allowance_cents,imported_at,file_name,commission_report_groups(group_name,rate_bp,sold_cents,commission_cents)",
         )
+        .neq("kind", "tecnico")
         .gte("competence", oldest)
         .lte("competence", competence),
       context.supabase.rpc("commission_os_summary", { _competence: competence }),
@@ -98,6 +103,7 @@ export const readCommissionAdmin = createServerFn({ method: "GET" })
         .select(
           "id,kind,unit_code,seller_code,competence,total_sold_cents,total_commission_cents,file_name,imported_at",
         )
+        .neq("kind", "tecnico")
         .order("competence", { ascending: false })
         .order("imported_at", { ascending: false })
         .limit(500),
@@ -172,4 +178,54 @@ export const importCommission = createServerFn({ method: "POST" })
           : "Não foi possível importar o relatório.",
       );
     return { ok: true };
+  });
+
+/** Operators (mechanics, aligners, balancers...): same shape as readCommissions, from the "tecnico" reports. RLS limits an operator to his own rows. */
+export const readTechCommissions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ competence: month.nullable() }))
+  .handler(async ({ data, context }) => {
+    const [months, sync] = await Promise.all([
+      context.supabase
+        .from("commission_reports")
+        .select("competence")
+        .eq("kind", "tecnico")
+        .order("competence", { ascending: false }),
+      context.supabase
+        .from("decision_sync_status")
+        .select("synced_at")
+        .eq("scope", "comissoes")
+        .maybeSingle(),
+    ]);
+    if (months.error) throw new Error("Não foi possível consultar as comissões.");
+    const syncedAt = sync.data?.synced_at ?? null;
+    const available = [...new Set((months.data ?? []).map((r) => r.competence))];
+    const competence = data.competence ?? available[0] ?? null;
+    if (!competence)
+      return { available, competence, syncedAt, reports: [], os: [], sellers: [], goalRefs: [] };
+    const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
+    const [reports, os, sellers] = await Promise.all([
+      context.supabase
+        .from("commission_reports")
+        .select(
+          "id,kind,unit_code,seller_code,competence,total_sold_cents,total_commission_cents,allowance_cents,imported_at,file_name,commission_report_groups(group_name,rate_bp,sold_cents,commission_cents)",
+        )
+        .eq("kind", "tecnico")
+        .gte("competence", oldest)
+        .lte("competence", competence),
+      context.supabase.rpc("technician_os_summary", { _competence: competence }),
+      context.supabase.from("decision_sellers").select("*").order("name"),
+    ]);
+    for (const res of [reports, sellers])
+      if (res.error) throw new Error("Não foi possível consultar as comissões.");
+    return {
+      available,
+      competence,
+      syncedAt,
+      reports: reports.data ?? [],
+      // Until migration 0016 is applied the OS count is simply unavailable (shown as "—").
+      os: os.error ? [] : (os.data ?? []),
+      sellers: sellers.data ?? [],
+      goalRefs: [] as GoalRefs,
+    };
   });
