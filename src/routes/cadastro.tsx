@@ -52,7 +52,7 @@ function Signup() {
     const f = new FormData(e.currentTarget);
     try {
       const { data: signed, error } = await supabase.auth.signUp({
-        email: String(f.get("email")).trim(),
+        email: String(f.get("email")).trim().toLowerCase(),
         password: String(f.get("password")),
         options: {
           emailRedirectTo: window.location.origin + "/confirmar-email",
@@ -189,6 +189,8 @@ function Signup() {
                 name="email"
                 type="email"
                 autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
                 maxLength={255}
                 required
                 className={fieldClass}

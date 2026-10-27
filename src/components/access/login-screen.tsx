@@ -19,13 +19,20 @@ export function LoginScreen() {
     setBusy(true);
     setError("");
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email: confirmationEmail,
-        options: { emailRedirectTo: window.location.origin + "/confirmar-email" } });
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: { emailRedirectTo: window.location.origin + "/confirmar-email" },
+      });
       if (error) throw error;
-      setNotice("Se houver um cadastro aguardando confirmação, enviaremos um novo link para este e-mail.");
+      setNotice(
+        "Se houver um cadastro aguardando confirmação, enviaremos um novo link para este e-mail.",
+      );
     } catch {
       setError("Não foi possível reenviar agora. Aguarde alguns minutos e tente novamente.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,7 +42,8 @@ export function LoginScreen() {
     setConfirmationEmail("");
     const f = new FormData(e.currentTarget);
     try {
-      const email = String(f.get("email")).trim();
+      // The auth server stores e-mails in lowercase, so capitals typed on a phone must not break the login.
+      const email = String(f.get("email")).trim().toLowerCase();
       if (recover) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin + "/nova-senha",
@@ -81,6 +89,8 @@ export function LoginScreen() {
               name="email"
               type="email"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               maxLength={255}
               required
               className={fieldClass}
@@ -120,7 +130,17 @@ export function LoginScreen() {
               {notice}
             </p>
           )}
-          {confirmationEmail && <Button type="button" variant="outline" disabled={busy} onClick={resendConfirmation} className="w-full">Reenviar confirmação de e-mail</Button>}
+          {confirmationEmail && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={resendConfirmation}
+              className="w-full"
+            >
+              Reenviar confirmação de e-mail
+            </Button>
+          )}
           <Button disabled={busy} className="min-h-11 w-full shadow-none">
             {busy ? "Aguarde…" : recover ? "Enviar link" : "Entrar"}
           </Button>
@@ -137,7 +157,11 @@ export function LoginScreen() {
           >
             {recover ? "Voltar para entrar" : "Esqueci minha senha"}
           </Button>
-          <Button asChild variant="link" className="min-h-11 px-0 text-muted-foreground hover:text-foreground">
+          <Button
+            asChild
+            variant="link"
+            className="min-h-11 px-0 text-muted-foreground hover:text-foreground"
+          >
             <Link to="/cadastro">Criar cadastro</Link>
           </Button>
         </div>
