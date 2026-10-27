@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { GOAL_HISTORY_MONTHS, monthsBefore } from "@/lib/commissions";
+import { GOAL_HISTORY_MONTHS, goalBaseMonth, monthsBefore } from "@/lib/commissions";
 import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
 
 const NO_GOALS = [] as LaborGoalRow[];
@@ -73,7 +73,7 @@ export const readCommissions = createServerFn({ method: "GET" })
         teams: NO_TEAMS,
         names: NO_NAMES,
       };
-    const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
+    const oldest = monthsBefore(goalBaseMonth(competence), GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, refs] = await Promise.all([
       context.supabase
         .from("commission_reports")
@@ -87,7 +87,7 @@ export const readCommissions = createServerFn({ method: "GET" })
       context.supabase.from("decision_sellers").select("*").order("name"),
       // "Média mínima" bases (Erivan/Israel use the lowest regular seller's). The seller only gets his own line. If the database
       // update (0013) is not applied yet this call fails and the page simply uses each seller's own base.
-      context.supabase.rpc("parts_goal_reference_base", { _competence: competence }),
+      context.supabase.rpc("parts_goal_reference_base", { _competence: goalBaseMonth(competence) }),
     ]);
     for (const res of [reports, os, sellers])
       if (res.error) throw new Error("Não foi possível consultar as comissões.");

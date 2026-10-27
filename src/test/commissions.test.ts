@@ -9,6 +9,7 @@ import {
 } from "@/lib/decision-report";
 import {
   categoryOf,
+  goalBaseMonth,
   monthsBefore,
   partsGoal,
   referenceFor,
@@ -412,5 +413,49 @@ describe("Peças goal", () => {
       )?.baseCents,
     ).toBe(5);
     expect(referenceFor([], 900)).toBeNull();
+  });
+});
+
+describe("Fixed peças goal base", () => {
+  const monthly = (code: number, month: string, cents: number) =>
+    report(`r${code}${month}`, "sintetico", "NP4", month, 1, 1, cents);
+  // 2025-10 … 2026-09 (the 12 months before October/2026): 1.000.000 each, one bad month of 100.000.
+  const base = [
+    "2025-10-01",
+    "2025-11-01",
+    "2025-12-01",
+    "2026-01-01",
+    "2026-02-01",
+    "2026-03-01",
+    "2026-04-01",
+    "2026-05-01",
+    "2026-06-01",
+    "2026-07-01",
+    "2026-08-01",
+    "2026-09-01",
+  ].map((m, i) => monthly(900, m, i === 3 ? 100000 : 1000000));
+
+  it("keeps the same base from October to December/2026", () => {
+    const reports = [
+      ...base,
+      monthly(900, "2026-10-01", 5000000), // a huge October must not lift November's base
+      monthly(900, "2026-11-01", 1200000),
+    ];
+    const oct = partsGoal(reports, 900, "2026-10-01");
+    const nov = partsGoal(reports, 900, "2026-11-01");
+    const dec = partsGoal(reports, 900, "2026-12-01");
+    expect(oct.averageCents).toBe(1000000);
+    expect(nov.averageCents).toBe(oct.averageCents);
+    expect(dec.averageCents).toBe(oct.averageCents);
+    expect(nov.tiers.map((x) => x.targetCents)).toEqual(oct.tiers.map((x) => x.targetCents));
+    expect(nov.currentCents).toBe(1200000);
+    expect(nov.history).toHaveLength(12);
+    expect(nov.history.at(-1)!.month).toBe("2026-09-01");
+  });
+
+  it("slides month by month outside the fixed period", () => {
+    expect(goalBaseMonth("2026-09-01")).toBe("2026-09-01");
+    expect(goalBaseMonth("2026-12-01")).toBe("2026-10-01");
+    expect(goalBaseMonth("2027-01-01")).toBe("2027-01-01");
   });
 });

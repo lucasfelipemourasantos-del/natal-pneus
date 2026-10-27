@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Award, CircleDollarSign, Target, TrendingUp } from "lucide-react";
 import { PortalShell, Stat } from "@/components/portal-shell";
 import { isSeller } from "@/lib/access";
+import { cleanName } from "@/lib/names";
 import { LaborGoalCard } from "@/components/labor-goal-card";
 import { readCommissions, readTechCommissions } from "@/lib/commission.functions";
 import { laborGoal } from "@/lib/technician-commissions";
@@ -51,7 +52,30 @@ function MetasPage() {
   const [competence, setCompetence] = useState<string | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
   const allowed = isSeller(access);
-  const operator = !allowed && Boolean(access.hasService);
+  const leader = Boolean(access.canReadAll || access.isAdmin);
+  const [team, setTeam] = useState<"vendedores" | "operadores">("vendedores");
+  const [pickedOp, setPickedOp] = useState<number | null>(null);
+  // Leadership can look at the operators' labor goals too; an operator sees only his own.
+  const teamSwitch = leader ? (
+    <div
+      role="group"
+      aria-label="Equipe"
+      className="mb-5 inline-flex rounded-lg border border-border p-0.5"
+    >
+      {(["vendedores", "operadores"] as const).map((k) => (
+        <button
+          key={k}
+          type="button"
+          aria-pressed={team === k}
+          onClick={() => setTeam(k)}
+          className={`min-h-10 rounded-md px-4 text-sm font-semibold ${team === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {k === "vendedores" ? "Vendedores" : "Operadores"}
+        </button>
+      ))}
+    </div>
+  ) : null;
+  const operator = leader ? team === "operadores" : !allowed && Boolean(access.hasService);
   const tech = useQuery({
     queryKey: ["tech-commissions", null],
     queryFn: () => readTechCommissions({ data: { competence: null } }),
@@ -63,27 +87,71 @@ function MetasPage() {
     enabled: allowed,
   });
 
-  if (operator)
+  if (operator) {
+    const td = tech.data;
+    const month = td?.competence ?? null;
+    const nameOf = (code: number) =>
+      td?.names.find((n) => n.code === code)?.name ??
+      cleanName(td?.sellers.find((x) => x.code === code)?.name ?? `Código ${code}`);
+    const own = access.sellerCodes ?? [];
+    const people =
+      td && month
+        ? [
+            ...new Set(td.reports.filter((r) => r.competence === month).map((r) => r.seller_code)),
+          ].filter((code) => {
+            const p = td.sellers.find((x) => x.code === code);
+            return !p?.ignored && p?.is_person !== false && (leader || own.includes(code));
+          })
+        : [];
+    const options = people
+      .map((code) => ({ code, name: nameOf(code) }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    const opCode = options.some((o) => o.code === pickedOp)
+      ? pickedOp!
+      : (options[0]?.code ?? null);
     return (
       <PortalShell title="Minhas metas" eyebrow="Desempenho">
+        {teamSwitch}
         {tech.isPending && <p className="text-muted-foreground">Carregando…</p>}
-        {tech.data?.competence && (
+        {td && month && (
           <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Meta de mão de obra de {monthLabel(tech.data.competence)}.
+              Meta de mão de obra de {monthLabel(month)}. As metas são fixas até o fim do ano.
             </p>
+            {leader && options.length > 0 && (
+              <label className="block max-w-sm text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Operador
+                <select
+                  id="goal-operator"
+                  value={opCode ?? ""}
+                  onChange={(e) => setPickedOp(Number(e.target.value))}
+                  className={fieldClass}
+                >
+                  {options.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.code} · {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div className="grid gap-5 lg:grid-cols-2">
-              {(access.sellerCodes ?? []).map((code) => (
-                <LaborGoalCard
-                  key={code}
-                  goal={laborGoal(tech.data.reports, code, tech.data.competence!, tech.data.goals)}
-                />
+              {(leader ? (opCode === null ? [] : [opCode]) : own).map((code) => (
+                <div key={code} className="space-y-2">
+                  {!leader && own.length > 1 && (
+                    <p className="text-sm font-semibold">
+                      {code} · {nameOf(code)}
+                    </p>
+                  )}
+                  <LaborGoalCard goal={laborGoal(td.reports, code, month, td.goals)} />
+                </div>
               ))}
             </div>
           </div>
         )}
       </PortalShell>
     );
+  }
 
   if (!allowed)
     return (
@@ -133,7 +201,6 @@ function MetasPage() {
         .map((r) => r.seller_code),
     ),
   ];
-  const leader = Boolean(access.canReadAll || access.isAdmin);
   const sellers = (leader ? codes : codes.filter((c) => c === access.sellerCode))
     .map((code) => ({
       code,
@@ -175,6 +242,7 @@ function MetasPage() {
 
   return (
     <PortalShell title="Minhas metas" eyebrow="Desempenho">
+      {teamSwitch}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary">

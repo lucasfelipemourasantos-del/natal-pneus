@@ -224,6 +224,18 @@ export function monthsBefore(competence: string, n: number) {
 }
 
 export const GOAL_HISTORY_MONTHS = 12;
+
+/**
+ * Goal periods: the peças base is formed once, from the 12 months before the first month of the period, and stays fixed
+ * until the period ends (it does not slide month by month). A new period is added when the new year's rules start.
+ * Months outside any period keep the sliding base (history).
+ */
+export const GOAL_PERIODS = [{ from: "2026-10-01", to: "2026-12-01" }];
+
+/** Month whose 12 previous months form the peças base of `competence`. */
+export function goalBaseMonth(competence: string) {
+  return GOAL_PERIODS.find((p) => competence >= p.from && competence <= p.to)?.from ?? competence;
+}
 /** The worst month (vacation, leave, a bad month) is left out of the base, once there is enough history. */
 export const GOAL_MIN_MONTHS_TO_DROP = 6;
 
@@ -281,7 +293,7 @@ export function partsGoal(
       .filter((g) => categoryOf(g.group_name) === "pecas")
       .reduce((t, g) => t + g.sold_cents, 0);
   };
-  const history = monthsBefore(competence, GOAL_HISTORY_MONTHS)
+  const history = monthsBefore(goalBaseMonth(competence), GOAL_HISTORY_MONTHS)
     .map((month) => ({ month, cents: parts(month) }))
     .reverse();
   const withData = history.filter((h): h is { month: string; cents: number } => h.cents !== null);
