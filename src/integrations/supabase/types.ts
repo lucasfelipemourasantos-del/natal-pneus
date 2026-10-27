@@ -260,8 +260,21 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_teams: {
+        Row: { id: string; members: number[]; name: string; unit_code: string }
+        Insert: { id?: string; members: number[]; name: string; unit_code: string }
+        Update: { id?: string; members?: number[]; name?: string; unit_code?: string }
+        Relationships: []
+      }
+      technician_goals: {
+        Row: { bonus_cents: number; seller_code: number; target_cents: number; tier: string }
+        Insert: { bonus_cents: number; seller_code: number; target_cents: number; tier: string }
+        Update: { bonus_cents?: number; seller_code?: number; target_cents?: number; tier?: string }
+        Relationships: []
+      }
       decision_sellers: {
         Row: {
+          active: boolean
           code: number
           created_at: string
           decision_role: string | null
@@ -272,6 +285,7 @@ export type Database = {
           profile_id: string | null
         }
         Insert: {
+          active?: boolean
           code: number
           created_at?: string
           decision_role?: string | null
@@ -282,6 +296,7 @@ export type Database = {
           profile_id?: string | null
         }
         Update: {
+          active?: boolean
           code?: number
           created_at?: string
           decision_role?: string | null
@@ -691,6 +706,17 @@ export type Database = {
     }
     Functions: {
       can_read_all: { Args: never; Returns: boolean }
+      team_commission: {
+        Args: { _competence: string }
+        Returns: {
+          commission_cents: number
+          member_codes: number[]
+          sold_cents: number
+          team_id: string
+          team_name: string
+          unit_code: string
+        }[]
+      }
       commission_os_summary: {
         Args: { _competence: string }
         Returns: {

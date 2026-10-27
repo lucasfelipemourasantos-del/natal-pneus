@@ -5,7 +5,14 @@ import {
   type ApiTechnicianCommissions,
 } from "@/lib/decision-sync";
 import { sellerMonth, type ReportRow } from "@/lib/commissions";
-import { roleGroup, techMonth, techSeries } from "@/lib/technician-commissions";
+import {
+  laborGoal,
+  roleGroup,
+  teamShare,
+  techMonth,
+  techSeries,
+  type LaborGoalRow,
+} from "@/lib/technician-commissions";
 
 const tech: ApiTechnicianCommissions = {
   periodo: { de: "2026-10-01", ate: "2026-10-31" },
@@ -131,5 +138,49 @@ describe("operators use the seller month view", () => {
     expect(v.osCount).toBe(3);
     expect(v.ticketCents).toBe(10000);
     expect(v.byUnit[0]?.check).toBe("conferido");
+  });
+});
+
+describe("labor goal and pooled team", () => {
+  const goals: LaborGoalRow[] = [
+    { seller_code: 163, tier: "bronze", target_cents: 877459, bonus_cents: 17800 },
+    { seller_code: 163, tier: "prata", target_cents: 957228, bonus_cents: 29500 },
+    { seller_code: 163, tier: "ouro", target_cents: 997112, bonus_cents: 50500 },
+  ];
+  const withGroups = (labor: number, parts: number): ReportRow => ({
+    ...report(163, "NP1", "2026-10-01", labor + parts, 1000),
+    commission_report_groups: [
+      { group_name: "PEÇAS", rate_bp: 200, sold_cents: parts, commission_cents: 0 },
+      {
+        group_name: "MÃO DE OBRA INTERNA",
+        rate_bp: 500,
+        sold_cents: labor - 20000,
+        commission_cents: 0,
+      },
+      { group_name: "MÃO DE OBRA EXTERNA", rate_bp: 200, sold_cents: 20000, commission_cents: 0 },
+    ],
+  });
+
+  it("counts only the internal labor group, not externa, peças or others", () => {
+    const g = laborGoal([withGroups(980000, 2000000)], 163, "2026-10-01", goals)!;
+    expect(g.currentCents).toBe(960000);
+    expect(g.reached?.key).toBe("prata");
+    expect(g.bonusCents).toBe(29500);
+    expect(g.next?.key).toBe("ouro");
+  });
+
+  it("is below bronze with no bonus", () => {
+    const g = laborGoal([withGroups(600000, 100)], 163, "2026-10-01", goals)!;
+    expect(g.reached).toBeNull();
+    expect(g.bonusCents).toBe(0);
+    expect(g.next?.key).toBe("bronze");
+  });
+
+  it("has no goal for someone without registered tiers", () => {
+    expect(laborGoal([withGroups(960000, 0)], 999, "2026-10-01", goals)).toBeNull();
+  });
+
+  it("splits the team commission equally", () => {
+    expect(teamShare({ commission_cents: 191828, member_codes: [163, 164, 176] })).toBe(63943);
   });
 });

@@ -1,8 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { canOpenOs } from "@/lib/access";
 import { CarFront, CheckCircle2, Mic, Package, ShieldCheck, UserRound } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 
 export const Route = createFileRoute("/_authenticated/abrir-os")({
+  beforeLoad: ({ context }) => {
+    if (!canOpenOs(context.access)) throw redirect({ to: "/inicio" });
+  },
   head: () => ({
     meta: [
       { title: "Abrir OS por voz — Portal Natal Pneus" },

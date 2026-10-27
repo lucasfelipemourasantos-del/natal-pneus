@@ -11,7 +11,16 @@ import {
   readTechCommissions,
 } from "@/lib/commission.functions";
 import { isTechnicianOnly } from "@/lib/access";
-import { ROLE_ORDER, roleGroup, roleLabel, type TechRole } from "@/lib/technician-commissions";
+import {
+  laborGoal,
+  ROLE_ORDER,
+  roleGroup,
+  roleLabel,
+  teamShare,
+  techMonth,
+  type TeamRow,
+  type TechRole,
+} from "@/lib/technician-commissions";
 import {
   categoryLabels,
   monthLabel,
@@ -66,6 +75,115 @@ const checkText: Record<UnitCheck, string> = {
 };
 
 type Team = "vendedores" | "operadores";
+
+/** Labor goal of a mechanic (bronze, prata, ouro, each with a bonus). Without a registered goal it says "em breve". */
+function LaborGoalCard({ goal }: { goal: ReturnType<typeof laborGoal> }) {
+  if (!goal)
+    return (
+      <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+        <h3 className="text-lg font-bold">Meta de mão de obra</h3>
+        <span className="inline-block rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide">
+          Em breve
+        </span>
+        <p className="text-xs text-muted-foreground">
+          A meta desta função ainda está sendo elaborada.
+        </p>
+      </section>
+    );
+  const top = goal.tiers.at(-1)?.targetCents ?? 1;
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+      <h3 className="text-lg font-bold">Meta de mão de obra</h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-xl font-extrabold tabular-nums">{money(goal.currentCents)}</span>
+        <span className="text-xs text-muted-foreground">
+          {goal.next
+            ? `de ${money(goal.next.targetCents)} (${goal.next.label})`
+            : "Todas as faixas atingidas"}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${Math.min(100, (goal.currentCents / top) * 100)}%` }}
+        />
+      </div>
+      <ul className="divide-y divide-border text-sm tabular-nums">
+        {goal.tiers.map((t) => (
+          <li key={t.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span className="font-semibold">
+              {t.label}
+              {t.reached && (
+                <span className="ml-2 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold uppercase text-success">
+                  atingida
+                </span>
+              )}
+            </span>
+            <span className="text-muted-foreground">
+              {money(t.targetCents)} · bônus {money(t.bonusCents)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-muted-foreground">
+        {goal.reached
+          ? `Bônus do mês: ${money(goal.bonusCents)} (faixa ${goal.reached.label}). `
+          : ""}
+        {goal.next
+          ? `Faltam ${money(goal.next.targetCents - goal.currentCents)} para a faixa ${goal.next.label}. `
+          : ""}
+        Conta só o grupo Mão de obra interna, somando todas as lojas.
+      </p>
+    </section>
+  );
+}
+
+/** Commission of a pooled team: everyone's commission summed and split equally. The goal stays individual. */
+function TeamCard({
+  team,
+  ownCents,
+  members,
+}: {
+  team: TeamRow;
+  ownCents: number;
+  members: { code: number; name: string; cents: number }[] | null;
+}) {
+  return (
+    <section className="space-y-3 rounded-xl border border-primary bg-card p-5 shadow-[inset_0_3px_0_var(--primary)]">
+      <h3 className="text-lg font-bold">Comissão unificada</h3>
+      <p className="text-xs text-muted-foreground">
+        {team.team_name}: a comissão de todos é somada e dividida por {team.member_codes.length}.
+      </p>
+      <dl className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-muted-foreground">Soma da equipe</dt>
+          <dd className="text-lg font-extrabold tabular-nums">{money(team.commission_cents)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Parte de cada um</dt>
+          <dd className="text-lg font-extrabold tabular-nums text-primary">
+            {money(teamShare(team))}
+          </dd>
+        </div>
+      </dl>
+      <p className="text-sm">
+        Comissão individual do Decision: <b className="tabular-nums">{money(ownCents)}</b>
+      </p>
+      {members && (
+        <ul className="divide-y divide-border text-sm tabular-nums">
+          {members.map((m) => (
+            <li key={m.code} className="flex justify-between gap-2 py-1.5">
+              <span>
+                {m.code} · {m.name}
+              </span>
+              <b>{money(m.cents)}</b>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 /** Sellers and operators (mechanics, aligners, balancers...) are never listed together. */
 function TeamSwitch({ team, onChange }: { team: Team; onChange: (t: Team) => void }) {
@@ -197,6 +315,14 @@ function Comissoes() {
     sellerCode === null || goalOff || operators
       ? null
       : partsGoal(data.reports, sellerCode, month, referenceFor(data.goalRefs, sellerCode));
+  const labor =
+    operators && sellerCode !== null
+      ? laborGoal(data.reports, sellerCode, month, data.goals)
+      : null;
+  const unifiedTeam =
+    operators && sellerCode !== null
+      ? (data.teams.find((t) => t.member_codes.includes(sellerCode)) ?? null)
+      : null;
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
   return (
@@ -499,6 +625,23 @@ function Comissoes() {
             </section>
 
             <div className="min-w-0 space-y-5">
+              {operators && sellerCode !== null && <LaborGoalCard goal={labor} />}
+              {unifiedTeam && sellerCode !== null && (
+                <TeamCard
+                  team={unifiedTeam}
+                  ownCents={techMonth(data.reports, sellerCode, month).commissionCents}
+                  members={
+                    leader
+                      ? unifiedTeam.member_codes.map((code) => ({
+                          code,
+                          name:
+                            data.sellers.find((s) => s.code === code)?.name ?? `Técnico ${code}`,
+                          cents: techMonth(data.reports, code, month).commissionCents,
+                        }))
+                      : null
+                  }
+                />
+              )}
               {goal && (
                 <section className="space-y-3 rounded-xl border border-border bg-card p-5">
                   <h3 className="text-lg font-bold">Meta de peças</h3>

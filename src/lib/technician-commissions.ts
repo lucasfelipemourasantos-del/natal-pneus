@@ -78,3 +78,60 @@ export function techSeries(reports: ReportRow[], codes: number[], competence: st
       };
     });
 }
+
+/** Only the "MÃO DE OBRA INTERNA" group counts for the mechanics' labor goal (not externa, higienização, etc.). */
+export const LABOR_GROUP = "MAO DE OBRA INTERNA";
+
+export type LaborGoalRow = {
+  seller_code: number;
+  tier: string;
+  target_cents: number;
+  bonus_cents: number;
+};
+export type TeamRow = {
+  team_id: string;
+  team_name: string;
+  unit_code: string;
+  member_codes: number[];
+  sold_cents: number;
+  commission_cents: number;
+};
+
+const TIER_ORDER = ["bronze", "prata", "ouro"] as const;
+const TIER_LABEL = { bronze: "Bronze", prata: "Prata", ouro: "Ouro" } as const;
+
+/** Labor sold by one person in a month and where it stands against his bronze, prata and ouro goals. Null: no goal registered. */
+export function laborGoal(
+  reports: ReportRow[],
+  code: number,
+  competence: string,
+  goals: LaborGoalRow[],
+) {
+  const mine = goals.filter((g) => g.seller_code === code);
+  if (!mine.length) return null;
+  const currentCents = techMonth(reports, code, competence)
+    .groups.filter((g) => plain(g.group_name) === LABOR_GROUP)
+    .reduce((sum, g) => sum + g.sold_cents, 0);
+  const tiers = TIER_ORDER.flatMap((key) => {
+    const row = mine.find((g) => g.tier === key);
+    return row
+      ? [
+          {
+            key,
+            label: TIER_LABEL[key],
+            targetCents: row.target_cents,
+            bonusCents: row.bonus_cents,
+            reached: currentCents >= row.target_cents,
+          },
+        ]
+      : [];
+  });
+  const reached = [...tiers].reverse().find((x) => x.reached) ?? null;
+  const next = tiers.find((x) => !x.reached) ?? null;
+  return { currentCents, tiers, reached, next, bonusCents: reached?.bonusCents ?? 0 };
+}
+
+/** Pooled team commission shared equally: what each member receives. */
+export function teamShare(team: Pick<TeamRow, "commission_cents" | "member_codes">) {
+  return Math.round(team.commission_cents / Math.max(1, team.member_codes.length));
+}

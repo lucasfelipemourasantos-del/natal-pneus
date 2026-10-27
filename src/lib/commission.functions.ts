@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { GOAL_HISTORY_MONTHS, monthsBefore } from "@/lib/commissions";
+import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
+
+const NO_GOALS = [] as LaborGoalRow[];
+const NO_TEAMS = [] as TeamRow[];
 
 type GoalRefs = Database["public"]["Functions"]["parts_goal_reference_base"]["Returns"];
 
@@ -30,7 +34,17 @@ export const readCommissions = createServerFn({ method: "GET" })
     const available = [...new Set((months.data ?? []).map((r) => r.competence))];
     const competence = data.competence ?? available[0] ?? null;
     if (!competence)
-      return { available, competence, syncedAt, reports: [], os: [], sellers: [], goalRefs: [] };
+      return {
+        available,
+        competence,
+        syncedAt,
+        reports: [],
+        os: [],
+        sellers: [],
+        goalRefs: [],
+        goals: NO_GOALS,
+        teams: NO_TEAMS,
+      };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, refs] = await Promise.all([
       context.supabase
@@ -57,6 +71,8 @@ export const readCommissions = createServerFn({ method: "GET" })
       os: os.data ?? [],
       sellers: sellers.data ?? [],
       goalRefs: refs.error ? [] : (refs.data ?? []),
+      goals: NO_GOALS,
+      teams: NO_TEAMS,
     };
   });
 
@@ -202,9 +218,19 @@ export const readTechCommissions = createServerFn({ method: "GET" })
     const available = [...new Set((months.data ?? []).map((r) => r.competence))];
     const competence = data.competence ?? available[0] ?? null;
     if (!competence)
-      return { available, competence, syncedAt, reports: [], os: [], sellers: [], goalRefs: [] };
+      return {
+        available,
+        competence,
+        syncedAt,
+        reports: [],
+        os: [],
+        sellers: [],
+        goalRefs: [],
+        goals: NO_GOALS,
+        teams: NO_TEAMS,
+      };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
-    const [reports, os, sellers] = await Promise.all([
+    const [reports, os, sellers, goals, teams] = await Promise.all([
       context.supabase
         .from("commission_reports")
         .select(
@@ -215,6 +241,8 @@ export const readTechCommissions = createServerFn({ method: "GET" })
         .lte("competence", competence),
       context.supabase.rpc("technician_os_summary", { _competence: competence }),
       context.supabase.from("decision_sellers").select("*").order("name"),
+      context.supabase.from("technician_goals").select("seller_code,tier,target_cents,bonus_cents"),
+      context.supabase.rpc("team_commission", { _competence: competence }),
     ]);
     for (const res of [reports, sellers])
       if (res.error) throw new Error("Não foi possível consultar as comissões.");
@@ -227,5 +255,8 @@ export const readTechCommissions = createServerFn({ method: "GET" })
       os: os.error ? [] : (os.data ?? []),
       sellers: sellers.data ?? [],
       goalRefs: [] as GoalRefs,
+      // Until migration 0017 is applied there are simply no goals or teams.
+      goals: goals.error ? NO_GOALS : (goals.data ?? NO_GOALS),
+      teams: teams.error ? NO_TEAMS : (teams.data ?? NO_TEAMS),
     };
   });

@@ -29,7 +29,7 @@ import {
   canSeeCommissions,
   hasAllStoresAccess,
   initials,
-  isSeller,
+  canOpenOs,
   type Access,
 } from "@/lib/access";
 import { useQuery } from "@tanstack/react-query";
@@ -67,7 +67,13 @@ type NavLink = {
 function navGroups(
   access: Pick<
     Access,
-    "isAdmin" | "canReadAll" | "isProducer" | "sellerCode" | "hasSales" | "hasService"
+    | "isAdmin"
+    | "canReadAll"
+    | "isProducer"
+    | "sellerCode"
+    | "sellerActive"
+    | "hasSales"
+    | "hasService"
   >,
 ) {
   const personal: NavLink[] = [
@@ -80,7 +86,7 @@ function navGroups(
       ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }]
       : []),
     { to: "/cursos", label: "Meus cursos", icon: BookOpen },
-    ...(isSeller(access)
+    ...(canOpenOs(access)
       ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }]
       : []),
     { to: "/documentos", label: "Meus documentos", icon: FileText },

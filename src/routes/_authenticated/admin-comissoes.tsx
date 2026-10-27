@@ -223,6 +223,24 @@ function AdminComissoes() {
     ]);
   }
 
+  async function setActive(code: number, active: boolean) {
+    const { error: err } = await supabase
+      .from("decision_sellers")
+      .update({ active })
+      .eq("code", code);
+    setNotice(
+      err
+        ? "Não foi possível salvar. A atualização do banco (0018) já foi aplicada?"
+        : active
+          ? "Vendedor em atividade."
+          : "Vendedor só para histórico: sem conta vinculada e sem abertura de OS por voz.",
+    );
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: adminKey }),
+      qc.invalidateQueries({ queryKey: ["commissions"] }),
+    ]);
+  }
+
   async function setIgnored(code: number, ignored: boolean) {
     const { error: err } = await supabase
       .from("decision_sellers")
@@ -494,7 +512,12 @@ function AdminComissoes() {
                     >
                       {s.code} · {s.name}
                     </label>
-                    {!s.ignored && (
+                    {s.active === false && (
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Só para histórico
+                      </p>
+                    )}
+                    {!s.ignored && s.active !== false && (
                       <select
                         id={`seller-link-${s.code}`}
                         value={s.profile_id ?? ""}
@@ -520,6 +543,18 @@ function AdminComissoes() {
                       />
                       Não é vendedor (estoque, gerência): ignorar nas comissões e metas
                     </label>
+                    {!s.ignored && (
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          id={`seller-active-${s.code}`}
+                          type="checkbox"
+                          checked={s.active === false}
+                          onChange={(e) => setActive(s.code, !e.target.checked)}
+                          className="size-4 accent-primary"
+                        />
+                        Só para histórico (não está mais em atividade)
+                      </label>
+                    )}
                     {!s.ignored && (
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         <input

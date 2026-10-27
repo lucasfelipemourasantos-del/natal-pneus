@@ -11,6 +11,8 @@ export type Access = {
   isProducer?: boolean;
   /** Decision seller code linked to this account, when there is one. */
   sellerCode?: number | null;
+  /** The linked Decision code is in activity (false: kept only for history, or ignored). */
+  sellerActive?: boolean | undefined;
   /** The linked Decision code has sales commissions (seller reports). */
   hasSales?: boolean;
   /** The linked Decision code has service commissions (technician reports). */
@@ -22,7 +24,20 @@ export function isTechnicianOnly(access: Pick<Access, "hasSales" | "hasService">
   return Boolean(access.hasService) && !access.hasSales;
 }
 
-/** Peças goal and voice OS are for sellers; a technician-only account does not get them. */
+/** Voice OS opening: leadership, or an active seller (not history-only, not ignored, not technician-only). */
+export function canOpenOs(
+  access: Pick<
+    Access,
+    "isAdmin" | "canReadAll" | "sellerCode" | "sellerActive" | "hasSales" | "hasService"
+  >,
+): boolean {
+  return (
+    hasAllStoresAccess(access) ||
+    (Boolean(access.sellerCode) && access.sellerActive !== false && !isTechnicianOnly(access))
+  );
+}
+
+/** Peças goal is for sellers; a technician-only account does not get it. */
 export function isSeller(
   access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode" | "hasSales" | "hasService">,
 ): boolean {
@@ -57,7 +72,11 @@ export async function loadAccess(): Promise<Access | null> {
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
     supabase.rpc("can_read_all"),
     supabase.rpc("has_role", { _user_id: user.id, _role: "producer" }),
-    supabase.from("decision_sellers").select("code").eq("profile_id", user.id).maybeSingle(),
+    supabase
+      .from("decision_sellers")
+      .select("code,active,ignored")
+      .eq("profile_id", user.id)
+      .maybeSingle(),
   ]);
   let hasSales = false;
   let hasService = false;
@@ -82,6 +101,7 @@ export async function loadAccess(): Promise<Access | null> {
     canReadAll: Boolean(canReadAll),
     isProducer: Boolean(isProducer),
     sellerCode: seller?.code ?? null,
+    sellerActive: seller ? seller.active && !seller.ignored : undefined,
     hasSales,
     hasService,
   };

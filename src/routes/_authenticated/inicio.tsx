@@ -7,7 +7,7 @@ import { PortalShell, SectionHeading, Stat } from "@/components/portal-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { isTechnicianOnly } from "@/lib/access";
 import { readCommissions, readTechCommissions } from "@/lib/commission.functions";
-import { techMonth } from "@/lib/technician-commissions";
+import { laborGoal, techMonth } from "@/lib/technician-commissions";
 import { partsGoal, referenceFor, sellerMonth } from "@/lib/commissions";
 import { money } from "@/lib/results";
 import { completeYears, tenureStatus } from "@/lib/tenure";
@@ -66,8 +66,8 @@ function Index() {
   let commissionValue = "Em breve";
   let commissionDetail = "Comissões para a sua função em breve";
   if (isTechnicianOnly(access)) {
-    goalValue = "Sem meta";
-    goalDetail = "A meta de peças vale para vendedores";
+    goalValue = "Em breve";
+    goalDetail = "Meta de mão de obra em breve";
     commissionValue = "—";
     commissionDetail = "Carregando seus dados";
     if (tech?.competence && access.sellerCode) {
@@ -75,6 +75,13 @@ function Index() {
         techMonth(tech.reports, access.sellerCode, tech.competence).commissionCents,
       );
       commissionDetail = "Comissão de serviços";
+      const labor = laborGoal(tech.reports, access.sellerCode, tech.competence, tech.goals);
+      if (labor) {
+        goalValue = labor.reached ? labor.reached.label : "Em andamento";
+        goalDetail = labor.next
+          ? `Mão de obra: faltam ${money(labor.next.targetCents - labor.currentCents)} para ${labor.next.label}`
+          : "Todas as faixas de mão de obra atingidas";
+      }
     }
   } else if (access.sellerCode) {
     goalValue = "—";
