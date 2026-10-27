@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { canManageAssets } from "@/lib/access";
 import {
+  DOC_TYPE_LABEL,
   DUE_LABEL,
+  assetSummary,
   STATUS_LABEL,
   addMonths,
   assetLink,
@@ -57,6 +59,7 @@ function AssetPage() {
   const [editing, setEditing] = useState(false);
   const [retiring, setRetiring] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [docType, setDocType] = useState("orcamento");
   const today = todayISO();
 
   const asset = useQuery({
@@ -122,7 +125,7 @@ function AssetPage() {
     e.target.value = "";
     if (!a || !files.length) return;
     await run(async () => {
-      for (const file of files) await uploadAssetFile(a, file, kind, maintenanceId);
+      for (const file of files) await uploadAssetFile(a, file, kind, maintenanceId, docType);
       return kind === "documento" ? "Documento anexado." : "Enviado.";
     });
   }
@@ -148,7 +151,7 @@ function AssetPage() {
   const retired = a.status === "baixado";
   const due = retired ? null : dueState(a.next_preventive, today);
   const media = (d?.files ?? []).filter((f) => f.kind !== "documento" && !f.maintenance_id);
-  const docs = (d?.files ?? []).filter((f) => f.kind === "documento" && !f.maintenance_id);
+  const docs = (d?.files ?? []).filter((f) => f.kind === "documento");
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -172,7 +175,7 @@ function AssetPage() {
             preventive && text("interval") ? Number(text("interval")) : null,
           next_preventive: preventive ? text("next_preventive") : null,
           ...(retired ? {} : { status: String(f.get("status")) }),
-          ...(access.isAdmin || access.canReadAll ? { unit_code: String(f.get("unit_code")) } : {}),
+          ...(access.isAdmin ? { unit_code: String(f.get("unit_code")) } : {}),
         })
         .eq("id", a!.id);
       if (error) throw new Error("Não foi possível salvar. Confira os dados.");
@@ -234,7 +237,7 @@ function AssetPage() {
               {editing ? "Cancelar edição" : "Editar"}
             </Button>
             {retired ? (
-              (access.isAdmin || access.canReadAll) && (
+              (access.isAdmin) && (
                 <Button variant="outline" onClick={reactivate} disabled={busy}>
                   Reativar
                 </Button>
@@ -289,6 +292,13 @@ function AssetPage() {
             <Button disabled={busy}>Confirmar baixa</Button>
           </form>
         )}
+
+        <Dashboard
+          asset={a}
+          maintenance={d?.maintenance ?? []}
+          files={d?.files ?? []}
+          today={today}
+        />
 
         <section className="space-y-3 rounded-xl border border-border bg-card p-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -386,7 +396,7 @@ function AssetPage() {
                     </select>
                   </label>
                 )}
-                {(access.isAdmin || access.canReadAll) && (
+                {(access.isAdmin) && (
                   <label className="block text-sm font-medium">
                     Loja
                     <input
@@ -474,77 +484,93 @@ function AssetPage() {
           )}
         </section>
 
-        <section className="space-y-3 rounded-xl border border-border bg-card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Fotos e vídeos</h2>
-            <div className="flex flex-wrap gap-2">
-              <CaptureButton
-                label="Tirar foto"
-                accept="image/*"
-                capture
-                disabled={busy}
-                onChange={(e) => onFile(e, "foto")}
-              />
-              <CaptureButton
-                label="Gravar vídeo curto"
-                accept="video/*"
-                capture
-                disabled={busy}
-                onChange={(e) => onFile(e, "video")}
-              />
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-bold">Fotos e vídeos</h2>
+              <div className="flex flex-wrap gap-2">
+                <CaptureButton
+                  label="Tirar foto"
+                  accept="image/*"
+                  capture
+                  disabled={busy}
+                  onChange={(e) => onFile(e, "foto")}
+                />
+                <CaptureButton
+                  label="Gravar vídeo curto"
+                  accept="video/*"
+                  capture
+                  disabled={busy}
+                  onChange={(e) => onFile(e, "video")}
+                />
+              </div>
             </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            As fotos e os vídeos são feitos na hora, pela câmera do celular. Vídeos até 25 MB.
-          </p>
-          {media.length ? (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {media.map((f) => (
-                <li key={f.id} className="overflow-hidden rounded-lg border border-border">
-                  {d?.urls[f.storage_path] &&
-                    (f.kind === "video" ? (
-                      <video
-                        src={d.urls[f.storage_path]}
-                        controls
-                        preload="metadata"
-                        className="aspect-square w-full object-cover"
-                      />
-                    ) : (
-                      <a href={d.urls[f.storage_path]} target="_blank" rel="noreferrer">
-                        <img
+            <p className="text-xs text-muted-foreground">
+              As fotos e os vídeos são feitos na hora, pela câmera do celular. Vídeos até 25 MB.
+            </p>
+            {media.length ? (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {media.map((f) => (
+                  <li key={f.id} className="overflow-hidden rounded-lg border border-border">
+                    {d?.urls[f.storage_path] &&
+                      (f.kind === "video" ? (
+                        <video
                           src={d.urls[f.storage_path]}
-                          alt={`Foto de ${a.name}`}
-                          loading="lazy"
+                          controls
+                          preload="metadata"
                           className="aspect-square w-full object-cover"
                         />
-                      </a>
-                    ))}
-                  <p className="px-2 py-1 text-[11px] text-muted-foreground">
-                    {formatDate(f.created_at)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">Nenhuma foto ainda.</p>
-          )}
-        </section>
+                      ) : (
+                        <a href={d.urls[f.storage_path]} target="_blank" rel="noreferrer">
+                          <img
+                            src={d.urls[f.storage_path]}
+                            alt={`Foto de ${a.name}`}
+                            loading="lazy"
+                            className="aspect-square w-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    <p className="px-2 py-1 text-[11px] text-muted-foreground">
+                      {formatDate(f.created_at)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma foto ainda.</p>
+            )}
+          </section>
 
-        <section className="space-y-3 rounded-xl border border-border bg-card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Documentos</h2>
-            <CaptureButton
-              label="Anexar documento"
-              accept="application/pdf,image/*"
-              disabled={busy}
-              onChange={(e) => onFile(e, "documento")}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Nota fiscal de compra, manual, garantia (PDF ou foto). Até 25 MB cada.
-          </p>
-          <FileList files={docs} urls={d?.urls ?? {}} empty="Nenhum documento anexado." />
-        </section>
+          <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-bold">Documentos</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label="Tipo do documento"
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value)}
+                  className={fieldClass + " mt-0 w-auto"}
+                >
+                  {Object.entries(DOC_TYPE_LABEL).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <CaptureButton
+                  label="Anexar"
+                  accept="application/pdf,image/*"
+                  disabled={busy}
+                  onChange={(e) => onFile(e, "documento")}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Escolha o tipo (orçamento, nota de serviço…) e anexe o PDF ou a foto. Até 25 MB cada.
+            </p>
+            <FileList files={docs} urls={d?.urls ?? {}} empty="Nenhum documento anexado." />
+          </section>
+        </div>
 
         <MaintenanceSection
           asset={a}
@@ -556,23 +582,25 @@ function AssetPage() {
           today={today}
         />
 
-        <LabelSection asset={a} />
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <LabelSection asset={a} />
 
-        <section className="space-y-2 rounded-xl border border-border bg-card p-5">
-          <h2 className="text-lg font-bold">Histórico do equipamento</h2>
-          {d?.log.length ? (
-            <ul className="divide-y divide-border text-sm">
-              {d.log.map((l) => (
-                <li key={l.id} className="py-2">
-                  <b className="capitalize">{l.action}</b> em{" "}
-                  {new Date(l.at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">Sem registros.</p>
-          )}
-        </section>
+          <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+            <h2 className="text-lg font-bold">Histórico do equipamento</h2>
+            {d?.log.length ? (
+              <ul className="divide-y divide-border text-sm">
+                {d.log.map((l) => (
+                  <li key={l.id} className="py-2">
+                    <b className="capitalize">{l.action}</b> em{" "}
+                    {new Date(l.at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sem registros.</p>
+            )}
+          </section>
+        </div>
       </div>
     </PortalShell>
   );
@@ -641,7 +669,14 @@ function FileList({
     <ul className="divide-y divide-border text-sm">
       {files.map((f) => (
         <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-          <span className="min-w-0 break-words">{f.file_name}</span>
+          <span className="min-w-0 break-words">
+            {f.doc_type && (
+              <b className="mr-2 rounded-full bg-accent px-2 py-0.5 text-[11px] text-accent-foreground">
+                {DOC_TYPE_LABEL[f.doc_type] ?? f.doc_type}
+              </b>
+            )}
+            {f.file_name}
+          </span>
           {urls[f.storage_path] && (
             <a
               href={urls[f.storage_path]}
@@ -676,6 +711,7 @@ function MaintenanceSection({
   today: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [attachType, setAttachType] = useState("nota_servico");
   const [kind, setKind] = useState<"preventiva" | "corretiva">("corretiva");
   const [status, setStatus] = useState<"realizada" | "agendada">("realizada");
   const pending = useRef<File[]>([]);
@@ -714,7 +750,8 @@ function MaintenanceSection({
         .select("id")
         .single();
       if (error || !data) throw new Error("Não foi possível registrar a manutenção.");
-      for (const file of pending.current) await uploadAssetFile(asset, file, "documento", data.id);
+      for (const file of pending.current)
+        await uploadAssetFile(asset, file, "documento", data.id, attachType);
       pending.current = [];
       await nextAfter(date);
       form.reset();
@@ -799,6 +836,20 @@ function MaintenanceSection({
               <input name="cost" inputMode="decimal" placeholder="350,00" className={fieldClass} />
             </label>
           </div>
+          <label className="block text-sm font-medium">
+            Tipo do anexo
+            <select
+              value={attachType}
+              onChange={(e) => setAttachType(e.target.value)}
+              className={fieldClass}
+            >
+              {Object.entries(DOC_TYPE_LABEL).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="block text-sm font-medium">
             Nota de serviço e documentos (PDF ou foto)
             <input
@@ -901,6 +952,67 @@ function LabelSection({ asset }: { asset: Asset }) {
         <Button variant="outline" onClick={print} disabled={!qr}>
           Imprimir etiqueta
         </Button>
+      </div>
+    </section>
+  );
+}
+
+function Tile({ label, value, sub }: { label: string; value: string; sub?: string | undefined }) {
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 text-lg font-extrabold tabular-nums">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/** Registro geral: the equipment at a glance. */
+function Dashboard({
+  asset,
+  maintenance,
+  files,
+  today,
+}: {
+  asset: Asset;
+  maintenance: Maintenance[];
+  files: AssetFile[];
+  today: string;
+}) {
+  const s = assetSummary(asset, maintenance, today);
+  const due = asset.status === "baixado" ? null : dueState(asset.next_preventive, today);
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+      <h2 className="text-lg font-bold">Registro geral</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Tile
+          label="Manutenções feitas"
+          value={String(s.done)}
+          sub={`${s.preventive} preventiva(s) · ${s.corrective} corretiva(s)`}
+        />
+        <Tile
+          label="Gasto com serviços"
+          value={money(s.costCents)}
+          sub={s.withoutCost ? `${s.withoutCost} sem valor informado` : undefined}
+        />
+        <Tile label="Última manutenção" value={formatDate(s.last)} />
+        <Tile
+          label="Próxima preventiva"
+          value={asset.preventive_applicable ? formatDate(asset.next_preventive) : "Não se aplica"}
+          sub={due ? DUE_LABEL[due] : s.scheduled ? `${s.scheduled} agendada(s)` : undefined}
+        />
+        <Tile
+          label="Valor"
+          value={asset.estimated_cents !== null ? money(asset.estimated_cents) : "—"}
+          sub={asset.purchase_cents !== null ? `Compra: ${money(asset.purchase_cents)}` : undefined}
+        />
+        <Tile
+          label="Tempo de uso"
+          value={s.age ?? "—"}
+          sub={`${files.filter((f) => f.kind !== "documento").length} foto(s) · ${files.filter((f) => f.kind === "documento").length} doc(s)`}
+        />
       </div>
     </section>
   );

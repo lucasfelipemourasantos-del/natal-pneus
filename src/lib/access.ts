@@ -39,9 +39,9 @@ export function canOpenOs(
   );
 }
 
-/** Patrimônio (equipment register): leadership sees every store; a chefe de pista or supervisor, their own store. */
-export function canManageAssets(access: Pick<Access, "isAdmin" | "canReadAll" | "profile">): boolean {
-  if (access.isAdmin || access.canReadAll) return true;
+/** Patrimônio (equipment register): the ADM RH sees every store; a chefe de pista or supervisor, their own store. */
+export function canManageAssets(access: Pick<Access, "isAdmin" | "profile">): boolean {
+  if (access.isAdmin) return true;
   const p = access.profile;
   return (
     p?.status === "approved" &&

@@ -46,6 +46,51 @@ export const DUE_LABEL: Record<DueState, string> = {
   em_dia: "Em dia",
 };
 
+export const DOC_TYPE_LABEL: Record<string, string> = {
+  orcamento: "Orçamento",
+  nota_servico: "Nota de serviço",
+  nota_compra: "Nota de compra",
+  garantia: "Garantia",
+  outro: "Outro",
+};
+
+/** Numbers of the equipment dashboard: how many times it was serviced, how much it cost, what is next. */
+export function assetSummary(
+  asset: Pick<Asset, "purchase_date" | "next_preventive">,
+  maintenance: Pick<Maintenance, "kind" | "status" | "cost_cents" | "performed_at">[],
+  today: string,
+) {
+  const done = maintenance.filter((m) => m.status === "realizada");
+  const last =
+    done
+      .map((m) => m.performed_at ?? "")
+      .sort()
+      .at(-1) || null;
+  let age: string | null = null;
+  if (asset.purchase_date) {
+    const months = Math.max(
+      0,
+      (Number(today.slice(0, 4)) - Number(asset.purchase_date.slice(0, 4))) * 12 +
+        Number(today.slice(5, 7)) -
+        Number(asset.purchase_date.slice(5, 7)),
+    );
+    age =
+      months < 12
+        ? `${months} ${months === 1 ? "mês" : "meses"}`
+        : `${Math.floor(months / 12)} ano(s)${months % 12 ? ` e ${months % 12} m` : ""}`;
+  }
+  return {
+    done: done.length,
+    preventive: done.filter((m) => m.kind === "preventiva").length,
+    corrective: done.filter((m) => m.kind === "corretiva").length,
+    scheduled: maintenance.filter((m) => m.status === "agendada").length,
+    costCents: done.reduce((t, m) => t + (m.cost_cents ?? 0), 0),
+    withoutCost: done.filter((m) => m.cost_cents === null).length,
+    last,
+    age,
+  };
+}
+
 export function formatDate(date: string | null) {
   if (!date) return "—";
   const [y, m, d] = date.slice(0, 10).split("-");
@@ -84,6 +129,7 @@ export async function uploadAssetFile(
   file: File,
   kind: "foto" | "video" | "documento",
   maintenanceId?: string,
+  docType?: string,
 ) {
   const body = kind === "foto" ? await shrinkImage(file) : file;
   if (body.size > MAX_BYTES) throw new Error("Arquivo maior que 25 MB.");
@@ -98,6 +144,7 @@ export async function uploadAssetFile(
     asset_id: asset.id,
     maintenance_id: maintenanceId ?? null,
     kind,
+    doc_type: kind === "documento" ? (docType ?? "outro") : null,
     storage_path: path,
     file_name: file.name.slice(0, 200),
   });

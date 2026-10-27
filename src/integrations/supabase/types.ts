@@ -285,8 +285,8 @@ export type Database = {
         Relationships: []
       }
       asset_files: {
-        Row: { asset_id: string; created_at: string; created_by: string | null; file_name: string; id: string; kind: string; maintenance_id: string | null; storage_path: string }
-        Insert: { asset_id: string; created_at?: string; created_by?: string | null; file_name: string; id?: string; kind: string; maintenance_id?: string | null; storage_path: string }
+        Row: { asset_id: string; created_at: string; created_by: string | null; doc_type: string | null; file_name: string; id: string; kind: string; maintenance_id: string | null; storage_path: string }
+        Insert: { asset_id: string; created_at?: string; created_by?: string | null; doc_type?: string | null; file_name: string; id?: string; kind: string; maintenance_id?: string | null; storage_path: string }
         Update: { asset_id?: string; created_at?: string; created_by?: string | null; file_name?: string; id?: string; kind?: string; maintenance_id?: string | null; storage_path?: string }
         Relationships: []
       }

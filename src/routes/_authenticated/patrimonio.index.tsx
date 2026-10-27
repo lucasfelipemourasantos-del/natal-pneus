@@ -1,16 +1,18 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { PortalShell } from "@/components/portal-shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { canManageAssets } from "@/lib/access";
 import {
+  DOC_TYPE_LABEL,
   DUE_LABEL,
   STATUS_LABEL,
   dueState,
   formatDate,
   todayISO,
+  uploadAssetFile,
   type Asset,
   type DueState,
 } from "@/lib/assets";
@@ -46,7 +48,7 @@ const dueClass: Record<DueState, string> = {
 function Patrimonio() {
   const { access } = Route.useRouteContext();
   const navigate = useNavigate();
-  const leader = Boolean(access.isAdmin || access.canReadAll);
+  const leader = Boolean(access.isAdmin);
   const [unit, setUnit] = useState("");
   const [show, setShow] = useState<"ativos" | "baixados" | "todos">("ativos");
   const [search, setSearch] = useState("");
@@ -54,6 +56,12 @@ function Patrimonio() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [docs, setDocs] = useState<{ file: File; type: string }[]>([]);
+  const [docType, setDocType] = useState("orcamento");
+  const [createdCode, setCreatedCode] = useState("");
+  const photoInput = useRef<HTMLInputElement>(null);
+  const docInput = useRef<HTMLInputElement>(null);
   const today = todayISO();
 
   const units = useQuery({
@@ -120,9 +128,31 @@ function Patrimonio() {
           preventive_interval_months: preventive ? interval : null,
           next_preventive: preventive ? text("next_preventive") : null,
         })
-        .select("code")
+        .select("id,code,unit_code")
         .single();
       if (err || !data?.code) throw new Error("Não foi possível cadastrar o equipamento.");
+      // The item exists from here on; files that fail can be attached again on its page.
+      let failed = 0;
+      for (const file of photos) {
+        try {
+          await uploadAssetFile(data, file, "foto");
+        } catch {
+          failed += 1;
+        }
+      }
+      for (const doc of docs) {
+        try {
+          await uploadAssetFile(data, doc.file, "documento", undefined, doc.type);
+        } catch {
+          failed += 1;
+        }
+      }
+      if (failed) {
+        setCreatedCode(data.code);
+        throw new Error(
+          `O equipamento ${data.code} foi cadastrado, mas ${failed} arquivo(s) não foram enviados. Abra a ficha e anexe de novo.`,
+        );
+      }
       await navigate({ to: "/patrimonio/$code", params: { code: data.code } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confira os dados do equipamento.");
@@ -244,15 +274,117 @@ function Patrimonio() {
               </label>
             </div>
           </fieldset>
-          <p className="text-xs text-muted-foreground">
-            As fotos e os documentos são anexados na próxima tela, depois de salvar.
-          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <fieldset className="space-y-2 rounded-lg border border-border p-4">
+              <legend className="px-1 text-sm font-semibold">Fotos</legend>
+              <input
+                ref={photoInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                aria-label="Tirar foto"
+                onChange={(e) => {
+                  const picked = [...(e.target.files ?? [])];
+                  e.target.value = "";
+                  setPhotos((all) => [...all, ...picked]);
+                }}
+              />
+              <Button type="button" variant="outline" onClick={() => photoInput.current?.click()}>
+                Tirar foto
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Pela câmera do celular. Toque de novo para tirar mais fotos.
+              </p>
+              {photos.length > 0 && (
+                <ul className="space-y-1 text-sm">
+                  {photos.map((p, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate">Foto {i + 1}</span>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-destructive hover:underline"
+                        onClick={() => setPhotos((all) => all.filter((_, j) => j !== i))}
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </fieldset>
+            <fieldset className="space-y-2 rounded-lg border border-border p-4">
+              <legend className="px-1 text-sm font-semibold">Documentos</legend>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label="Tipo do documento"
+                  value={docType}
+                  onChange={(e) => setDocType(e.target.value)}
+                  className={fieldClass + " mt-0 w-auto"}
+                >
+                  {Object.entries(DOC_TYPE_LABEL).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  ref={docInput}
+                  type="file"
+                  accept="application/pdf,image/*"
+                  multiple
+                  className="hidden"
+                  aria-label="Anexar documento"
+                  onChange={(e) => {
+                    const picked = [...(e.target.files ?? [])];
+                    e.target.value = "";
+                    setDocs((all) => [...all, ...picked.map((file) => ({ file, type: docType }))]);
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={() => docInput.current?.click()}>
+                  Anexar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Orçamento, nota de serviço, nota de compra… em PDF ou foto.
+              </p>
+              {docs.length > 0 && (
+                <ul className="space-y-1 text-sm">
+                  {docs.map((doc, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate">
+                        <b>{DOC_TYPE_LABEL[doc.type]}</b> · {doc.file.name}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-destructive hover:underline"
+                        onClick={() => setDocs((all) => all.filter((_, j) => j !== i))}
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </fieldset>
+          </div>
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           )}
-          <Button disabled={busy}>{busy ? "Salvando…" : "Salvar e anexar fotos"}</Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button disabled={busy}>{busy ? "Salvando…" : "Salvar equipamento"}</Button>
+            {createdCode && (
+              <Link
+                to="/patrimonio/$code"
+                params={{ code: createdCode }}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Abrir a ficha de {createdCode}
+              </Link>
+            )}
+          </div>
         </form>
       )}
 
