@@ -190,6 +190,10 @@ function Signup() {
                 type="email"
                 autoComplete="email"
                 autoCapitalize="none"
+                onInput={(e) => {
+                  const v = e.currentTarget.value;
+                  if (v !== v.toLowerCase()) e.currentTarget.value = v.toLowerCase();
+                }}
                 spellCheck={false}
                 maxLength={255}
                 required
