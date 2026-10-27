@@ -272,6 +272,18 @@ export type Database = {
         Update: { bonus_cents?: number; seller_code?: number; target_cents?: number; tier?: string }
         Relationships: []
       }
+      supervisor_commissions: {
+        Row: { commission_cents: number; competence: string; entered_at: string; entered_by: string | null; group_name: string; id: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }
+        Insert: { commission_cents: number; competence: string; entered_at?: string; entered_by?: string | null; group_name: string; id?: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }
+        Update: { commission_cents?: number; competence?: string; entered_at?: string; entered_by?: string | null; group_name?: string; id?: string; period_end?: string; rate_bp?: number; seller_code?: number; sold_cents?: number; unit_code?: string }
+        Relationships: []
+      }
+      decision_code_requests: {
+        Row: { code: number; created_at: string; id: string; profile_id: string; reason: string; typed_name: string }
+        Insert: { code: number; created_at?: string; id?: string; profile_id: string; reason: string; typed_name: string }
+        Update: { code?: number; created_at?: string; id?: string; profile_id?: string; reason?: string; typed_name?: string }
+        Relationships: []
+      }
       decision_sellers: {
         Row: {
           active: boolean
@@ -284,6 +296,7 @@ export type Database = {
           min_average: boolean
           name: string
           parts_goal: boolean
+          supervisor_unit: string | null
           profile_id: string | null
         }
         Insert: {
@@ -297,6 +310,7 @@ export type Database = {
           min_average?: boolean
           name: string
           parts_goal?: boolean
+          supervisor_unit?: string | null
           profile_id?: string | null
         }
         Update: {
@@ -310,6 +324,7 @@ export type Database = {
           min_average?: boolean
           name?: string
           parts_goal?: boolean
+          supervisor_unit?: string | null
           profile_id?: string | null
         }
         Relationships: [
@@ -738,6 +753,7 @@ export type Database = {
         Returns: number
       }
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
+      claim_decision_codes: { Args: { _codes: number[] }; Returns: Json }
       technician_os_summary: {
         Args: { _competence: string }
         Returns: {

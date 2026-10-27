@@ -20,6 +20,20 @@ export const Route = createFileRoute("/cadastro")({
   }),
   component: Signup,
 });
+/** "72, 206" -> [72, 206] */
+function parseCodes(text: string) {
+  return [
+    ...new Set(
+      text
+        .split(/[^0-9]+/)
+        .filter(Boolean)
+        .map(Number),
+    ),
+  ]
+    .filter((n) => Number.isInteger(n) && n > 0 && n < 1_000_000)
+    .slice(0, 5);
+}
+
 function Signup() {
   const { data } = useSuspenseQuery(catalogOptions);
   const [unit, setUnit] = useState("");
@@ -51,6 +65,11 @@ function Signup() {
       });
       if (error) throw new Error(authErrorMessage(error, "signup"));
       if (signed.session) {
+        const codes = parseCodes(String(f.get("decision_codes") ?? ""));
+        if (codes.length) {
+          // Never blocks the signup: anything not confirmed here is decided by the RH.
+          await supabase.rpc("claim_decision_codes", { _codes: codes });
+        }
         window.location.assign("/aguardando");
         return;
       }
@@ -115,7 +134,9 @@ function Signup() {
                   onChange={(e) => setUnit(e.target.value)}
                   className={fieldClass + " disabled:opacity-60"}
                 >
-                  <option value="">{job ? "Selecione a unidade" : "Escolha a função primeiro"}</option>
+                  <option value="">
+                    {job ? "Selecione a unidade" : "Escolha a função primeiro"}
+                  </option>
                   {data.units.map((u) => (
                     <option key={u.code} value={u.code}>
                       Natal Pneus · {u.code}
@@ -147,6 +168,20 @@ function Signup() {
                 required
                 className={fieldClass}
               />
+            </label>
+            <label className="block text-sm font-medium">
+              Código no Decision (vendedores e operadores)
+              <input
+                name="decision_codes"
+                inputMode="numeric"
+                maxLength={30}
+                placeholder="Ex.: 207"
+                className={fieldClass}
+              />
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                É o mesmo código das suas comissões. Se tiver mais de um, separe por vírgula. O
+                sistema confere com o seu nome completo; se não bater, o RH confirma.
+              </span>
             </label>
             <label className="block text-sm font-medium">
               E-mail

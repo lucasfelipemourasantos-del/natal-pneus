@@ -5,6 +5,9 @@ import { CircleCheck, TriangleAlert } from "lucide-react";
 import { CommissionCharts } from "@/components/commission-charts";
 import { LaborGoalCard } from "@/components/labor-goal-card";
 import { PortalShell } from "@/components/portal-shell";
+import { SupervisorPanel } from "@/components/supervisor-panel";
+import { supabase } from "@/integrations/supabase/client";
+import { supervisorMonth, type SupervisorRow } from "@/lib/supervisor";
 import { canSeeCommissions, hasAllStoresAccess } from "@/lib/access";
 import {
   readCommissionItems,
@@ -232,6 +235,20 @@ function Comissoes() {
         : readCommissions({ data: { competence } }),
   });
 
+  // Supervisor commission: mirror of the Decision report typed in by the RH (empty until the 0021 update is applied).
+  const supervisor = useQuery({
+    queryKey: ["supervisor-commissions"],
+    enabled: !operators,
+    queryFn: async () => {
+      const { data: rows, error: err } = await supabase
+        .from("supervisor_commissions")
+        .select(
+          "seller_code,unit_code,competence,period_end,group_name,sold_cents,rate_bp,commission_cents",
+        );
+      return err ? ([] as SupervisorRow[]) : (rows as SupervisorRow[]);
+    },
+  });
+
   if (isPending)
     return (
       <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
@@ -283,7 +300,14 @@ function Comissoes() {
     if (!operators || !role) return true;
     return operatorTypes(p).includes(role);
   });
-  const sellers =
+  const supRows = operators ? [] : (supervisor.data ?? []);
+  const supCodes = [
+    ...new Set([
+      ...supRows.map((r) => r.seller_code),
+      ...(operators ? [] : data.sellers.filter((s) => s.supervisor_unit).map((s) => s.code)),
+    ]),
+  ];
+  const sellers = (
     access.canReadAll || access.isAdmin
       ? sellerCodes
           .map((code) => ({
@@ -293,9 +317,13 @@ function Comissoes() {
           .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
       : sellerCodes
           .filter((c) => (access.sellerCodes ?? [access.sellerCode]).includes(c))
-          .map((code) => ({ code, name: nameOf(code) }));
+          .map((code) => ({ code, name: nameOf(code) }))
+  ).concat(
+    supCodes.filter((c) => !sellerCodes.includes(c)).map((code) => ({ code, name: nameOf(code) })),
+  );
   const sellerCode = sellers.some((s) => s.code === picked) ? picked! : (sellers[0]?.code ?? null);
   const seller = sellers.find((s) => s.code === sellerCode);
+  const isSupervisor = sellerCode !== null && supCodes.includes(sellerCode);
   const leader = Boolean(access.canReadAll || access.isAdmin);
   const byStore = leader && mode === "loja";
   const units = [
@@ -331,10 +359,16 @@ function Comissoes() {
     : [];
   const codeLines = siblings.map((s) => ({
     code: s.code,
-    label: operators ? typesLabel(operatorTypes(s)) : "Vendedor",
+    label: operators
+      ? typesLabel(operatorTypes(s))
+      : supCodes.includes(s.code)
+        ? "Supervisor"
+        : "Vendedor",
     cents: operators
       ? techMonth(data.reports, s.code, month).commissionCents
-      : sellerMonth(data.reports, data.os, s.code, month).commissionCents,
+      : supCodes.includes(s.code)
+        ? supervisorMonth(supRows, s.code, month).commissionCents
+        : sellerMonth(data.reports, data.os, s.code, month).commissionCents,
   }));
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
@@ -445,6 +479,7 @@ function Comissoes() {
                 {sellers.map((s) => (
                   <option key={s.code} value={s.code}>
                     {s.code} · {s.name}
+                    {supCodes.includes(s.code) ? " · Supervisor" : ""}
                   </option>
                 ))}
               </select>
@@ -465,6 +500,25 @@ function Comissoes() {
             setUnit("");
           }}
         />
+      ) : isSupervisor && sellerCode !== null ? (
+        <div className="mt-6 space-y-6">
+          {codeLines.length > 1 && (
+            <CodesCard
+              lines={codeLines}
+              selected={sellerCode}
+              onPick={(code) => {
+                setPicked(code);
+                setUnit("");
+              }}
+            />
+          )}
+          <SupervisorPanel
+            rows={supRows}
+            code={sellerCode}
+            month={month}
+            partialCompetence={currentCompetence()}
+          />
+        </div>
       ) : !view ? (
         <p className="mt-6 text-muted-foreground">Não há relatórios seus neste mês.</p>
       ) : (

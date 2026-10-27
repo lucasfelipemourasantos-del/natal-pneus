@@ -4,6 +4,8 @@ import { useState, type ChangeEvent } from "react";
 import { CircleCheck, FileUp, Trash2, TriangleAlert } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 import { Button } from "@/components/ui/button";
+import { cleanName } from "@/lib/names";
+import { SupervisorEntry } from "@/components/supervisor-entry";
 import { supabase } from "@/integrations/supabase/client";
 import { OPERATOR_KEYS, ROLE_SINGULAR } from "@/lib/technician-commissions";
 import { importCommission, readCommissionAdmin } from "@/lib/commission.functions";
@@ -177,6 +179,30 @@ function AdminComissoes() {
       qc.invalidateQueries({ queryKey: adminKey }),
       qc.invalidateQueries({ queryKey: ["commissions"] }),
     ]);
+  }
+
+  const requests = useQuery({
+    queryKey: ["code-requests"],
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from("decision_code_requests")
+        .select("id,profile_id,code,typed_name,reason")
+        .order("created_at");
+      return rows ?? [];
+    },
+  });
+
+  async function resolveRequest(id: string, profileId: string, code: number, approve: boolean) {
+    if (approve) {
+      const { error: err } = await supabase
+        .from("decision_sellers")
+        .update({ profile_id: profileId })
+        .eq("code", code);
+      if (err) return setNotice("Não foi possível vincular.");
+    }
+    await supabase.from("decision_code_requests").delete().eq("id", id);
+    setNotice(approve ? "Vínculo salvo." : "Pedido recusado.");
+    await Promise.all([requests.refetch(), qc.invalidateQueries({ queryKey: adminKey })]);
   }
 
   async function linkSeller(code: number, profileId: string) {
@@ -519,6 +545,53 @@ function AdminComissoes() {
               </div>
             )}
           </section>
+
+          {Boolean(requests.data?.length) && (
+            <section className="min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-bold">Códigos para confirmar</h2>
+              <p className="text-sm text-muted-foreground">
+                O funcionário informou o código no cadastro, mas o nome não conferiu por completo.
+                Confira e aprove ou recuse.
+              </p>
+              {requests.data!.map((r) => {
+                const seller = data.sellers.find((s) => s.code === r.code);
+                return (
+                  <div key={r.id} className="space-y-1 border-t border-border pt-3 text-sm">
+                    <p>
+                      <span className="font-semibold">{r.typed_name}</span> pediu o código{" "}
+                      <span className="font-semibold">
+                        {r.code} · {seller?.name ?? "?"}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{r.reason}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => resolveRequest(r.id, r.profile_id, r.code, true)}
+                      >
+                        Aprovar vínculo
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolveRequest(r.id, r.profile_id, r.code, false)}
+                      >
+                        Recusar
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+
+          <SupervisorEntry
+            supervisors={data.sellers.flatMap((s) =>
+              s.supervisor_unit
+                ? [{ code: s.code, name: cleanName(s.name), unit: s.supervisor_unit }]
+                : [],
+            )}
+          />
 
           <section className="min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
             <h2 className="text-lg font-bold">Vendedores do Decision</h2>
