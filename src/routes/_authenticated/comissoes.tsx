@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import { CommissionCharts } from "@/components/commission-charts";
+import { LaborGoalCard } from "@/components/labor-goal-card";
 import { PortalShell } from "@/components/portal-shell";
 import { canSeeCommissions, hasAllStoresAccess } from "@/lib/access";
 import {
@@ -11,15 +12,18 @@ import {
   readTechCommissions,
 } from "@/lib/commission.functions";
 import { isTechnicianOnly } from "@/lib/access";
+import { cleanName } from "@/lib/names";
 import {
+  isLaborGroup,
   laborGoal,
+  operatorTypes,
   ROLE_ORDER,
-  roleGroup,
   roleLabel,
   teamShare,
   techMonth,
   type TeamRow,
   type TechRole,
+  typesLabel,
 } from "@/lib/technician-commissions";
 import {
   categoryLabels,
@@ -76,63 +80,56 @@ const checkText: Record<UnitCheck, string> = {
 
 type Team = "vendedores" | "operadores";
 
-/** Labor goal of a mechanic (bronze, prata, ouro, each with a bonus). Without a registered goal it says "em breve". */
-function LaborGoalCard({ goal }: { goal: ReturnType<typeof laborGoal> }) {
-  if (!goal)
-    return (
-      <section className="space-y-2 rounded-xl border border-border bg-card p-5">
-        <h3 className="text-lg font-bold">Meta de mão de obra</h3>
-        <span className="inline-block rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide">
-          Em breve
-        </span>
-        <p className="text-xs text-muted-foreground">
-          A meta desta função ainda está sendo elaborada.
-        </p>
-      </section>
-    );
-  const top = goal.tiers.at(-1)?.targetCents ?? 1;
+type CodeLine = { code: number; label: string; cents: number };
+
+/** One person with more than one Decision code (e.g. chefe de pista and mecânico): always separate, with an optional sum. */
+function CodesCard({
+  lines,
+  selected,
+  onPick,
+}: {
+  lines: CodeLine[];
+  selected: number | null;
+  onPick: (code: number) => void;
+}) {
+  const [sum, setSum] = useState(false);
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-5">
-      <h3 className="text-lg font-bold">Meta de mão de obra</h3>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-xl font-extrabold tabular-nums">{money(goal.currentCents)}</span>
-        <span className="text-xs text-muted-foreground">
-          {goal.next
-            ? `de ${money(goal.next.targetCents)} (${goal.next.label})`
-            : "Todas as faixas atingidas"}
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{ width: `${Math.min(100, (goal.currentCents / top) * 100)}%` }}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-lg font-bold">Seus códigos</h3>
+        <button
+          type="button"
+          aria-pressed={sum}
+          onClick={() => setSum((v) => !v)}
+          className="min-h-9 rounded-lg border border-border px-3 text-sm font-semibold"
+        >
+          {sum ? "Ver separado" : "Somar as comissões"}
+        </button>
       </div>
       <ul className="divide-y divide-border text-sm tabular-nums">
-        {goal.tiers.map((t) => (
-          <li key={t.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
-            <span className="font-semibold">
-              {t.label}
-              {t.reached && (
-                <span className="ml-2 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold uppercase text-success">
-                  atingida
-                </span>
-              )}
-            </span>
-            <span className="text-muted-foreground">
-              {money(t.targetCents)} · bônus {money(t.bonusCents)}
-            </span>
+        {lines.map((l) => (
+          <li key={l.code} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <button
+              type="button"
+              onClick={() => onPick(l.code)}
+              aria-pressed={selected === l.code}
+              className={`text-left font-semibold hover:text-primary ${selected === l.code ? "text-primary" : ""}`}
+            >
+              {l.code} · {l.label}
+            </button>
+            <b>{money(l.cents)}</b>
           </li>
         ))}
+        {sum && (
+          <li className="flex justify-between gap-2 py-2 font-extrabold">
+            <span>Soma das comissões</span>
+            <span>{money(lines.reduce((t, l) => t + l.cents, 0))}</span>
+          </li>
+        )}
       </ul>
       <p className="text-xs text-muted-foreground">
-        {goal.reached
-          ? `Bônus do mês: ${money(goal.bonusCents)} (faixa ${goal.reached.label}). `
-          : ""}
-        {goal.next
-          ? `Faltam ${money(goal.next.targetCents - goal.currentCents)} para a faixa ${goal.next.label}. `
-          : ""}
-        Conta só o grupo Mão de obra interna, somando todas as lojas.
+        As comissões de cada código ficam sempre separadas. Toque em um código para ver os detalhes
+        dele.
       </p>
     </section>
   );
@@ -275,22 +272,28 @@ function Comissoes() {
   const month = data.competence;
   const ignored = new Set(data.sellers.filter((s) => s.ignored).map((s) => s.code));
   const inMonth = data.reports.filter((r) => r.competence === month && !ignored.has(r.seller_code));
+  /** Name shown in the portal: what the employee typed at signup, otherwise the Decision name without reference tags. */
+  const nameOf = (code: number) =>
+    data.names.find((n) => n.code === code)?.name ??
+    cleanName(data.sellers.find((s) => s.code === code)?.name ?? `Código ${code}`);
   const sellerCodes = [...new Set(inMonth.map((r) => r.seller_code))].filter((code) => {
-    if (!operators || !role) return true;
     const p = data.sellers.find((s) => s.code === code);
-    return roleGroup(p?.decision_role, p?.name) === role;
+    // Generic Decision users (TECNICO PNEUS) only add up in the totals; they are not people.
+    if (operators && p?.is_person === false) return false;
+    if (!operators || !role) return true;
+    return operatorTypes(p).includes(role);
   });
   const sellers =
     access.canReadAll || access.isAdmin
       ? sellerCodes
           .map((code) => ({
             code,
-            name: data.sellers.find((s) => s.code === code)?.name ?? `Vendedor ${code}`,
+            name: nameOf(code),
           }))
           .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
       : sellerCodes
-          .filter((c) => c === access.sellerCode)
-          .map((code) => ({ code, name: data.sellers.find((s) => s.code === code)?.name ?? "" }));
+          .filter((c) => (access.sellerCodes ?? [access.sellerCode]).includes(c))
+          .map((code) => ({ code, name: nameOf(code) }));
   const sellerCode = sellers.some((s) => s.code === picked) ? picked! : (sellers[0]?.code ?? null);
   const seller = sellers.find((s) => s.code === sellerCode);
   const leader = Boolean(access.canReadAll || access.isAdmin);
@@ -303,8 +306,7 @@ function Comissoes() {
   const store = byStore
     ? storeMonth(data.reports, data.os, month, ignored, unit || undefined)
     : null;
-  const sellerName = (code: number) =>
-    data.sellers.find((s) => s.code === code)?.name ?? `Vendedor ${code}`;
+  const sellerName = nameOf;
 
   const view =
     sellerCode === null
@@ -323,6 +325,17 @@ function Comissoes() {
     operators && sellerCode !== null
       ? (data.teams.find((t) => t.member_codes.includes(sellerCode)) ?? null)
       : null;
+  const current = data.sellers.find((s) => s.code === sellerCode);
+  const siblings = current?.profile_id
+    ? data.sellers.filter((s) => s.profile_id === current.profile_id)
+    : [];
+  const codeLines = siblings.map((s) => ({
+    code: s.code,
+    label: operators ? typesLabel(operatorTypes(s)) : "Vendedor",
+    cents: operators
+      ? techMonth(data.reports, s.code, month).commissionCents
+      : sellerMonth(data.reports, data.os, s.code, month).commissionCents,
+  }));
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
   return (
@@ -578,30 +591,33 @@ function Comissoes() {
                       </tr>
                     </thead>
                     <tbody>
-                      {view.groups.map((g) => (
-                        <tr
-                          key={g.label}
-                          className={`border-t border-border ${g.category === "pecas" ? "bg-accent/20" : ""}`}
-                        >
-                          <td className="min-w-44 py-2.5 pr-2">
-                            {g.label}
-                            {g.category === "pecas" && (
-                              <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-accent-foreground">
-                                base da meta
-                              </span>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-2 text-right">
-                            {money(g.soldCents).replace("R$", "").trim()}
-                          </td>
-                          <td className="whitespace-nowrap px-2 text-right">
-                            {rateLabel(g.rateBp)}
-                          </td>
-                          <td className="whitespace-nowrap pl-2 text-right">
-                            {money(g.commissionCents).replace("R$", "").trim()}
-                          </td>
-                        </tr>
-                      ))}
+                      {view.groups.map((g) => {
+                        const goalBase = operators ? isLaborGroup(g.label) : g.category === "pecas";
+                        return (
+                          <tr
+                            key={g.label}
+                            className={`border-t border-border ${goalBase ? "bg-accent/20" : ""}`}
+                          >
+                            <td className="min-w-44 py-2.5 pr-2">
+                              {g.label}
+                              {goalBase && (
+                                <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-accent-foreground">
+                                  base da meta
+                                </span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-2 text-right">
+                              {money(g.soldCents).replace("R$", "").trim()}
+                            </td>
+                            <td className="whitespace-nowrap px-2 text-right">
+                              {rateLabel(g.rateBp)}
+                            </td>
+                            <td className="whitespace-nowrap pl-2 text-right">
+                              {money(g.commissionCents).replace("R$", "").trim()}
+                            </td>
+                          </tr>
+                        );
+                      })}
                       <tr className="border-t border-border font-extrabold">
                         <td className="py-2.5">Total</td>
                         <td className="px-2 text-right">
@@ -625,6 +641,16 @@ function Comissoes() {
             </section>
 
             <div className="min-w-0 space-y-5">
+              {codeLines.length > 1 && (
+                <CodesCard
+                  lines={codeLines}
+                  selected={sellerCode}
+                  onPick={(code) => {
+                    setPicked(code);
+                    setUnit("");
+                  }}
+                />
+              )}
               {operators && sellerCode !== null && <LaborGoalCard goal={labor} />}
               {unifiedTeam && sellerCode !== null && (
                 <TeamCard
@@ -634,8 +660,7 @@ function Comissoes() {
                     leader
                       ? unifiedTeam.member_codes.map((code) => ({
                           code,
-                          name:
-                            data.sellers.find((s) => s.code === code)?.name ?? `Técnico ${code}`,
+                          name: nameOf(code),
                           cents: techMonth(data.reports, code, month).commissionCents,
                         }))
                       : null

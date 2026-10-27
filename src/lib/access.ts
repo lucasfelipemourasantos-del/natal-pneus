@@ -11,6 +11,8 @@ export type Access = {
   isProducer?: boolean;
   /** Decision seller code linked to this account, when there is one. */
   sellerCode?: number | null;
+  /** All Decision codes linked to the account (a person may have more than one). */
+  sellerCodes?: number[] | undefined;
   /** The linked Decision code is in activity (false: kept only for history, or ignored). */
   sellerActive?: boolean | undefined;
   /** The linked Decision code has sales commissions (seller reports). */
@@ -66,7 +68,7 @@ export async function loadAccess(): Promise<Access | null> {
     { data: isAdmin },
     { data: canReadAll },
     { data: isProducer },
-    { data: seller },
+    { data: sellerRows },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
@@ -76,17 +78,20 @@ export async function loadAccess(): Promise<Access | null> {
       .from("decision_sellers")
       .select("code,active,ignored")
       .eq("profile_id", user.id)
-      .maybeSingle(),
+      .order("code"),
   ]);
+  const rows = sellerRows ?? [];
+  const codes = rows.map((r) => r.code);
+  const primary = rows.find((r) => r.active && !r.ignored) ?? rows[0];
   let hasSales = false;
   let hasService = false;
-  if (seller?.code) {
+  if (codes.length) {
     // RLS limits these to the person's own reports; before migration 0015 the technician check simply counts zero.
     const own = () =>
       supabase
         .from("commission_reports")
         .select("id", { count: "exact", head: true })
-        .eq("seller_code", seller.code);
+        .in("seller_code", codes);
     const [sales, service] = await Promise.all([
       own().neq("kind", "tecnico"),
       own().eq("kind", "tecnico"),
@@ -100,8 +105,9 @@ export async function loadAccess(): Promise<Access | null> {
     isAdmin: Boolean(isAdmin),
     canReadAll: Boolean(canReadAll),
     isProducer: Boolean(isProducer),
-    sellerCode: seller?.code ?? null,
-    sellerActive: seller ? seller.active && !seller.ignored : undefined,
+    sellerCode: primary?.code ?? null,
+    sellerCodes: codes,
+    sellerActive: rows.length ? rows.some((r) => r.active && !r.ignored) : undefined,
     hasSales,
     hasService,
   };

@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Award, CircleDollarSign, Target, TrendingUp } from "lucide-react";
 import { PortalShell, Stat } from "@/components/portal-shell";
 import { isSeller } from "@/lib/access";
-import { readCommissions } from "@/lib/commission.functions";
+import { LaborGoalCard } from "@/components/labor-goal-card";
+import { readCommissions, readTechCommissions } from "@/lib/commission.functions";
+import { laborGoal } from "@/lib/technician-commissions";
 import { monthLabel, partsGoal, referenceFor } from "@/lib/commissions";
 import { fieldClass } from "@/lib/portal-data";
 import { money } from "@/lib/results";
@@ -49,11 +51,39 @@ function MetasPage() {
   const [competence, setCompetence] = useState<string | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
   const allowed = isSeller(access);
+  const operator = !allowed && Boolean(access.hasService);
+  const tech = useQuery({
+    queryKey: ["tech-commissions", null],
+    queryFn: () => readTechCommissions({ data: { competence: null } }),
+    enabled: operator,
+  });
   const { data, isPending, error } = useQuery({
     queryKey: ["commissions", competence],
     queryFn: () => readCommissions({ data: { competence } }),
     enabled: allowed,
   });
+
+  if (operator)
+    return (
+      <PortalShell title="Minhas metas" eyebrow="Desempenho">
+        {tech.isPending && <p className="text-muted-foreground">Carregando…</p>}
+        {tech.data?.competence && (
+          <div className="space-y-5">
+            <p className="text-sm text-muted-foreground">
+              Meta de mão de obra de {monthLabel(tech.data.competence)}.
+            </p>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {(access.sellerCodes ?? []).map((code) => (
+                <LaborGoalCard
+                  key={code}
+                  goal={laborGoal(tech.data.reports, code, tech.data.competence!, tech.data.goals)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </PortalShell>
+    );
 
   if (!allowed)
     return (

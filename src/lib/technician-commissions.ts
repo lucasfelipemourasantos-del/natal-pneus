@@ -97,6 +97,11 @@ export type TeamRow = {
   commission_cents: number;
 };
 
+/** True for the "MÃO DE OBRA INTERNA" group, the base of the mechanics' goal. */
+export function isLaborGroup(groupName: string) {
+  return plain(groupName) === LABOR_GROUP;
+}
+
 const TIER_ORDER = ["bronze", "prata", "ouro"] as const;
 const TIER_LABEL = { bronze: "Bronze", prata: "Prata", ouro: "Ouro" } as const;
 
@@ -134,4 +139,39 @@ export function laborGoal(
 /** Pooled team commission shared equally: what each member receives. */
 export function teamShare(team: Pick<TeamRow, "commission_cents" | "member_codes">) {
   return Math.round(team.commission_cents / Math.max(1, team.member_codes.length));
+}
+
+export const ROLE_SINGULAR: Record<TechRole, string> = {
+  mecanico: "Mecânico",
+  alinhador: "Alinhador",
+  balanceador: "Balanceador",
+  borracheiro: "Borracheiro",
+  chefe: "Chefe de pista",
+  supervisor: "Supervisor",
+  outros: "Outra função",
+};
+/** Types the RH can set on a person (a person may have more than one). */
+export const OPERATOR_KEYS = [
+  "mecanico",
+  "alinhador",
+  "balanceador",
+  "borracheiro",
+  "chefe",
+] as const;
+
+type PersonTypes = {
+  operator_roles?: string[] | null;
+  decision_role?: string | null;
+  name?: string;
+};
+
+/** Types of a person: the ones the RH set, otherwise a guess from the Decision function. */
+export function operatorTypes(person: PersonTypes | undefined): TechRole[] {
+  const set = (person?.operator_roles ?? []).filter((r): r is TechRole => r in ROLE_LABELS);
+  return set.length ? set : [roleGroup(person?.decision_role, person?.name)];
+}
+
+/** "Alinhador e Balanceador" */
+export function typesLabel(types: TechRole[]) {
+  return types.map((t) => ROLE_SINGULAR[t]).join(" e ");
 }

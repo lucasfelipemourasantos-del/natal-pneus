@@ -279,6 +279,8 @@ export type Database = {
           created_at: string
           decision_role: string | null
           ignored: boolean
+          is_person: boolean
+          operator_roles: string[]
           min_average: boolean
           name: string
           parts_goal: boolean
@@ -290,6 +292,8 @@ export type Database = {
           created_at?: string
           decision_role?: string | null
           ignored?: boolean
+          is_person?: boolean
+          operator_roles?: string[]
           min_average?: boolean
           name: string
           parts_goal?: boolean
@@ -301,6 +305,8 @@ export type Database = {
           created_at?: string
           decision_role?: string | null
           ignored?: boolean
+          is_person?: boolean
+          operator_roles?: string[]
           min_average?: boolean
           name?: string
           parts_goal?: boolean

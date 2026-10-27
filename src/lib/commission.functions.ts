@@ -7,6 +7,33 @@ import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
 
 const NO_GOALS = [] as LaborGoalRow[];
 const NO_TEAMS = [] as TeamRow[];
+const NO_NAMES = [] as { code: number; name: string }[];
+
+type ProfilesClient = {
+  from: (t: "profiles") => {
+    select: (c: string) => {
+      in: (
+        c: string,
+        v: string[],
+      ) => PromiseLike<{ data: { id: string; full_name: string }[] | null }>;
+    };
+  };
+};
+
+/** Full name the employee typed at signup, for each linked Decision code (leadership sees all, a person sees his own). */
+async function linkedNames(
+  supabase: ProfilesClient,
+  sellers: { code: number; profile_id: string | null }[],
+) {
+  const ids = [...new Set(sellers.flatMap((s) => (s.profile_id ? [s.profile_id] : [])))];
+  if (!ids.length) return NO_NAMES;
+  const { data } = await supabase.from("profiles").select("id,full_name").in("id", ids);
+  const byId = new Map((data ?? []).map((p) => [p.id, p.full_name]));
+  return sellers.flatMap((s) => {
+    const name = s.profile_id ? byId.get(s.profile_id) : undefined;
+    return name ? [{ code: s.code, name }] : [];
+  });
+}
 
 type GoalRefs = Database["public"]["Functions"]["parts_goal_reference_base"]["Returns"];
 
@@ -44,6 +71,7 @@ export const readCommissions = createServerFn({ method: "GET" })
         goalRefs: [],
         goals: NO_GOALS,
         teams: NO_TEAMS,
+        names: NO_NAMES,
       };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, refs] = await Promise.all([
@@ -73,6 +101,7 @@ export const readCommissions = createServerFn({ method: "GET" })
       goalRefs: refs.error ? [] : (refs.data ?? []),
       goals: NO_GOALS,
       teams: NO_TEAMS,
+      names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
     };
   });
 
@@ -228,6 +257,7 @@ export const readTechCommissions = createServerFn({ method: "GET" })
         goalRefs: [],
         goals: NO_GOALS,
         teams: NO_TEAMS,
+        names: NO_NAMES,
       };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, goals, teams] = await Promise.all([
@@ -258,5 +288,6 @@ export const readTechCommissions = createServerFn({ method: "GET" })
       // Until migration 0017 is applied there are simply no goals or teams.
       goals: goals.error ? NO_GOALS : (goals.data ?? NO_GOALS),
       teams: teams.error ? NO_TEAMS : (teams.data ?? NO_TEAMS),
+      names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
     };
   });

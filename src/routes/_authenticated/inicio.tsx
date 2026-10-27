@@ -61,18 +61,23 @@ function Index() {
   const years = admission ? completeYears(admission) : null;
   const tenure = tenureStatus(years ?? 0);
 
+  let goalLabel = "Meta de peças do mês";
   let goalValue = "Em breve";
   let goalDetail = "Metas para a sua função em breve";
   let commissionValue = "Em breve";
   let commissionDetail = "Comissões para a sua função em breve";
   if (isTechnicianOnly(access)) {
+    goalLabel = "Meta de mão de obra do mês";
     goalValue = "Em breve";
     goalDetail = "Meta de mão de obra em breve";
     commissionValue = "—";
     commissionDetail = "Carregando seus dados";
     if (tech?.competence && access.sellerCode) {
       commissionValue = money(
-        techMonth(tech.reports, access.sellerCode, tech.competence).commissionCents,
+        (access.sellerCodes ?? [access.sellerCode]).reduce(
+          (sum, code) => sum + techMonth(tech.reports, code, tech.competence!).commissionCents,
+          0,
+        ),
       );
       commissionDetail = "Comissão de serviços";
       const labor = laborGoal(tech.reports, access.sellerCode, tech.competence, tech.goals);
@@ -181,7 +186,7 @@ function Index() {
           value="0"
           detail={courses?.length ? "Acompanhamento em breve" : "Cursos em breve"}
         />
-        <Stat icon={Target} label="Meta de peças do mês" value={goalValue} detail={goalDetail} />
+        <Stat icon={Target} label={goalLabel} value={goalValue} detail={goalDetail} />
         <Stat
           icon={Wallet}
           label="Comissão do mês"

@@ -5,6 +5,7 @@ import { CircleCheck, FileUp, Trash2, TriangleAlert } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { OPERATOR_KEYS, ROLE_SINGULAR } from "@/lib/technician-commissions";
 import { importCommission, readCommissionAdmin } from "@/lib/commission.functions";
 import { monthLabel } from "@/lib/commissions";
 import {
@@ -220,6 +221,40 @@ function AdminComissoes() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: adminKey }),
       qc.invalidateQueries({ queryKey: ["commissions"] }),
+    ]);
+  }
+
+  async function setRoles(code: number, roles: string[]) {
+    const { error: err } = await supabase
+      .from("decision_sellers")
+      .update({ operator_roles: roles })
+      .eq("code", code);
+    setNotice(
+      err
+        ? "Não foi possível salvar. A atualização do banco (0019) já foi aplicada?"
+        : "Tipo de operador salvo.",
+    );
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: adminKey }),
+      qc.invalidateQueries({ queryKey: ["tech-commissions"] }),
+    ]);
+  }
+
+  async function setPerson(code: number, genericUser: boolean) {
+    const { error: err } = await supabase
+      .from("decision_sellers")
+      .update({ is_person: !genericUser })
+      .eq("code", code);
+    setNotice(
+      err
+        ? "Não foi possível salvar. A atualização do banco (0019) já foi aplicada?"
+        : genericUser
+          ? "Usuário genérico: só entra nos totais."
+          : "Volta a contar como pessoa.",
+    );
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: adminKey }),
+      qc.invalidateQueries({ queryKey: ["tech-commissions"] }),
     ]);
   }
 
@@ -517,7 +552,7 @@ function AdminComissoes() {
                         Só para histórico
                       </p>
                     )}
-                    {!s.ignored && s.active !== false && (
+                    {!s.ignored && s.active !== false && s.is_person !== false && (
                       <select
                         id={`seller-link-${s.code}`}
                         value={s.profile_id ?? ""}
@@ -543,6 +578,43 @@ function AdminComissoes() {
                       />
                       Não é vendedor (estoque, gerência): ignorar nas comissões e metas
                     </label>
+                    {!s.ignored && (
+                      <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <legend className="sr-only">Tipo de operador</legend>
+                        <span className="font-semibold">Tipo de operador:</span>
+                        {OPERATOR_KEYS.map((k) => (
+                          <label key={k} className="flex items-center gap-1.5">
+                            <input
+                              id={`seller-role-${s.code}-${k}`}
+                              type="checkbox"
+                              checked={(s.operator_roles ?? []).includes(k)}
+                              onChange={(e) =>
+                                setRoles(
+                                  s.code,
+                                  e.target.checked
+                                    ? [...(s.operator_roles ?? []), k]
+                                    : (s.operator_roles ?? []).filter((r) => r !== k),
+                                )
+                              }
+                              className="size-4 accent-primary"
+                            />
+                            {ROLE_SINGULAR[k]}
+                          </label>
+                        ))}
+                      </fieldset>
+                    )}
+                    {!s.ignored && (
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          id={`seller-person-${s.code}`}
+                          type="checkbox"
+                          checked={s.is_person === false}
+                          onChange={(e) => setPerson(s.code, !e.target.checked)}
+                          className="size-4 accent-primary"
+                        />
+                        Usuário genérico, não é uma pessoa (só entra nos totais)
+                      </label>
+                    )}
                     {!s.ignored && (
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         <input
