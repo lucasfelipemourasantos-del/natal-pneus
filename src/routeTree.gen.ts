@@ -35,6 +35,8 @@ import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authenticated/trajetoria'
 import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
+import { Route as AuthenticatedPatrimonioIndexRouteImport } from './routes/_authenticated/patrimonio.index'
+import { Route as AuthenticatedPatrimonioCodeRouteImport } from './routes/_authenticated/patrimonio.$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -173,6 +175,18 @@ const AuthenticatedUnidadesRoute = AuthenticatedUnidadesRouteImport.update({
   path: '/unidades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPatrimonioIndexRoute =
+  AuthenticatedPatrimonioIndexRouteImport.update({
+    id: '/patrimonio/',
+    path: '/patrimonio/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPatrimonioCodeRoute =
+  AuthenticatedPatrimonioCodeRouteImport.update({
+    id: '/patrimonio/$code',
+    path: '/patrimonio/$code',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -200,6 +214,8 @@ export interface FileRoutesByFullPath {
   '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
+  '/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/patrimonio/': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -227,6 +243,8 @@ export interface FileRoutesByTo {
   '/resultados': typeof AuthenticatedResultadosRoute
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
+  '/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/patrimonio': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -256,6 +274,8 @@ export interface FileRoutesById {
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
+  '/_authenticated/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/_authenticated/patrimonio/': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -285,6 +305,8 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/trajetoria'
     | '/unidades'
+    | '/patrimonio/$code'
+    | '/patrimonio/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -312,6 +334,8 @@ export interface FileRouteTypes {
     | '/resultados'
     | '/trajetoria'
     | '/unidades'
+    | '/patrimonio/$code'
+    | '/patrimonio'
   id:
     | '__root__'
     | '/'
@@ -340,6 +364,8 @@ export interface FileRouteTypes {
     | '/_authenticated/resultados'
     | '/_authenticated/trajetoria'
     | '/_authenticated/unidades'
+    | '/_authenticated/patrimonio/$code'
+    | '/_authenticated/patrimonio/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -536,6 +562,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUnidadesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/patrimonio/': {
+      id: '/_authenticated/patrimonio/'
+      path: '/patrimonio'
+      fullPath: '/patrimonio/'
+      preLoaderRoute: typeof AuthenticatedPatrimonioIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/patrimonio/$code': {
+      id: '/_authenticated/patrimonio/$code'
+      path: '/patrimonio/$code'
+      fullPath: '/patrimonio/$code'
+      preLoaderRoute: typeof AuthenticatedPatrimonioCodeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -559,6 +599,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
   AuthenticatedTrajetoriaRoute: typeof AuthenticatedTrajetoriaRoute
   AuthenticatedUnidadesRoute: typeof AuthenticatedUnidadesRoute
+  AuthenticatedPatrimonioCodeRoute: typeof AuthenticatedPatrimonioCodeRoute
+  AuthenticatedPatrimonioIndexRoute: typeof AuthenticatedPatrimonioIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -581,6 +623,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
   AuthenticatedTrajetoriaRoute: AuthenticatedTrajetoriaRoute,
   AuthenticatedUnidadesRoute: AuthenticatedUnidadesRoute,
+  AuthenticatedPatrimonioCodeRoute: AuthenticatedPatrimonioCodeRoute,
+  AuthenticatedPatrimonioIndexRoute: AuthenticatedPatrimonioIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

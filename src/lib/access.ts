@@ -39,6 +39,17 @@ export function canOpenOs(
   );
 }
 
+/** Patrimônio (equipment register): leadership sees every store; a chefe de pista or supervisor, their own store. */
+export function canManageAssets(access: Pick<Access, "isAdmin" | "canReadAll" | "profile">): boolean {
+  if (access.isAdmin || access.canReadAll) return true;
+  const p = access.profile;
+  return (
+    p?.status === "approved" &&
+    Boolean(p.unit_code) &&
+    (p.job_role === "Chefe de pista" || p.job_role === "Supervisor")
+  );
+}
+
 /** Peças goal is for sellers; a technician-only account does not get it. */
 export function isSeller(
   access: Pick<Access, "isAdmin" | "canReadAll" | "sellerCode" | "hasSales" | "hasService">,

@@ -272,6 +272,30 @@ export type Database = {
         Update: { bonus_cents?: number; seller_code?: number; target_cents?: number; tier?: string }
         Relationships: []
       }
+      assets: {
+        Row: { code: string | null; created_at: string; created_by: string | null; estimated_cents: number | null; id: string; name: string; category: string | null; notes: string | null; next_preventive: string | null; preventive_applicable: boolean; preventive_interval_months: number | null; purchase_cents: number | null; purchase_date: string | null; retired_at: string | null; retired_reason: string | null; serial_number: string | null; status: string; supplier: string | null; unit_code: string; updated_at: string }
+        Insert: { code?: string | null; created_at?: string; created_by?: string | null; estimated_cents?: number | null; id?: string; name: string; category?: string | null; notes?: string | null; next_preventive?: string | null; preventive_applicable?: boolean; preventive_interval_months?: number | null; purchase_cents?: number | null; purchase_date?: string | null; retired_at?: string | null; retired_reason?: string | null; serial_number?: string | null; status?: string; supplier?: string | null; unit_code: string; updated_at?: string }
+        Update: { code?: string | null; created_at?: string; created_by?: string | null; estimated_cents?: number | null; id?: string; name?: string; category?: string | null; notes?: string | null; next_preventive?: string | null; preventive_applicable?: boolean; preventive_interval_months?: number | null; purchase_cents?: number | null; purchase_date?: string | null; retired_at?: string | null; retired_reason?: string | null; serial_number?: string | null; status?: string; supplier?: string | null; unit_code?: string; updated_at?: string }
+        Relationships: []
+      }
+      asset_maintenance: {
+        Row: { asset_id: string; cost_cents: number | null; created_at: string; created_by: string | null; description: string | null; id: string; kind: string; performed_at: string | null; provider: string | null; scheduled_for: string | null; service_note: string | null; status: string }
+        Insert: { asset_id: string; cost_cents?: number | null; created_at?: string; created_by?: string | null; description?: string | null; id?: string; kind: string; performed_at?: string | null; provider?: string | null; scheduled_for?: string | null; service_note?: string | null; status?: string }
+        Update: { asset_id?: string; cost_cents?: number | null; created_at?: string; created_by?: string | null; description?: string | null; id?: string; kind?: string; performed_at?: string | null; provider?: string | null; scheduled_for?: string | null; service_note?: string | null; status?: string }
+        Relationships: []
+      }
+      asset_files: {
+        Row: { asset_id: string; created_at: string; created_by: string | null; file_name: string; id: string; kind: string; maintenance_id: string | null; storage_path: string }
+        Insert: { asset_id: string; created_at?: string; created_by?: string | null; file_name: string; id?: string; kind: string; maintenance_id?: string | null; storage_path: string }
+        Update: { asset_id?: string; created_at?: string; created_by?: string | null; file_name?: string; id?: string; kind?: string; maintenance_id?: string | null; storage_path?: string }
+        Relationships: []
+      }
+      asset_log: {
+        Row: { action: string; actor: string | null; asset_id: string; at: string; changes: Json | null; id: number }
+        Insert: { action: string; actor?: string | null; asset_id: string; at?: string; changes?: Json | null; id?: number }
+        Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
+        Relationships: []
+      }
       supervisor_commissions: {
         Row: { commission_cents: number; competence: string; entered_at: string; entered_by: string | null; group_name: string; id: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }
         Insert: { commission_cents: number; competence: string; entered_at?: string; entered_by?: string | null; group_name: string; id?: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }

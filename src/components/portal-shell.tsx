@@ -4,6 +4,7 @@ import {
   Award,
   BellRing,
   BookOpen,
+  Boxes,
   Building2,
   ChevronDown,
   ChevronRight,
@@ -30,6 +31,7 @@ import {
   hasAllStoresAccess,
   initials,
   canOpenOs,
+  canManageAssets,
   type Access,
 } from "@/lib/access";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +47,7 @@ type NavLink = {
     | "/metas"
     | "/comissoes"
     | "/abrir-os"
+    | "/patrimonio"
     | "/comunicados"
     | "/documentos"
     | "/admin-documentos"
@@ -74,6 +77,7 @@ function navGroups(
     | "sellerActive"
     | "hasSales"
     | "hasService"
+    | "profile"
   >,
 ) {
   const personal: NavLink[] = [
@@ -88,6 +92,9 @@ function navGroups(
     { to: "/cursos", label: "Meus cursos", icon: BookOpen },
     ...(canOpenOs(access)
       ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }]
+      : []),
+    ...(canManageAssets(access)
+      ? [{ to: "/patrimonio" as const, label: "Patrimônio", icon: Boxes }]
       : []),
     { to: "/documentos", label: "Meus documentos", icon: FileText },
     { to: "/trajetoria", label: "Minha trajetória", icon: Award },
