@@ -2,7 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { GOAL_HISTORY_MONTHS, goalBaseMonth, monthsBefore } from "@/lib/commissions";
+import {
+  GOAL_HISTORY_MONTHS,
+  categoryOf,
+  goalBaseMonth,
+  groupKey,
+  monthsBefore,
+  type Category,
+} from "@/lib/commissions";
 import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
 
 const NO_GOALS = [] as LaborGoalRow[];
@@ -335,5 +342,109 @@ export const readTechCommissions = createServerFn({ method: "GET" })
       teams: teams.error ? NO_TEAMS : (teams.data ?? NO_TEAMS),
       names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
       noCommission: NO_EXTRA,
+    };
+  });
+
+/**
+ * Composition of the OS (sales) of a month: how many OS had each category (pneus, peças, óleos, serviços) and, for the
+ * fields the person selected, how many OS contain any of them. The value of an OS is its whole total (every item of the
+ * sale), so the average ticket of "OS with peças" counts the labor and tires sold in the same OS.
+ * Only items with commission exist in the Decision reports, so the totals follow the same rule as the commission screens.
+ */
+export const readOsComposition = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      competence: z.string().regex(/^\d{4}-\d{2}-01$/),
+      unit: z
+        .string()
+        .regex(/^NP[1-4]$/)
+        .nullable(),
+      sellerCode: z.number().int().positive().nullable(),
+      fields: z.array(z.string().max(160)).max(80),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("commission_reports")
+      .select("id,unit_code,seller_code")
+      .eq("kind", "api")
+      .eq("competence", data.competence);
+    if (data.unit) query = query.eq("unit_code", data.unit);
+    if (data.sellerCode) query = query.eq("seller_code", data.sellerCode);
+    const [reports, ignoredRows] = await Promise.all([
+      query,
+      context.supabase.from("decision_sellers").select("code").eq("ignored", true),
+    ]);
+    if (reports.error) throw new Error("Não foi possível consultar as OS.");
+    const ignored = new Set((ignoredRows.data ?? []).map((r) => r.code));
+    // A single seller was asked for on purpose; stores and the network leave the ignored users out.
+    const rows = (reports.data ?? []).filter((r) => data.sellerCode || !ignored.has(r.seller_code));
+    const unitOf = new Map(rows.map((r) => [r.id, r.unit_code]));
+    const wanted = new Set(data.fields);
+    const sales = new Map<
+      string,
+      { total: number; selected: number; fields: Set<string>; cats: Set<Category> }
+    >();
+    const ids = rows.map((r) => r.id);
+    const page = 1000;
+    for (let i = 0; i < ids.length; i += 15) {
+      const chunk = ids.slice(i, i + 15);
+      for (let from = 0; from < 30000; from += page) {
+        const { data: items, error } = await context.supabase
+          .from("commission_report_items")
+          .select("report_id,sale_number,total_cents,rule")
+          .in("report_id", chunk)
+          .order("report_id")
+          .order("position")
+          .range(from, from + page - 1);
+        if (error) throw new Error("Não foi possível consultar as OS.");
+        for (const item of items ?? []) {
+          const rule = item.rule ?? "SEM GRUPO NO DECISION";
+          const key = `${unitOf.get(item.report_id) ?? ""}|${item.sale_number}`;
+          const sale = sales.get(key) ?? {
+            total: 0,
+            selected: 0,
+            fields: new Set(),
+            cats: new Set(),
+          };
+          const field = groupKey(rule);
+          sale.total += item.total_cents;
+          if (wanted.has(field)) sale.selected += item.total_cents;
+          sale.fields.add(field);
+          sale.cats.add(categoryOf(rule));
+          sales.set(key, sale);
+        }
+        if ((items ?? []).length < page) break;
+      }
+    }
+    const byCategory = { pneus: [0, 0], servicos: [0, 0], pecas: [0, 0], oleos: [0, 0] } as Record<
+      Category,
+      [number, number]
+    >;
+    let osTotal = 0;
+    const withSelection = { osCount: 0, osTotalCents: 0, selectedCents: 0 };
+    for (const sale of sales.values()) {
+      osTotal += sale.total;
+      for (const c of sale.cats) {
+        byCategory[c][0] += 1;
+        byCategory[c][1] += sale.total;
+      }
+      if ([...sale.fields].some((f) => wanted.has(f))) {
+        withSelection.osCount += 1;
+        withSelection.osTotalCents += sale.total;
+        withSelection.selectedCents += sale.selected;
+      }
+    }
+    return {
+      osCount: sales.size,
+      osTotalCents: osTotal,
+      categories: Object.fromEntries(
+        (Object.keys(byCategory) as Category[]).map((c) => [
+          c,
+          { osCount: byCategory[c][0], osTotalCents: byCategory[c][1] },
+        ]),
+      ) as Record<Category, { osCount: number; osTotalCents: number }>,
+      withSelection: data.fields.length ? withSelection : null,
     };
   });

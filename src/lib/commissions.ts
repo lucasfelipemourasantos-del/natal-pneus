@@ -62,6 +62,11 @@ function storeSources(list: ReportRow[], unit: string) {
   return { groups: s, sales: a, check };
 }
 
+/** Key that joins the Decision group spellings of one field (all the pneus groups are one field). */
+export function groupKey(groupName: string) {
+  return categoryOf(groupName) === "pneus" ? "pneus" : normalize(groupName);
+}
+
 export function sellerMonth(
   reports: ReportRow[],
   os: OsRow[],

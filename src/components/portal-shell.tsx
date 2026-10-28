@@ -57,6 +57,7 @@ type NavLink = {
     | "/trajetoria"
     | "/empresa"
     | "/resultados"
+    | "/comparativos"
     | "/unidades"
     | "/admin"
     | "/admin-cursos"
@@ -102,7 +103,7 @@ function navGroups(
   ];
   const management: NavLink[] = access.canReadAll
     ? [
-        { to: "/resultados", label: "Vendas e resultados", icon: ChartNoAxesCombined },
+        { to: "/comparativos", label: "Vendas e resultados", icon: ChartNoAxesCombined },
         { to: "/unidades", label: "Lojas e funções", icon: Building2 },
         { to: "/admin", label: access.isAdmin ? "Contas" : "Colaboradores", icon: ShieldCheck },
         ...(access.isAdmin

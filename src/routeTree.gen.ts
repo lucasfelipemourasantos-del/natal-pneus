@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminDocumentosRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminEstoqueRouteImport } from './routes/_authenticated/admin-estoque'
 import { Route as AuthenticatedAdminInsigniasRouteImport } from './routes/_authenticated/admin-insignias'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
+import { Route as AuthenticatedComparativosRouteImport } from './routes/_authenticated/comparativos'
 import { Route as AuthenticatedComunicadosRouteImport } from './routes/_authenticated/comunicados'
 import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
@@ -129,6 +130,12 @@ const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
   path: '/comissoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedComparativosRoute =
+  AuthenticatedComparativosRouteImport.update({
+    id: '/comparativos',
+    path: '/comparativos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedComunicadosRoute =
   AuthenticatedComunicadosRouteImport.update({
     id: '/comunicados',
@@ -205,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/comparativos': typeof AuthenticatedComparativosRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
@@ -234,6 +242,7 @@ export interface FileRoutesByTo {
   '/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/comparativos': typeof AuthenticatedComparativosRoute
   '/comunicados': typeof AuthenticatedComunicadosRoute
   '/cursos': typeof AuthenticatedCursosRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
@@ -265,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/admin-estoque': typeof AuthenticatedAdminEstoqueRoute
   '/_authenticated/admin-insignias': typeof AuthenticatedAdminInsigniasRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
+  '/_authenticated/comparativos': typeof AuthenticatedComparativosRoute
   '/_authenticated/comunicados': typeof AuthenticatedComunicadosRoute
   '/_authenticated/cursos': typeof AuthenticatedCursosRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/admin-estoque'
     | '/admin-insignias'
     | '/comissoes'
+    | '/comparativos'
     | '/comunicados'
     | '/cursos'
     | '/documentos'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/admin-estoque'
     | '/admin-insignias'
     | '/comissoes'
+    | '/comparativos'
     | '/comunicados'
     | '/cursos'
     | '/documentos'
@@ -355,6 +367,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin-estoque'
     | '/_authenticated/admin-insignias'
     | '/_authenticated/comissoes'
+    | '/_authenticated/comparativos'
     | '/_authenticated/comunicados'
     | '/_authenticated/cursos'
     | '/_authenticated/documentos'
@@ -499,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedComissoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/comparativos': {
+      id: '/_authenticated/comparativos'
+      path: '/comparativos'
+      fullPath: '/comparativos'
+      preLoaderRoute: typeof AuthenticatedComparativosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/comunicados': {
       id: '/_authenticated/comunicados'
       path: '/comunicados'
@@ -590,6 +610,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminEstoqueRoute: typeof AuthenticatedAdminEstoqueRoute
   AuthenticatedAdminInsigniasRoute: typeof AuthenticatedAdminInsigniasRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
+  AuthenticatedComparativosRoute: typeof AuthenticatedComparativosRoute
   AuthenticatedComunicadosRoute: typeof AuthenticatedComunicadosRoute
   AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
@@ -614,6 +635,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminEstoqueRoute: AuthenticatedAdminEstoqueRoute,
   AuthenticatedAdminInsigniasRoute: AuthenticatedAdminInsigniasRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
+  AuthenticatedComparativosRoute: AuthenticatedComparativosRoute,
   AuthenticatedComunicadosRoute: AuthenticatedComunicadosRoute,
   AuthenticatedCursosRoute: AuthenticatedCursosRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
