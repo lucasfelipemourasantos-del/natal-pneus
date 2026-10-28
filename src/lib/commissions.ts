@@ -367,6 +367,33 @@ export function currentCompetence() {
 }
 
 /** Month totals of one seller over the last 12 months plus the viewed one (ascending), for the charts. */
+/**
+ * Month series of a store (or of the network, without unit) for the comparison charts: the team's sales plus the sales of
+ * sellers without commission. Same shape as sellerSeries, so the same charts serve both.
+ */
+export function storeSeries(
+  reports: ReportRow[],
+  competence: string,
+  ignored: Set<number>,
+  unit: string | undefined,
+  extra: { competence: string; unit_code: string; sold_cents: number }[],
+) {
+  return [...monthsBefore(competence, GOAL_HISTORY_MONTHS)]
+    .reverse()
+    .concat(competence)
+    .map((month) => {
+      const s = storeMonth(reports, [], month, ignored, unit);
+      const added = extra
+        .filter((r) => r.competence === month && (!unit || r.unit_code === unit))
+        .reduce((t, r) => t + r.sold_cents, 0);
+      return {
+        competence: month,
+        soldCents: s.soldCents + added,
+        commissionCents: s.commissionCents,
+      };
+    });
+}
+
 export function sellerSeries(reports: ReportRow[], sellerCode: number, competence: string) {
   return [...monthsBefore(competence, GOAL_HISTORY_MONTHS)]
     .reverse()

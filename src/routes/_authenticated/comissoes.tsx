@@ -38,6 +38,7 @@ import {
   sellerMonth,
   sellerSeries,
   storeMonth,
+  storeSeries,
   type Category,
   type UnitCheck,
 } from "@/lib/commissions";
@@ -494,6 +495,7 @@ function Comissoes() {
           unit={unit}
           sellerName={sellerName}
           syncedAt={data.syncedAt}
+          points={storeSeries(data.reports, month, ignored, unit || undefined, data.noCommission)}
           extra={data.noCommission.filter(
             (r) => r.competence === month && (!unit || r.unit_code === unit),
           )}
@@ -839,9 +841,12 @@ function StoreView({
   sellerName,
   syncedAt,
   extra,
+  points,
   onPick,
 }: {
   store: ReturnType<typeof storeMonth>;
+  /** Month series (12 months before plus the month viewed) for the comparison charts. */
+  points: ReturnType<typeof storeSeries>;
   /** Sales of sellers who earn no commission: they add to the store billing, nothing else. */
   extra: {
     unit_code: string;
@@ -1063,6 +1068,8 @@ function StoreView({
           </table>
         </div>
       </section>
+
+      <CommissionCharts points={points} partialCompetence={currentCompetence()} />
     </div>
   );
 }
