@@ -494,6 +494,9 @@ function Comissoes() {
           unit={unit}
           sellerName={sellerName}
           syncedAt={data.syncedAt}
+          extra={data.noCommission.filter(
+            (r) => r.competence === month && (!unit || r.unit_code === unit),
+          )}
           onPick={(code) => {
             setPicked(code);
             setMode("vendedor");
@@ -835,9 +838,18 @@ function StoreView({
   unit,
   sellerName,
   syncedAt,
+  extra,
   onPick,
 }: {
   store: ReturnType<typeof storeMonth>;
+  /** Sales of sellers who earn no commission: they add to the store billing, nothing else. */
+  extra: {
+    unit_code: string;
+    seller_code: number;
+    seller_name: string;
+    sales_count: number;
+    sold_cents: number;
+  }[];
   unit: string;
   sellerName: (code: number) => string;
   syncedAt: string | null;
@@ -906,6 +918,34 @@ function StoreView({
           </div>
         ))}
       </section>
+
+      {extra.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+          <h3 className="text-lg font-bold">Vendas sem comissão</h3>
+          <p className="text-sm text-muted-foreground">
+            Quem não recebe comissão não aparece no relatório do Decision. As vendas dele entram só
+            no faturamento da loja, sem comissão e sem meta.
+          </p>
+          <ul className="divide-y divide-border text-sm tabular-nums">
+            {extra.map((r) => (
+              <li
+                key={`${r.unit_code}-${r.seller_code}`}
+                className="flex flex-wrap justify-between gap-2 py-2"
+              >
+                <span>
+                  {cleanName(r.seller_name)} · {r.unit_code}{" "}
+                  <span className="text-muted-foreground">({r.sales_count} vendas)</span>
+                </span>
+                <b>{money(r.sold_cents)}</b>
+              </li>
+            ))}
+            <li className="flex flex-wrap justify-between gap-2 py-2 font-extrabold">
+              <span>Faturamento da loja (equipe + sem comissão)</span>
+              <span>{money(store.soldCents + extra.reduce((s, r) => s + r.sold_cents, 0))}</span>
+            </li>
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">Composição das vendas</h3>
@@ -1024,7 +1064,8 @@ function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: 
       (!term ||
         i.description.toLowerCase().includes(term) ||
         i.product_code.includes(term) ||
-        i.sale_number.includes(term)),
+        i.sale_number.includes(term) ||
+        (i.plate ?? "").toLowerCase().includes(term)),
   );
   const total = shown.reduce((t, i) => t + i.total_cents, 0);
   const commission = shown.reduce((t, i) => t + i.commission_cents, 0);
@@ -1066,7 +1107,7 @@ function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: 
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Produto, descrição ou nº da OS"
+              placeholder="Produto, descrição, nº da OS ou placa"
               className={fieldClass}
             />
           </label>
@@ -1098,7 +1139,9 @@ function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: 
               {shown.map((i) => (
                 <tr key={`${i.report_id}-${i.position}`} className="border-t border-border">
                   <td className="py-2 pr-2">{i.sale_number}</td>
-                  {showPlate && <td className="px-2 text-muted-foreground">Em breve</td>}
+                  {showPlate && (
+                    <td className="whitespace-nowrap px-2 font-semibold">{i.plate ?? "—"}</td>
+                  )}
                   {multiStore && <td className="px-2">{i.unit_code}</td>}
                   <td className="whitespace-nowrap px-2">
                     {i.sold_at ? new Date(i.sold_at).toLocaleDateString("pt-BR") : "—"}

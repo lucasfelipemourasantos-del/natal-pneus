@@ -119,6 +119,7 @@ export type Database = {
           commission_cents: number
           description: string
           id: string
+          plate: string | null
           position: number
           product_code: string
           quantity: number
@@ -136,6 +137,7 @@ export type Database = {
           commission_cents: number
           description: string
           id?: string
+          plate?: string | null
           position: number
           product_code: string
           quantity: number
@@ -153,6 +155,7 @@ export type Database = {
           commission_cents?: number
           description?: string
           id?: string
+          plate?: string | null
           position?: number
           product_code?: string
           quantity?: number
@@ -294,6 +297,12 @@ export type Database = {
         Row: { action: string; actor: string | null; asset_id: string; at: string; changes: Json | null; id: number }
         Insert: { action: string; actor?: string | null; asset_id: string; at?: string; changes?: Json | null; id?: number }
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
+        Relationships: []
+      }
+      sales_without_commission: {
+        Row: { competence: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
+        Insert: { competence: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
+        Update: { competence?: string; sales_count?: number; seller_code?: number; seller_name?: string; sold_cents?: number; unit_code?: string }
         Relationships: []
       }
       supervisor_commissions: {
@@ -777,6 +786,7 @@ export type Database = {
         Returns: number
       }
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
+      replace_sales_without_commission: { Args: { _competence: string; _rows: Json }; Returns: number }
       claim_decision_codes: { Args: { _codes: number[] }; Returns: Json }
       technician_os_summary: {
         Args: { _competence: string }

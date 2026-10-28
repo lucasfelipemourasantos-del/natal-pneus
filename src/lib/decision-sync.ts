@@ -13,6 +13,8 @@ export type ApiCommissionItem = {
   descontoUnitario: number;
   acrescimoUnitario: number;
   valorItem: number;
+  /** Plate of the vehicle of the OS (null when the sale has no OS). */
+  placa?: string | null | undefined;
   vendedor: number;
   vendedorNome: string | null;
   percentual: number;
@@ -64,6 +66,7 @@ export type SyncReport = {
     unit_discount_cents: number;
     unit_surcharge_cents: number;
     rule: string;
+    plate: string | null;
   }[];
 };
 
@@ -106,6 +109,7 @@ export async function buildApiReports(api: ApiCommissions): Promise<Map<string, 
         unit_discount_cents: cents(i.descontoUnitario),
         unit_surcharge_cents: cents(i.acrescimoUnitario),
         rule: (i.regra ?? "").trim() || NO_RULE,
+        plate: (i.placa ?? "").trim().toUpperCase() || null,
       }));
     const groupMap = new Map<string, SyncReport["groups"][number]>();
     for (const i of items) {

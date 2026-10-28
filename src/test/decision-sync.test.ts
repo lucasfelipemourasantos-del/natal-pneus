@@ -112,3 +112,20 @@ describe("Decision API sync", () => {
     expect(m.byUnit[0]!.check).toBe("conferido");
   });
 });
+
+describe("plate of the OS", () => {
+  it("travels with each item, uppercase, and is null when the sale has no OS", async () => {
+    const base = item(1, 20, 901, "PEÇAS", 1, 100, 1);
+    const reports = await buildApiReports({
+      periodo: { de: "2026-04-01", ate: "2026-04-30" },
+      lojas: [1],
+      totais: [{ loja: 1, pessoa: 901, nome: "VENDEDOR 901", itens: 2, base: 200, comissao: 2 }],
+      itens: [
+        { ...base, placa: " abc1d23 " },
+        { ...item(1, 21, 901, "PEÇAS", 1, 100, 1), placa: null },
+      ],
+    });
+    const plates = reports.get("NP1")![0]!.items.map((i) => i.plate);
+    expect(plates).toEqual(["ABC1D23", null]);
+  });
+});

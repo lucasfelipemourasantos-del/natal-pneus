@@ -141,6 +141,51 @@ async function syncRoles(env: Record<string, string>, token: string) {
   return (await res.json()) as number;
 }
 
+/**
+ * The Decision commission report only lists items that earn commission, so a seller who earns none (Humberto, NP2)
+ * is missing from the store total. The sales summary has every seller: the ones without a commission report are saved
+ * apart, as sales only (no commission, no goal).
+ */
+async function syncSalesWithoutCommission(
+  env: Record<string, string>,
+  token: string,
+  competence: string,
+  de: string,
+  ate: string,
+  commissioned: Set<string>,
+) {
+  type Total = { loja: number; vendedor: number; vendas: number; liquido: number };
+  type Employee = { funcionario: number; nome: string };
+  const summary = await decisionGet<{ totais: Total[] }>(
+    env,
+    token,
+    `/vendas/resumo?de=${de}&ate=${ate}&agrupar=vendedor`,
+  );
+  const staff = await decisionGet<{ funcionarios: Employee[] }>(env, token, "/funcionarios");
+  const names = new Map(staff.funcionarios.map((f) => [f.funcionario, f.nome.trim()]));
+  const rows = summary.totais
+    .filter((t) => !commissioned.has(`${t.loja}:${t.vendedor}`) && t.liquido !== 0)
+    .map((t) => ({
+      unit_code: `NP${t.loja}`,
+      seller_code: t.vendedor,
+      seller_name: names.get(t.vendedor) ?? `VENDEDOR ${t.vendedor}`,
+      sales_count: t.vendas,
+      sold_cents: Math.round(t.liquido * 100),
+    }));
+  const key = env.SUPABASE_SECRET_KEY!;
+  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/replace_sales_without_commission`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: key,
+      ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}),
+    },
+    body: JSON.stringify({ _competence: competence, _rows: rows }),
+  });
+  if (!res.ok) throw new Error(`Supabase recusou as vendas sem comissão (${res.status})`);
+  return rows.length;
+}
+
 function monthsToSync() {
   const asked = process.argv.filter((a) => a.startsWith("--mes=")).map((a) => a.slice(6));
   if (asked.some((m) => !/^\d{4}-\d{2}$/.test(m))) throw new Error("Use --mes=AAAA-MM");
@@ -196,8 +241,15 @@ for (const month of monthsToSync()) {
       techs = ` · técnicos: ERRO ${err instanceof Error ? err.message : String(err)}`;
     }
   }
+  let semComissao = "";
+  try {
+    const commissioned = new Set(api.totais.map((t) => `${t.loja}:${t.pessoa}`));
+    semComissao = ` · sem comissão: ${await syncSalesWithoutCommission(env, token, competence, de, ate, commissioned)}`;
+  } catch (err) {
+    semComissao = ` · sem comissão: ERRO ${err instanceof Error ? err.message : String(err)}`;
+  }
   console.log(
-    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
+    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
 }
 if (withTechnicians) {

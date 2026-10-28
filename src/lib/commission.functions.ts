@@ -8,6 +8,44 @@ import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
 const NO_GOALS = [] as LaborGoalRow[];
 const NO_TEAMS = [] as TeamRow[];
 const NO_NAMES = [] as { code: number; name: string }[];
+type ExtraClient = {
+  from: (t: "sales_without_commission") => {
+    select: (c: string) => {
+      gte: (
+        c: string,
+        v: string,
+      ) => {
+        lte: (c: string, v: string) => PromiseLike<{ data: ExtraRow[] | null; error: unknown }>;
+      };
+    };
+  };
+};
+type ExtraRow = {
+  unit_code: string;
+  competence: string;
+  seller_code: number;
+  seller_name: string;
+  sales_count: number;
+  sold_cents: number;
+};
+
+/** Sales of sellers who earn no commission (only sales; they add to the store total). Empty until the 0026 update. */
+async function salesWithoutCommission(supabase: ExtraClient, from: string, to: string) {
+  const { data, error } = await supabase
+    .from("sales_without_commission")
+    .select("unit_code,competence,seller_code,seller_name,sales_count,sold_cents")
+    .gte("competence", from)
+    .lte("competence", to);
+  return error ? NO_EXTRA : (data ?? NO_EXTRA);
+}
+const NO_EXTRA = [] as {
+  unit_code: string;
+  competence: string;
+  seller_code: number;
+  seller_name: string;
+  sales_count: number;
+  sold_cents: number;
+}[];
 
 type ProfilesClient = {
   from: (t: "profiles") => {
@@ -72,6 +110,7 @@ export const readCommissions = createServerFn({ method: "GET" })
         goals: NO_GOALS,
         teams: NO_TEAMS,
         names: NO_NAMES,
+        noCommission: NO_EXTRA,
       };
     const oldest = monthsBefore(goalBaseMonth(competence), GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, refs] = await Promise.all([
@@ -102,6 +141,11 @@ export const readCommissions = createServerFn({ method: "GET" })
       goals: NO_GOALS,
       teams: NO_TEAMS,
       names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
+      noCommission: await salesWithoutCommission(
+        context.supabase as unknown as ExtraClient,
+        oldest,
+        competence,
+      ),
     };
   });
 
@@ -123,7 +167,7 @@ export const readCommissionItems = createServerFn({ method: "GET" })
       const { data: chunk, error } = await context.supabase
         .from("commission_report_items")
         .select(
-          "report_id,position,sale_number,product_code,description,quantity,total_cents,rate_bp,commission_cents,sold_at,rule",
+          "report_id,position,sale_number,product_code,description,quantity,total_cents,rate_bp,commission_cents,sold_at,rule,plate",
         )
         .in("report_id", data.reportIds)
         .order("report_id")
@@ -258,6 +302,7 @@ export const readTechCommissions = createServerFn({ method: "GET" })
         goals: NO_GOALS,
         teams: NO_TEAMS,
         names: NO_NAMES,
+        noCommission: NO_EXTRA,
       };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, goals, teams] = await Promise.all([
@@ -289,5 +334,6 @@ export const readTechCommissions = createServerFn({ method: "GET" })
       goals: goals.error ? NO_GOALS : (goals.data ?? NO_GOALS),
       teams: teams.error ? NO_TEAMS : (teams.data ?? NO_TEAMS),
       names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
+      noCommission: NO_EXTRA,
     };
   });
