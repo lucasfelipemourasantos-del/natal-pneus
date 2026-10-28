@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -381,6 +381,35 @@ function Comparativos() {
           osAvailable={[needsOs(sideA), needsOs(sideB)]}
         />
 
+        {allFields.length > 0 && (
+          <section className="space-y-6 rounded-xl border border-border bg-card p-5">
+            <div className="space-y-2">
+              <h2 className="text-lg font-bold">Gráfico por categoria</h2>
+              <CompareBars
+                data={rows.map((c) => ({ name: c.label, A: c.a / 100, B: c.b / 100 }))}
+                nameA={describe(sideA)}
+                nameB={describe(sideB)}
+                unit="money"
+                height={Math.max(220, rows.length * 70)}
+                label="Gráfico de barras comparando as categorias dos dois lados"
+              />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-lg font-bold">
+                Gráfico por campo {selected.size ? "(campos escolhidos)" : "(maiores campos)"}
+              </h2>
+              <CompareBars
+                data={chartData}
+                nameA={describe(sideA)}
+                nameB={describe(sideB)}
+                unit="money"
+                height={Math.max(260, chartData.length * 44)}
+                label="Gráfico de barras comparando os campos dos dois lados"
+              />
+            </div>
+          </section>
+        )}
+
         <section className="space-y-3 rounded-xl border border-border bg-card p-5">
           <h2 className="text-lg font-bold">Vendido por campo</h2>
           {allFields.length === 0 ? (
@@ -428,47 +457,6 @@ function Comparativos() {
           )}
         </section>
 
-        {chartData.length > 0 && (
-          <section className="space-y-3 rounded-xl border border-border bg-card p-5">
-            <h2 className="text-lg font-bold">Gráfico por campo</h2>
-            <div
-              className="h-[420px] w-full"
-              role="img"
-              aria-label="Gráfico de barras comparando os campos dos dois lados"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid horizontal={false} stroke="var(--border)" strokeDasharray="3 3" />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                    tickFormatter={(v: number) =>
-                      v.toLocaleString("pt-BR", { notation: "compact", maximumFractionDigits: 1 })
-                    }
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={170}
-                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  />
-                  <Tooltip
-                    formatter={(v) => money(Math.round(Number(v) * 100))}
-                    contentStyle={{
-                      background: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="A" name={describe(sideA)} fill={COLOR_A} radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="B" name={describe(sideB)} fill={COLOR_B} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-        )}
-
         <OsPanel
           a={{
             title: describe(sideA),
@@ -484,8 +472,8 @@ function Comparativos() {
           }}
         />
 
-        <details className="rounded-xl border border-border bg-card p-5">
-          <summary className="cursor-pointer text-lg font-bold">Evolução mês a mês</summary>
+        <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+          <h2 className="text-lg font-bold">Evolução mês a mês</h2>
           <div className="mt-4 grid gap-6 xl:grid-cols-2">
             <div className="space-y-2">
               <h3 className="font-bold" style={{ color: COLOR_A }}>
@@ -500,7 +488,7 @@ function Comparativos() {
               <CommissionCharts points={pointsFor(sideB)} partialCompetence={currentCompetence()} />
             </div>
           </div>
-        </details>
+        </section>
       </div>
     </PortalShell>
   );
@@ -652,6 +640,20 @@ function OsPanel({
         de OS e o ticket médio dessas OS. O valor da OS é o total dela inteira (peças mais mão de
         obra, por exemplo), não só do campo.
       </p>
+      {a.data && b.data && (
+        <CompareBars
+          data={cats.map((c) => ({
+            name: categoryLabels[c],
+            A: a.data!.osCount ? (a.data!.categories[c].osCount / a.data!.osCount) * 100 : 0,
+            B: b.data!.osCount ? (b.data!.categories[c].osCount / b.data!.osCount) * 100 : 0,
+          }))}
+          nameA={a.title}
+          nameB={b.title}
+          unit="percent"
+          height={260}
+          label="Gráfico da porcentagem de OS que tiveram cada categoria"
+        />
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm tabular-nums">
           <thead>
@@ -717,5 +719,65 @@ function OsPanel({
         </table>
       </div>
     </section>
+  );
+}
+
+/** Side-by-side horizontal bars, one pair per row, the two sides in the same two colors everywhere. */
+function CompareBars({
+  data,
+  nameA,
+  nameB,
+  unit,
+  height,
+  label,
+}: {
+  data: { name: string; A: number; B: number }[];
+  nameA: string;
+  nameB: string;
+  unit: "money" | "percent";
+  height: number;
+  label: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const fmt = (v: number) =>
+    unit === "money" ? money(Math.round(v * 100)) : `${v.toFixed(1).replace(".", ",")}%`;
+  return (
+    <div style={{ height }} className="w-full" role="img" aria-label={label}>
+      {mounted && (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}>
+            <CartesianGrid horizontal={false} stroke="var(--border)" strokeDasharray="3 3" />
+            <XAxis
+              type="number"
+              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+              tickFormatter={(v: number) =>
+                unit === "money"
+                  ? v.toLocaleString("pt-BR", { notation: "compact", maximumFractionDigits: 1 })
+                  : `${v}%`
+              }
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={170}
+              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+            />
+            <Tooltip
+              formatter={(v) => fmt(Number(v))}
+              contentStyle={{
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+              }}
+              cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+            />
+            <Legend />
+            <Bar dataKey="A" name={nameA} fill={COLOR_A} radius={[0, 4, 4, 0]} />
+            <Bar dataKey="B" name={nameB} fill={COLOR_B} radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
   );
 }
