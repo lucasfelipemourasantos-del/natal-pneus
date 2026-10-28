@@ -164,7 +164,13 @@ async function syncSalesWithoutCommission(
   const staff = await decisionGet<{ funcionarios: Employee[] }>(env, token, "/funcionarios");
   const names = new Map(staff.funcionarios.map((f) => [f.funcionario, f.nome.trim()]));
   const rows = summary.totais
-    .filter((t) => !commissioned.has(`${t.loja}:${t.vendedor}`) && t.liquido !== 0)
+    // Generic "SUPERVISOR" / "SUPERVISOR NP4" users also do the transfers between stores: not store billing.
+    .filter(
+      (t) =>
+        !commissioned.has(`${t.loja}:${t.vendedor}`) &&
+        t.liquido !== 0 &&
+        !/^SUPERVISOR(\s+NP\d)?$/i.test(names.get(t.vendedor) ?? ""),
+    )
     .map((t) => ({
       unit_code: `NP${t.loja}`,
       seller_code: t.vendedor,
