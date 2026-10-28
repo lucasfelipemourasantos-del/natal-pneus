@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import { CommissionCharts } from "@/components/commission-charts";
 import { LaborGoalCard } from "@/components/labor-goal-card";
+import { ManagerPanel } from "@/components/manager-panel";
 import { PortalShell } from "@/components/portal-shell";
 import { SupervisorPanel } from "@/components/supervisor-panel";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +83,7 @@ const checkText: Record<UnitCheck, string> = {
   divergente: "sintético e analítico não batem",
 };
 
-type Team = "vendedores" | "operadores";
+type Team = "vendedores" | "operadores" | "gerente";
 
 type CodeLine = { code: number; label: string; cents: number };
 
@@ -187,10 +188,19 @@ function TeamCard({
 }
 
 /** Sellers and operators (mechanics, aligners, balancers...) are never listed together. */
-function TeamSwitch({ team, onChange }: { team: Team; onChange: (t: Team) => void }) {
+function TeamSwitch({
+  team,
+  onChange,
+  withManager,
+}: {
+  team: Team;
+  onChange: (t: Team) => void;
+  withManager: boolean;
+}) {
   const options: { key: Team; label: string }[] = [
     { key: "vendedores", label: "Vendedores" },
     { key: "operadores", label: "Operadores" },
+    ...(withManager ? [{ key: "gerente" as const, label: "Gerente" }] : []),
   ];
   return (
     <div
@@ -227,7 +237,11 @@ function Comissoes() {
   const [role, setRole] = useState<TechRole | "">("");
   const operators = team === "operadores";
   const canPickTeam = hasAllStoresAccess(access) || Boolean(access.hasSales && access.hasService);
-  const teamSwitch = canPickTeam ? <TeamSwitch team={team} onChange={setTeam} /> : null;
+  const manager = team === "gerente";
+  const leaderView = Boolean(access.canReadAll || access.isAdmin);
+  const teamSwitch = canPickTeam ? (
+    <TeamSwitch team={team} onChange={setTeam} withManager={leaderView} />
+  ) : null;
   const { data, isPending, error } = useQuery({
     queryKey: [operators ? "tech-commissions" : "commissions", competence],
     queryFn: () =>
@@ -294,6 +308,22 @@ function Comissoes() {
   const nameOf = (code: number) =>
     data.names.find((n) => n.code === code)?.name ??
     cleanName(data.sellers.find((s) => s.code === code)?.name ?? `Código ${code}`);
+  if (manager && leaderView)
+    return (
+      <PortalShell title="Comissões" eyebrow="Gerente">
+        {teamSwitch}
+        <ManagerPanel
+          reports={data.reports}
+          ignored={ignored}
+          extra={data.noCommission}
+          month={month}
+          months={data.available}
+          onMonth={setCompetence}
+          nameOf={nameOf}
+          partialCompetence={currentCompetence()}
+        />
+      </PortalShell>
+    );
   const sellerCodes = [...new Set(inMonth.map((r) => r.seller_code))].filter((code) => {
     const p = data.sellers.find((s) => s.code === code);
     // Generic Decision users (TECNICO PNEUS) only add up in the totals; they are not people.
