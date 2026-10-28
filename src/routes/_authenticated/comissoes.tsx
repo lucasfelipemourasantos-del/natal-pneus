@@ -855,17 +855,30 @@ function StoreView({
   syncedAt: string | null;
   onPick: (code: number) => void;
 }) {
+  const extraSold = extra.reduce((s, r) => s + r.sold_cents, 0);
+  const totalSold = store.soldCents + extraSold;
+  // The same seller may have sold in more than one store of the view.
+  const extraBySeller = [...new Set(extra.map((r) => r.seller_code))].map((code) => {
+    const rows = extra.filter((r) => r.seller_code === code);
+    return {
+      code,
+      name: rows[0]!.seller_name,
+      units: rows.map((r) => r.unit_code),
+      salesCount: rows.reduce((s, r) => s + r.sales_count, 0),
+      soldCents: rows.reduce((s, r) => s + r.sold_cents, 0),
+    };
+  });
   const soldDelta = delta(store.soldCents, store.previous?.soldCents);
   const commissionDelta = delta(store.commissionCents, store.previous?.commissionCents);
   const prev = monthLabel(store.prevMonth);
   return (
     <div className="mt-6 space-y-6">
       <p className="max-w-[75ch] text-sm text-muted-foreground">
-        <b className="text-foreground">Vendas da equipe:</b> soma das vendas com comissão dos
-        vendedores {unit ? `da ${unit}` : "das quatro lojas"}, como vêm do Decision. Usuários de
-        estoque e gerência ficam de fora. Itens sem comissão (como cortesias) não aparecem neste
-        relatório do Decision, por isso o valor pode ficar um pouco abaixo do faturamento oficial da
-        loja.
+        <b className="text-foreground">Vendas da equipe:</b> soma das vendas dos vendedores
+        {unit ? ` da ${unit}` : " das quatro lojas"}, como vêm do Decision, mais as vendas de quem
+        não recebe comissão (sem comissão e sem meta). Usuários de estoque e gerência ficam de fora.
+        Itens sem comissão (como cortesias) não aparecem neste relatório do Decision, por isso o
+        valor pode ficar um pouco abaixo do faturamento oficial da loja.
         {syncedAt && (
           <>
             {" "}
@@ -885,8 +898,12 @@ function StoreView({
         {[
           {
             k: "Vendas da equipe",
-            v: money(store.soldCents),
-            d: soldDelta ? `${soldDelta} sobre ${prev}` : `Sem dados de ${prev}`,
+            v: money(totalSold),
+            d: extraSold
+              ? `Inclui ${money(extraSold)} de vendas sem comissão`
+              : soldDelta
+                ? `${soldDelta} sobre ${prev}`
+                : `Sem dados de ${prev}`,
             hl: true,
           },
           {
@@ -918,34 +935,6 @@ function StoreView({
           </div>
         ))}
       </section>
-
-      {extra.length > 0 && (
-        <section className="space-y-2 rounded-xl border border-border bg-card p-5">
-          <h3 className="text-lg font-bold">Vendas sem comissão</h3>
-          <p className="text-sm text-muted-foreground">
-            Quem não recebe comissão não aparece no relatório do Decision. As vendas dele entram só
-            no faturamento da loja, sem comissão e sem meta.
-          </p>
-          <ul className="divide-y divide-border text-sm tabular-nums">
-            {extra.map((r) => (
-              <li
-                key={`${r.unit_code}-${r.seller_code}`}
-                className="flex flex-wrap justify-between gap-2 py-2"
-              >
-                <span>
-                  {cleanName(r.seller_name)} · {r.unit_code}{" "}
-                  <span className="text-muted-foreground">({r.sales_count} vendas)</span>
-                </span>
-                <b>{money(r.sold_cents)}</b>
-              </li>
-            ))}
-            <li className="flex flex-wrap justify-between gap-2 py-2 font-extrabold">
-              <span>Faturamento da loja (equipe + sem comissão)</span>
-              <span>{money(store.soldCents + extra.reduce((s, r) => s + r.sold_cents, 0))}</span>
-            </li>
-          </ul>
-        </section>
-      )}
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">Composição das vendas</h3>
@@ -1021,10 +1010,13 @@ function StoreView({
                       <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted sm:inline-block">
                         <span
                           className="block h-full bg-primary"
-                          style={{ width: `${s.sharePct}%` }}
+                          style={{ width: `${totalSold ? (s.soldCents / totalSold) * 100 : 0}%` }}
                         />
                       </span>
-                      {s.sharePct.toFixed(1).replace(".", ",")}%
+                      {(totalSold ? (s.soldCents / totalSold) * 100 : 0)
+                        .toFixed(1)
+                        .replace(".", ",")}
+                      %
                     </span>
                   </td>
                   <td className="px-2 text-right">{s.osCount ?? "—"}</td>
@@ -1032,6 +1024,39 @@ function StoreView({
                     {s.ticketCents === null ? "—" : money(s.ticketCents)}
                   </td>
                   <td className="whitespace-nowrap pl-2 text-right">{money(s.commissionCents)}</td>
+                </tr>
+              ))}
+              {extraBySeller.map((s) => (
+                <tr key={`sem-${s.code}`} className="border-t border-border">
+                  <td className="min-w-48 py-2.5 pr-2">
+                    <span className="font-semibold">
+                      {s.code} · {cleanName(s.name)}
+                    </span>
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+                      Sem comissão
+                    </span>
+                  </td>
+                  {!unit && <td className="whitespace-nowrap px-2">{s.units.join(", ")}</td>}
+                  <td className="whitespace-nowrap px-2 text-right">{money(s.soldCents)}</td>
+                  <td className="px-2 text-right">
+                    <span className="inline-flex items-center justify-end gap-2">
+                      <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted sm:inline-block">
+                        <span
+                          className="block h-full bg-primary"
+                          style={{ width: `${totalSold ? (s.soldCents / totalSold) * 100 : 0}%` }}
+                        />
+                      </span>
+                      {(totalSold ? (s.soldCents / totalSold) * 100 : 0)
+                        .toFixed(1)
+                        .replace(".", ",")}
+                      %
+                    </span>
+                  </td>
+                  <td className="px-2 text-right">{s.salesCount}</td>
+                  <td className="whitespace-nowrap px-2 text-right">
+                    {s.salesCount ? money(Math.round(s.soldCents / s.salesCount)) : "—"}
+                  </td>
+                  <td className="whitespace-nowrap pl-2 text-right text-muted-foreground">—</td>
                 </tr>
               ))}
             </tbody>
