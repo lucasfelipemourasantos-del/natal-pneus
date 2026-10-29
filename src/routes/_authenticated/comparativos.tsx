@@ -176,13 +176,13 @@ function Comparativos() {
 
   if (api.isPending)
     return (
-      <PortalShell title="Vendas e resultados" eyebrow="Comparativos">
+      <PortalShell printable title="Vendas e resultados" eyebrow="Comparativos">
         <p className="text-muted-foreground">Carregando…</p>
       </PortalShell>
     );
   if (api.error || !api.data || !latest)
     return (
-      <PortalShell title="Vendas e resultados" eyebrow="Comparativos">
+      <PortalShell printable title="Vendas e resultados" eyebrow="Comparativos">
         <p role="alert" className="text-destructive">
           {api.error?.message ?? "Ainda não há dados do Decision para comparar."}
         </p>
@@ -236,7 +236,7 @@ function Comparativos() {
     ));
 
   return (
-    <PortalShell title="Vendas e resultados" eyebrow="Comparativos">
+    <PortalShell printable title="Vendas e resultados" eyebrow="Comparativos">
       <div className="space-y-6">
         <p className="max-w-[75ch] text-sm text-muted-foreground">
           Compare lojas, vendedores e operadores, mês a mês, com os valores que o Decision traz.

@@ -18,6 +18,7 @@ import {
   LogOut,
   Megaphone,
   Mic,
+  Printer,
   Target,
   UserRound,
   Wallet,
@@ -137,10 +138,13 @@ function navGroups(
 export function PortalShell({
   title,
   eyebrow,
+  printable,
   children,
 }: {
   title: string;
   eyebrow?: string;
+  /** Shows the "Gerar PDF" button (ADM only) and prints a header with the logo, title and date. */
+  printable?: boolean;
   children: ReactNode;
 }) {
   const context = useRouteContext({ strict: false }) as { access?: Access };
@@ -177,8 +181,8 @@ export function PortalShell({
     navigate({ to: "/", replace: true });
   }
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr]">
-      <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
+    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[240px_1fr] print:block">
+      <aside className="hidden min-h-screen flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex print:!hidden">
         <Link to="/inicio" aria-label="Natal Pneus — início" className="block px-2 py-2">
           <img src={logo} alt="Natal Pneus" className="h-auto w-[168px]" />
         </Link>
@@ -269,7 +273,7 @@ export function PortalShell({
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:static">
+        <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:static print:hidden">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-10">
             <Link to="/inicio" className="lg:hidden" aria-label="Natal Pneus — início">
               <img src={logo} alt="Natal Pneus" className="h-auto w-[142px]" />
@@ -346,6 +350,24 @@ export function PortalShell({
             {eyebrow && <p className="text-xs font-bold uppercase text-primary">{eyebrow}</p>}
             <h1 className="mt-1 text-2xl font-bold text-foreground">{title}</h1>
           </div>
+          <div className="mb-5 hidden items-center justify-between gap-4 border-b border-border pb-3 print:flex">
+            <img src={logo} alt="Natal Pneus" className="h-auto w-[130px]" />
+            <div className="text-right">
+              <p className="text-lg font-bold">{title}</p>
+              <p className="text-xs text-muted-foreground">
+                {eyebrow ? `${eyebrow} · ` : ""}Emitido em{" "}
+                {new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+              </p>
+            </div>
+          </div>
+          {printable && access.isAdmin && (
+            <div className="mb-4 flex justify-end print:hidden">
+              <Button type="button" variant="outline" onClick={() => window.print()}>
+                <Printer size={17} aria-hidden="true" className="mr-2" />
+                Gerar PDF
+              </Button>
+            </div>
+          )}
           {children}
           {store && (
             <footer className="mt-10 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">

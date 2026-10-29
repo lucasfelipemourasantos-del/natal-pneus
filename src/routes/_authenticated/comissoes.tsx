@@ -266,14 +266,14 @@ function Comissoes() {
 
   if (isPending)
     return (
-      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+      <PortalShell printable title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
         {teamSwitch}
         <p className="text-muted-foreground">Carregando…</p>
       </PortalShell>
     );
   if (error)
     return (
-      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+      <PortalShell printable title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
         {teamSwitch}
         <p role="alert" className="text-destructive">
           {error.message}
@@ -282,7 +282,7 @@ function Comissoes() {
     );
   if (!data.competence)
     return (
-      <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+      <PortalShell printable title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
         {teamSwitch}
         <section className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold">Nenhum relatório de comissão importado ainda</h2>
@@ -310,7 +310,7 @@ function Comissoes() {
     cleanName(data.sellers.find((s) => s.code === code)?.name ?? `Código ${code}`);
   if (manager && leaderView)
     return (
-      <PortalShell title="Comissões" eyebrow="Gerente">
+      <PortalShell printable title="Comissões" eyebrow="Gerente">
         {teamSwitch}
         <ManagerPanel
           reports={data.reports}
@@ -407,7 +407,7 @@ function Comissoes() {
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
   return (
-    <PortalShell title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
+    <PortalShell printable title="Comissões" eyebrow={operators ? "Operadores" : "Vendedores"}>
       {teamSwitch}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>

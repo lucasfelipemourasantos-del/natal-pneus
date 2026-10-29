@@ -174,3 +174,88 @@
 
   :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 3px; }
 }
+
+/* Impressão / PDF (só o ADM vê o botão "Gerar PDF"): sempre no tema claro, sem menus nem botões, tabelas inteiras. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  :root,
+  :root.dark,
+  .dark {
+  --radius: 0.75rem;
+  --background: oklch(0.974 0.003 247.9);
+  --foreground: oklch(0.182 0.011 253.9);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.577 0.236 28.7);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.955 0.004 247.9);
+  --secondary-foreground: oklch(0.182 0.011 253.9);
+  --muted: oklch(0.944 0.004 247.9);
+  --muted-foreground: oklch(0.483 0.022 250.9);
+  --accent: oklch(0.963 0.19 102.2);
+  --accent-foreground: oklch(0.182 0.011 253.9);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.888 0.009 247.9);
+  --input: oklch(0.888 0.009 247.9);
+  --ring: oklch(0.577 0.236 28.7);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.182 0.011 253.9);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-muted: oklch(0.72 0.01 247.9);
+  --sidebar-primary: oklch(0.577 0.236 28.7);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.257 0.013 253.9);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.577 0.236 28.7);
+  --success: oklch(0.59 0.15 151);
+  --success-soft: oklch(0.95 0.04 151);
+  --warning-soft: oklch(0.97 0.13 102.2);
+  --sales-tires: oklch(0.577 0.236 28.7);
+  --sales-services: oklch(0.47 0.085 222);
+  --sales-parts: oklch(0.82 0.17 95);
+  --sales-oils: oklch(0.74 0.015 253.9);
+  --shadow-card: 0 1px 2px oklch(0.182 0.011 253.9 / 5%), 0 8px 22px oklch(0.182 0.011 253.9 / 4%);
+  }
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  aside,
+  button,
+  [role="tablist"] {
+    display: none !important;
+  }
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  section,
+  tr,
+  li {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+  }
+}
