@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { CommissionCharts } from "@/components/commission-charts";
 import { monthLabel, type ReportRow } from "@/lib/commissions";
 import {
@@ -15,6 +16,10 @@ export function ManagerPanel({
   reports,
   ignored,
   extra,
+  monthReports,
+  monthExtra,
+  periodControl,
+  periodLabel,
   month,
   months,
   onMonth,
@@ -22,6 +27,12 @@ export function ManagerPanel({
   partialCompetence,
 }: {
   reports: ReportRow[];
+  /** Whole-month reports for the 12-month charts (the other props may be narrowed to some days). */
+  monthReports?: ReportRow[];
+  /** Whole-month sales of sellers without commission, for the same charts. */
+  monthExtra?: SalesWithoutCommission[];
+  periodControl?: ReactNode;
+  periodLabel?: string;
   ignored: Set<number>;
   extra: SalesWithoutCommission[];
   month: string;
@@ -41,8 +52,10 @@ export function ManagerPanel({
           </p>
           <h2 className="mt-1 text-2xl font-extrabold text-balance">
             {MANAGER_RULE.name} — {monthLabel(month)}
+            {periodLabel}
           </h2>
         </div>
+        {periodControl}
         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Mês
           <select value={month} onChange={(e) => onMonth(e.target.value)} className={fieldClass}>
@@ -174,7 +187,7 @@ export function ManagerPanel({
       )}
 
       <CommissionCharts
-        points={managerSeries(reports, ignored, extra, month)}
+        points={managerSeries(monthReports ?? reports, ignored, monthExtra ?? extra, month)}
         partialCompetence={partialCompetence}
       />
     </div>

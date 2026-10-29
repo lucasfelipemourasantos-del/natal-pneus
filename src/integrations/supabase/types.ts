@@ -323,6 +323,12 @@ export type Database = {
         Update: { document_id?: string; sent_at?: string; stage?: string }
         Relationships: []
       }
+      sales_without_commission_days: {
+        Row: { day: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
+        Insert: { day: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
+        Update: { day?: string; sales_count?: number; seller_code?: number; seller_name?: string; sold_cents?: number; unit_code?: string }
+        Relationships: []
+      }
       supervisor_commissions: {
         Row: { commission_cents: number; competence: string; entered_at: string; entered_by: string | null; group_name: string; id: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }
         Insert: { commission_cents: number; competence: string; entered_at?: string; entered_by?: string | null; group_name: string; id?: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }

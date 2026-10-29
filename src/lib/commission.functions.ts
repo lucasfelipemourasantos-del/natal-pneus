@@ -457,3 +457,114 @@ export const readOsComposition = createServerFn({ method: "GET" })
       withSelection: data.fields.length ? withSelection : null,
     };
   });
+
+/**
+ * Month reports narrowed to a range of days of the same month (for "month broken in the middle" commissions).
+ * It re-adds the items sold inside the range, so the percentages stay the ones of the closed month. Only the reports the
+ * person can read come back. Sellers without commission (Humberto) come from the daily table, when it exists.
+ */
+export const readPeriodReports = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      competence: month,
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      kind: z.enum(["api", "tecnico"]),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (
+      data.from > data.to ||
+      data.from.slice(0, 7) !== data.competence.slice(0, 7) ||
+      data.to.slice(0, 7) !== data.competence.slice(0, 7)
+    )
+      throw new Error("Escolha dias dentro do mês.");
+    const reports = await context.supabase
+      .from("commission_reports")
+      .select("id,unit_code,seller_code")
+      .eq("kind", data.kind)
+      .eq("competence", data.competence);
+    if (reports.error) throw new Error("Não foi possível consultar o período.");
+    const ids = (reports.data ?? []).map((r) => r.id);
+    type Acc = {
+      sold: number;
+      commission: number;
+      sales: Set<string>;
+      groups: Map<
+        string,
+        { group_name: string; rate_bp: number; sold_cents: number; commission_cents: number }
+      >;
+    };
+    const byReport = new Map<string, Acc>(
+      ids.map((id) => [id, { sold: 0, commission: 0, sales: new Set(), groups: new Map() }]),
+    );
+    const page = 1000;
+    for (let i = 0; i < ids.length; i += 15) {
+      const chunk = ids.slice(i, i + 15);
+      for (let from = 0; from < 30000; from += page) {
+        const { data: items, error } = await context.supabase
+          .from("commission_report_items")
+          .select("report_id,sale_number,total_cents,rate_bp,commission_cents,sold_at,rule")
+          .in("report_id", chunk)
+          .order("report_id")
+          .order("position")
+          .range(from, from + page - 1);
+        if (error) throw new Error("Não foi possível consultar o período.");
+        for (const item of items ?? []) {
+          const day = (item.sold_at ?? "").slice(0, 10);
+          if (day < data.from || day > data.to) continue;
+          const acc = byReport.get(item.report_id)!;
+          const rule = item.rule ?? "SEM GRUPO NO DECISION";
+          const key = `${rule}|${item.rate_bp}`;
+          const g = acc.groups.get(key) ?? {
+            group_name: rule,
+            rate_bp: item.rate_bp,
+            sold_cents: 0,
+            commission_cents: 0,
+          };
+          g.sold_cents += item.total_cents;
+          g.commission_cents += item.commission_cents;
+          acc.groups.set(key, g);
+          acc.sold += item.total_cents;
+          acc.commission += item.commission_cents;
+          acc.sales.add(item.sale_number);
+        }
+        if ((items ?? []).length < page) break;
+      }
+    }
+    // Sellers without commission, day by day (table created by the 0028 update; empty until then).
+    const days = await context.supabase
+      .from("sales_without_commission_days")
+      .select("unit_code,seller_code,seller_name,sales_count,sold_cents")
+      .gte("day", data.from)
+      .lte("day", data.to);
+    const extra = new Map<
+      string,
+      {
+        unit_code: string;
+        seller_code: number;
+        seller_name: string;
+        sales_count: number;
+        sold_cents: number;
+      }
+    >();
+    for (const r of days.error ? [] : (days.data ?? [])) {
+      const key = `${r.unit_code}|${r.seller_code}`;
+      const cur = extra.get(key) ?? { ...r, sales_count: 0, sold_cents: 0 };
+      cur.sales_count += r.sales_count;
+      cur.sold_cents += r.sold_cents;
+      extra.set(key, cur);
+    }
+    return {
+      reports: [...byReport].map(([id, a]) => ({
+        id,
+        total_sold_cents: a.sold,
+        total_commission_cents: a.commission,
+        os_count: a.sales.size,
+        groups: [...a.groups.values()],
+      })),
+      extra: [...extra.values()],
+      extraAvailable: !days.error,
+    };
+  });

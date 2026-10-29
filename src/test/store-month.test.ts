@@ -65,3 +65,34 @@ describe("Store month (vendas da equipe)", () => {
     expect(s.sellers.find((x) => x.code === 20)!.units).toEqual(["NP1", "NP4"]);
   });
 });
+
+describe("Period inside the month (mês quebrado)", () => {
+  it("narrows totals, groups and OS to the days chosen, leaving other months alone", async () => {
+    const { applyPeriod, sellerMonth } = await import("@/lib/commissions");
+    const base: ReportRow[] = [
+      report("a", 10, "NP4", "2026-04-01", 100000),
+      report("m", 10, "NP4", "2026-03-01", 200000),
+    ];
+    const adjusted = applyPeriod(
+      base,
+      [{ report_id: "a", unit_code: "NP4", seller_code: 10, os_count: 4 }],
+      [
+        {
+          id: "a",
+          total_sold_cents: 30000,
+          total_commission_cents: 300,
+          os_count: 1,
+          groups: [{ group_name: "PEÇAS", rate_bp: 100, sold_cents: 30000, commission_cents: 300 }],
+        },
+      ],
+      "2026-04-01",
+    );
+    const v = sellerMonth(adjusted.reports, adjusted.os, 10, "2026-04-01");
+    expect(v.soldCents).toBe(30000);
+    expect(v.commissionCents).toBe(300);
+    expect(v.osCount).toBe(1);
+    expect(v.groups.map((g) => [g.category, g.soldCents])).toEqual([["pecas", 30000]]);
+    // the other month is untouched
+    expect(sellerMonth(adjusted.reports, adjusted.os, 10, "2026-03-01").soldCents).toBe(200000);
+  });
+});

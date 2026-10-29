@@ -189,6 +189,47 @@ async function syncSalesWithoutCommission(
     body: JSON.stringify({ _competence: competence, _rows: rows }),
   });
   if (!res.ok) throw new Error(`Supabase recusou as vendas sem comissão (${res.status})`);
+  // The same sellers day by day (store by store), for the day filter. Needs the 0028 database update; never stops the sync.
+  try {
+    const dayRows: {
+      unit_code: string;
+      day: string;
+      seller_code: number;
+      seller_name: string;
+      sales_count: number;
+      sold_cents: number;
+    }[] = [];
+    for (const r of rows) {
+      const store = r.unit_code.slice(2);
+      const days = await decisionGet<{
+        totais: { dia: string; vendas: number; liquido: number }[];
+      }>(
+        env,
+        token,
+        `/vendas/resumo?de=${de}&ate=${ate}&agrupar=dia&vendedor=${r.seller_code}&loja=${store}`,
+      );
+      for (const d of days.totais)
+        dayRows.push({
+          unit_code: r.unit_code,
+          day: d.dia,
+          seller_code: r.seller_code,
+          seller_name: r.seller_name,
+          sales_count: d.vendas,
+          sold_cents: Math.round(d.liquido * 100),
+        });
+    }
+    await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/replace_sales_without_commission_days`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}),
+      },
+      body: JSON.stringify({ _competence: competence, _rows: dayRows }),
+    });
+  } catch {
+    // keep going: the monthly totals above are already saved
+  }
   return rows.length;
 }
 

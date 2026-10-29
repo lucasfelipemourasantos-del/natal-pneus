@@ -408,3 +408,48 @@ export function sellerSeries(reports: ReportRow[], sellerCode: number, competenc
       return { competence: month, soldCents: v.soldCents, commissionCents: v.commissionCents };
     });
 }
+
+export type PeriodReport = {
+  id: string;
+  total_sold_cents: number;
+  total_commission_cents: number;
+  os_count: number;
+  groups: NonNullable<ReportRow["commission_report_groups"]>;
+};
+
+/**
+ * Month reports narrowed to some days of the month ("mês quebrado"): totals, groups and the OS count of the days chosen.
+ * The reports keep their ids, so the sold items of the same reports can be filtered by day too.
+ */
+export function applyPeriod(
+  reports: ReportRow[],
+  os: OsRow[],
+  period: PeriodReport[],
+  competence: string,
+) {
+  const byId = new Map(period.map((p) => [p.id, p]));
+  const inPeriod = reports.filter((r) => r.competence === competence && byId.has(r.id));
+  return {
+    reports: reports.map((r) => {
+      const p = r.competence === competence ? byId.get(r.id) : undefined;
+      return p
+        ? {
+            ...r,
+            total_sold_cents: p.total_sold_cents,
+            total_commission_cents: p.total_commission_cents,
+            allowance_cents: 0,
+            commission_report_groups: p.groups,
+          }
+        : r;
+    }),
+    os: [
+      ...os.filter((o) => !byId.has(o.report_id)),
+      ...inPeriod.map((r) => ({
+        report_id: r.id,
+        unit_code: r.unit_code,
+        seller_code: r.seller_code,
+        os_count: byId.get(r.id)!.os_count,
+      })),
+    ],
+  };
+}

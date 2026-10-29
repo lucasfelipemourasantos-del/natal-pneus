@@ -13,6 +13,7 @@ import { canSeeCommissions, hasAllStoresAccess } from "@/lib/access";
 import {
   readCommissionItems,
   readCommissions,
+  readPeriodReports,
   readTechCommissions,
 } from "@/lib/commission.functions";
 import { isTechnicianOnly } from "@/lib/access";
@@ -36,6 +37,7 @@ import {
   referenceFor,
   rateLabel,
   currentCompetence,
+  applyPeriod,
   sellerMonth,
   sellerSeries,
   storeMonth,
@@ -223,6 +225,78 @@ function TeamSwitch({
   );
 }
 
+/** Day filter for "mês quebrado" (some days of the month chosen above). */
+function PeriodPicker({
+  on,
+  onToggle,
+  from,
+  to,
+  lastDay,
+  onFrom,
+  onTo,
+  loading,
+  error,
+}: {
+  on: boolean;
+  onToggle: (v: boolean) => void;
+  from: string;
+  to: string;
+  lastDay: number;
+  onFrom: (v: string) => void;
+  onTo: (v: string) => void;
+  loading: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Período
+        <select
+          id="commission-period"
+          value={on ? "dias" : "mes"}
+          onChange={(e) => onToggle(e.target.value === "dias")}
+          className={fieldClass}
+        >
+          <option value="mes">Mês inteiro</option>
+          <option value="dias">Escolher dias</option>
+        </select>
+      </label>
+      {on && (
+        <>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Do dia
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={lastDay}
+              value={from}
+              onChange={(e) => onFrom(e.target.value)}
+              className={fieldClass + " w-20"}
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Até o dia
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={lastDay}
+              placeholder={String(lastDay)}
+              value={to}
+              onChange={(e) => onTo(e.target.value)}
+              className={fieldClass + " w-20"}
+            />
+          </label>
+          <span role="status" className="pb-3 text-xs text-muted-foreground">
+            {loading ? "Calculando…" : error}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function percent(part: number, total: number) {
   return total ? `${((part / total) * 100).toFixed(1).replace(".", ",")}%` : "—";
 }
@@ -235,6 +309,10 @@ function Comissoes() {
   const [mode, setMode] = useState<"vendedor" | "loja">("vendedor");
   const [team, setTeam] = useState<Team>(isTechnicianOnly(access) ? "operadores" : "vendedores");
   const [role, setRole] = useState<TechRole | "">("");
+  // "Mês quebrado": only some days of the chosen month (Comissões and store totals; goals never change).
+  const [daysOn, setDaysOn] = useState(false);
+  const [fromDay, setFromDay] = useState("1");
+  const [toDay, setToDay] = useState("");
   const operators = team === "operadores";
   const canPickTeam = hasAllStoresAccess(access) || Boolean(access.hasSales && access.hasService);
   const manager = team === "gerente";
@@ -262,6 +340,30 @@ function Comissoes() {
         );
       return err ? ([] as SupervisorRow[]) : (rows as SupervisorRow[]);
     },
+  });
+
+  const periodMonth = data?.competence ?? null;
+  const lastDay = periodMonth
+    ? new Date(Number(periodMonth.slice(0, 4)), Number(periodMonth.slice(5, 7)), 0).getDate()
+    : 31;
+  const dayFromN = Math.max(1, Math.min(lastDay, Number(fromDay) || 1));
+  const dayToN = Math.max(1, Math.min(lastDay, Number(toDay) || lastDay));
+  const daysValid = daysOn && dayFromN <= dayToN && !(dayFromN === 1 && dayToN === lastDay);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const periodFrom = periodMonth ? `${periodMonth.slice(0, 8)}${pad(dayFromN)}` : "";
+  const periodTo = periodMonth ? `${periodMonth.slice(0, 8)}${pad(dayToN)}` : "";
+  const periodQuery = useQuery({
+    queryKey: ["period-reports", operators ? "tecnico" : "api", periodMonth, periodFrom, periodTo],
+    enabled: daysValid && Boolean(periodMonth),
+    queryFn: () =>
+      readPeriodReports({
+        data: {
+          competence: periodMonth!,
+          from: periodFrom,
+          to: periodTo,
+          kind: operators ? "tecnico" : "api",
+        },
+      }),
   });
 
   if (isPending)
@@ -302,6 +404,32 @@ function Comissoes() {
     );
 
   const month = data.competence;
+  // The numbers of the days chosen; goals and the 12-month charts keep reading the whole month (data.reports).
+  const adjusted =
+    daysValid && periodQuery.data
+      ? applyPeriod(data.reports, data.os, periodQuery.data.reports, month)
+      : null;
+  const pReports = adjusted?.reports ?? data.reports;
+  const pOs = adjusted?.os ?? data.os;
+  const pExtra =
+    daysValid && periodQuery.data
+      ? periodQuery.data.extra.map((r) => ({ ...r, competence: month }))
+      : data.noCommission;
+  const periodOn = Boolean(adjusted);
+  const periodLabel = periodOn ? ` · dias ${dayFromN} a ${dayToN}` : "";
+  const periodControl = (
+    <PeriodPicker
+      on={daysOn}
+      onToggle={setDaysOn}
+      from={fromDay}
+      to={toDay}
+      lastDay={lastDay}
+      onFrom={setFromDay}
+      onTo={setToDay}
+      loading={daysValid && periodQuery.isFetching}
+      error={periodQuery.error?.message ?? null}
+    />
+  );
   const ignored = new Set(data.sellers.filter((s) => s.ignored).map((s) => s.code));
   const inMonth = data.reports.filter((r) => r.competence === month && !ignored.has(r.seller_code));
   /** Name shown in the portal: what the employee typed at signup, otherwise the Decision name without reference tags. */
@@ -313,9 +441,13 @@ function Comissoes() {
       <PortalShell printable title="Comissões" eyebrow="Gerente">
         {teamSwitch}
         <ManagerPanel
-          reports={data.reports}
+          reports={pReports}
+          monthReports={data.reports}
+          monthExtra={data.noCommission}
+          periodControl={periodControl}
+          periodLabel={periodLabel}
           ignored={ignored}
-          extra={data.noCommission}
+          extra={pExtra}
           month={month}
           months={data.available}
           onMonth={setCompetence}
@@ -365,15 +497,11 @@ function Comissoes() {
       inMonth.filter((r) => byStore || r.seller_code === sellerCode).map((r) => r.unit_code),
     ),
   ].sort();
-  const store = byStore
-    ? storeMonth(data.reports, data.os, month, ignored, unit || undefined)
-    : null;
+  const store = byStore ? storeMonth(pReports, pOs, month, ignored, unit || undefined) : null;
   const sellerName = nameOf;
 
   const view =
-    sellerCode === null
-      ? null
-      : sellerMonth(data.reports, data.os, sellerCode, month, unit || undefined);
+    sellerCode === null ? null : sellerMonth(pReports, pOs, sellerCode, month, unit || undefined);
   const goalOff = data.sellers.find((s) => s.code === sellerCode)?.parts_goal === false;
   const goal =
     sellerCode === null || goalOff || operators
@@ -399,10 +527,10 @@ function Comissoes() {
         ? "Supervisor"
         : "Vendedor",
     cents: operators
-      ? techMonth(data.reports, s.code, month).commissionCents
+      ? techMonth(pReports, s.code, month).commissionCents
       : supCodes.includes(s.code)
         ? supervisorMonth(supRows, s.code, month).commissionCents
-        : sellerMonth(data.reports, data.os, s.code, month).commissionCents,
+        : sellerMonth(pReports, pOs, s.code, month).commissionCents,
   }));
   const allChecked = view?.byUnit.every((u) => u.check === "conferido");
 
@@ -423,6 +551,7 @@ function Comissoes() {
                 ? `${seller.code} · ${seller.name}`
                 : "Sem vendedor"}{" "}
             — {monthLabel(month)}
+            {periodLabel}
           </h2>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -443,6 +572,7 @@ function Comissoes() {
               </select>
             </label>
           )}
+          {periodControl}
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Mês
             <select
@@ -529,9 +659,7 @@ function Comissoes() {
           sellerName={sellerName}
           syncedAt={data.syncedAt}
           points={storeSeries(data.reports, month, ignored, unit || undefined, data.noCommission)}
-          extra={data.noCommission.filter(
-            (r) => r.competence === month && (!unit || r.unit_code === unit),
-          )}
+          extra={pExtra.filter((r) => r.competence === month && (!unit || r.unit_code === unit))}
           onPick={(code) => {
             setPicked(code);
             setMode("vendedor");
@@ -747,13 +875,13 @@ function Comissoes() {
               {unifiedTeam && sellerCode !== null && (
                 <TeamCard
                   team={unifiedTeam}
-                  ownCents={techMonth(data.reports, sellerCode, month).commissionCents}
+                  ownCents={techMonth(pReports, sellerCode, month).commissionCents}
                   members={
                     leader
                       ? unifiedTeam.member_codes.map((code) => ({
                           code,
                           name: nameOf(code),
-                          cents: techMonth(data.reports, code, month).commissionCents,
+                          cents: techMonth(pReports, code, month).commissionCents,
                         }))
                       : null
                   }
@@ -848,6 +976,8 @@ function Comissoes() {
             key={view.reportIds.join(",")}
             reportIds={view.reportIds}
             showPlate={operators}
+            dayFrom={periodOn ? periodFrom : undefined}
+            dayTo={periodOn ? periodTo : undefined}
           />
           {sellerCode !== null && (
             <CommissionCharts
@@ -1108,7 +1238,17 @@ function StoreView({
 }
 
 /** Item list behind the month (like the analítico), filterable by group, product/description or OS. */
-function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: boolean }) {
+function SoldItems({
+  reportIds,
+  showPlate,
+  dayFrom,
+  dayTo,
+}: {
+  reportIds: string[];
+  showPlate?: boolean;
+  dayFrom?: string | undefined;
+  dayTo?: string | undefined;
+}) {
   const [group, setGroup] = useState("");
   const [search, setSearch] = useState("");
   const {
@@ -1125,6 +1265,8 @@ function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: 
   const term = search.trim().toLowerCase();
   const shown = (items ?? []).filter(
     (i) =>
+      (!dayFrom || (i.sold_at ?? "").slice(0, 10) >= dayFrom) &&
+      (!dayTo || (i.sold_at ?? "").slice(0, 10) <= dayTo) &&
       (!group || i.rule === group) &&
       (!term ||
         i.description.toLowerCase().includes(term) ||
