@@ -42,7 +42,7 @@ import { money } from "@/lib/results";
 
 export const Route = createFileRoute("/_authenticated/comparativos")({
   beforeLoad: ({ context }) => {
-    if (!context.access.canReadAll && !context.access.isAdmin) throw redirect({ to: "/inicio" });
+    if (!context.access.isAdmin) throw redirect({ to: "/inicio" });
   },
   head: () => ({
     meta: [

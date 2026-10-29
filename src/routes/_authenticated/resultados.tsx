@@ -23,7 +23,7 @@ import type { Tables } from "@/integrations/supabase/types";
 const options = queryOptions({ queryKey: ["sales-results"], queryFn: () => readResults() });
 export const Route = createFileRoute("/_authenticated/resultados")({
   beforeLoad: ({ context }) => {
-    if (!context.access.canReadAll && !context.access.isProducer) throw redirect({ to: "/inicio" });
+    if (!context.access.isAdmin) throw redirect({ to: "/inicio" });
   },
   loader: async ({ context }) => {
     await Promise.all([

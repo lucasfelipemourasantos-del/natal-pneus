@@ -87,9 +87,6 @@ function navGroups(
     ...(canSeeCommissions(access)
       ? [{ to: "/comissoes" as const, label: "Comissões", icon: Wallet }]
       : []),
-    ...(access.isProducer && !access.canReadAll
-      ? [{ to: "/resultados" as const, label: "Meus resultados", icon: ChartNoAxesCombined }]
-      : []),
     { to: "/cursos", label: "Meus cursos", icon: BookOpen },
     ...(canOpenOs(access)
       ? [{ to: "/abrir-os" as const, label: "Abrir OS por voz", icon: Mic }]
@@ -103,11 +100,15 @@ function navGroups(
   ];
   const management: NavLink[] = access.canReadAll
     ? [
-        { to: "/comparativos", label: "Vendas e resultados", icon: ChartNoAxesCombined },
         { to: "/unidades", label: "Lojas e funções", icon: Building2 },
         { to: "/admin", label: access.isAdmin ? "Contas" : "Colaboradores", icon: ShieldCheck },
         ...(access.isAdmin
           ? [
+              {
+                to: "/comparativos" as const,
+                label: "Vendas e resultados",
+                icon: ChartNoAxesCombined,
+              },
               { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
               { to: "/admin-documentos" as const, label: "Documentos", icon: FolderLock },
               { to: "/admin-alertas" as const, label: "Alertas de clientes", icon: BellRing },
