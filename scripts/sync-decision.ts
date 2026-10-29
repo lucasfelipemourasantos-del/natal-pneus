@@ -258,6 +258,13 @@ for (const month of monthsToSync()) {
     `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
 }
+// Aviso por e-mail dos documentos da empresa que vencem (45 dias, 15 dias, vencido). Nunca atrapalha a atualização.
+try {
+  const { sendDocumentAlerts } = await import("./document-alerts.ts");
+  console.log(`alertas de documentos: ${await sendDocumentAlerts(env)}`);
+} catch (err) {
+  console.log(`alertas de documentos: ERRO ${err instanceof Error ? err.message : String(err)}`);
+}
 if (withTechnicians) {
   try {
     console.log(`funções do Decision atualizadas: ${await syncRoles(env, token)}`);

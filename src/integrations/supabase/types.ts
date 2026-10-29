@@ -305,6 +305,24 @@ export type Database = {
         Update: { competence?: string; sales_count?: number; seller_code?: number; seller_name?: string; sold_cents?: number; unit_code?: string }
         Relationships: []
       }
+      company_documents: {
+        Row: { created_at: string; created_by: string | null; doc_type: string; expires_at: string | null; id: string; issued_at: string | null; issuer: string | null; name: string; notes: string | null; number: string | null; superseded_by: string | null; unit_code: string | null; updated_at: string }
+        Insert: { created_at?: string; created_by?: string | null; doc_type: string; expires_at?: string | null; id?: string; issued_at?: string | null; issuer?: string | null; name: string; notes?: string | null; number?: string | null; superseded_by?: string | null; unit_code?: string | null; updated_at?: string }
+        Update: { created_at?: string; created_by?: string | null; doc_type?: string; expires_at?: string | null; id?: string; issued_at?: string | null; issuer?: string | null; name?: string; notes?: string | null; number?: string | null; superseded_by?: string | null; unit_code?: string | null; updated_at?: string }
+        Relationships: []
+      }
+      company_document_files: {
+        Row: { created_at: string; created_by: string | null; document_id: string; file_name: string; id: string; storage_path: string }
+        Insert: { created_at?: string; created_by?: string | null; document_id: string; file_name: string; id?: string; storage_path: string }
+        Update: { created_at?: string; created_by?: string | null; document_id?: string; file_name?: string; id?: string; storage_path?: string }
+        Relationships: []
+      }
+      company_document_alerts: {
+        Row: { document_id: string; sent_at: string; stage: string }
+        Insert: { document_id: string; sent_at?: string; stage: string }
+        Update: { document_id?: string; sent_at?: string; stage?: string }
+        Relationships: []
+      }
       supervisor_commissions: {
         Row: { commission_cents: number; competence: string; entered_at: string; entered_by: string | null; group_name: string; id: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }
         Insert: { commission_cents: number; competence: string; entered_at?: string; entered_by?: string | null; group_name: string; id?: string; period_end: string; rate_bp: number; seller_code: number; sold_cents: number; unit_code: string }

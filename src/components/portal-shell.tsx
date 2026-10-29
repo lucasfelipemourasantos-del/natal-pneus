@@ -11,6 +11,7 @@ import {
   FileText,
   FileUp,
   FolderLock,
+  FolderOpen,
   Gauge,
   Home,
   ShieldCheck,
@@ -35,6 +36,7 @@ import {
   type Access,
 } from "@/lib/access";
 import { useQuery } from "@tanstack/react-query";
+import { countDocAlerts } from "@/lib/company-docs";
 import { catalogOptions } from "@/lib/portal-data";
 import { Button } from "@/components/ui/button";
 import { AnnouncementBell, AnnouncementGate } from "@/components/announcements";
@@ -58,6 +60,7 @@ type NavLink = {
     | "/empresa"
     | "/resultados"
     | "/comparativos"
+    | "/documentos-empresa"
     | "/unidades"
     | "/admin"
     | "/admin-cursos"
@@ -111,6 +114,11 @@ function navGroups(
               },
               { to: "/admin-comunicados" as const, label: "Comunicados", icon: Megaphone },
               { to: "/admin-documentos" as const, label: "Documentos", icon: FolderLock },
+              {
+                to: "/documentos-empresa" as const,
+                label: "Documentos da empresa",
+                icon: FolderOpen,
+              },
               { to: "/admin-alertas" as const, label: "Alertas de clientes", icon: BellRing },
               { to: "/admin-estoque" as const, label: "Controle de estoque", icon: Warehouse },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
@@ -142,6 +150,13 @@ export function PortalShell({
   const name = access.profile?.full_name || access.profile?.email || "Colaborador";
   const role = access.isAdmin ? "ADM RH" : access.profile?.job_role || "Colaborador";
   const { data: catalog } = useQuery(catalogOptions);
+  // Company documents close to expiry or expired: a number next to the menu item (ADM only).
+  const { data: docAlerts = 0 } = useQuery({
+    queryKey: ["company-docs-alerts"],
+    enabled: access.isAdmin,
+    retry: false,
+    queryFn: countDocAlerts,
+  });
   const allStores = hasAllStoresAccess(access);
   const store = allStores
     ? undefined
@@ -182,6 +197,11 @@ export function PortalShell({
                     className="flex w-full items-center justify-between rounded-md px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70 hover:text-sidebar-foreground"
                   >
                     {group.label}
+                    {docAlerts > 0 && !open && (
+                      <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold normal-case text-white">
+                        {docAlerts}
+                      </span>
+                    )}
                     <ChevronDown
                       size={15}
                       aria-hidden="true"
@@ -210,6 +230,14 @@ export function PortalShell({
                     >
                       <Icon size={19} aria-hidden="true" />
                       {label}
+                      {to === "/documentos-empresa" && docAlerts > 0 && (
+                        <span
+                          className="ml-auto rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-white"
+                          aria-label={`${docAlerts} documento(s) vencendo`}
+                        >
+                          {docAlerts}
+                        </span>
+                      )}
                     </Link>
                   ))}
                 </div>
@@ -287,6 +315,11 @@ export function PortalShell({
                 >
                   <Icon size={18} aria-hidden="true" />
                   {label}
+                  {to === "/documentos-empresa" && docAlerts > 0 && (
+                    <span className="rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
+                      {docAlerts}
+                    </span>
+                  )}
                 </Link>
               ),
             )}

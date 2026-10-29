@@ -13,6 +13,7 @@ import { money } from "@/lib/results";
 import { completeYears, tenureStatus } from "@/lib/tenure";
 import { phraseOfWeek } from "@/lib/weekly-phrases";
 import { CategoryTag } from "@/components/announcements";
+import { DocAlertsBanner } from "@/components/doc-alerts-banner";
 import { myAnnouncementsOptions } from "@/lib/announcements";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
@@ -119,6 +120,7 @@ function Index() {
   }
   return (
     <PortalShell title="Olá. Seja bem-vindo(a)!" eyebrow="Portal do colaborador">
+      {access.isAdmin && <DocAlertsBanner />}
       <section
         aria-label="Frase da semana"
         className="relative flex min-h-56 items-center overflow-hidden rounded-xl border border-border bg-black p-6 text-white sm:p-10"
