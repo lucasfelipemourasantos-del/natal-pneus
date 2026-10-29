@@ -5,6 +5,15 @@
 const TAGS =
   "MECANICO|MECÂNICO|MEC|ALINHADOR|BORRACHEIRO|BALANCEADOR|VENDEDOR|VENDAS|CAIXA|ESTOQUE";
 
+/**
+ * Two people with the same first name in the Decision (the two Franciélios) are shown with their functions and store,
+ * so they can be told apart everywhere. Keyed by Decision code; it wins over the name typed at signup.
+ */
+export const DISPLAY_NAME_BY_CODE: Record<number, string> = {
+  70: "Franciélio Alinhador/Balanceador (NP4)",
+  159: "Franciélio Borracheiro/Alinhador (NP2)",
+};
+
 export function cleanName(raw: string) {
   const cleaned = raw
     .replace(/\s*\((?:[^)]*)\)/g, "")

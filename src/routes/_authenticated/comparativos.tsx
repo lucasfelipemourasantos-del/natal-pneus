@@ -116,7 +116,9 @@ function Comparativos() {
       sellers.set(r.seller_code, { code: r.seller_code, name: cleanName(r.seller_name) });
     for (const r of tech.data?.reports ?? []) {
       const s = tech.data?.sellers.find((x) => x.code === r.seller_code);
-      if (s && ok(s)) operators.set(s.code, { code: s.code, name: nameOf(s.code) });
+      // Operators with no commission in the last 6 months (history only) are no longer offered.
+      if (s && ok(s) && s.active !== false)
+        operators.set(s.code, { code: s.code, name: nameOf(s.code) });
     }
     const byName = (x: Person, y: Person) => x.name.localeCompare(y.name, "pt-BR");
     return {

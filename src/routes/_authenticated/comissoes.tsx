@@ -328,6 +328,9 @@ function Comissoes() {
     const p = data.sellers.find((s) => s.code === code);
     // Generic Decision users (TECNICO PNEUS) only add up in the totals; they are not people.
     if (operators && p?.is_person === false) return false;
+    // Operators with no commission in the last 6 months (kept only for history) leave the list, except the person himself.
+    if (operators && p?.active === false && !(access.sellerCodes ?? []).includes(code))
+      return false;
     if (!operators || !role) return true;
     return operatorTypes(p).includes(role);
   });

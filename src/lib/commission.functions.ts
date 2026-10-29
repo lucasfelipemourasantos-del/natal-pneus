@@ -10,6 +10,7 @@ import {
   monthsBefore,
   type Category,
 } from "@/lib/commissions";
+import { DISPLAY_NAME_BY_CODE } from "@/lib/names";
 import type { LaborGoalRow, TeamRow } from "@/lib/technician-commissions";
 
 const NO_GOALS = [] as LaborGoalRow[];
@@ -70,14 +71,22 @@ async function linkedNames(
   supabase: ProfilesClient,
   sellers: { code: number; profile_id: string | null }[],
 ) {
+  // Names that tell two people with the same first name apart come first, so they win.
+  const fixed = Object.entries(DISPLAY_NAME_BY_CODE).map(([code, name]) => ({
+    code: Number(code),
+    name,
+  }));
   const ids = [...new Set(sellers.flatMap((s) => (s.profile_id ? [s.profile_id] : [])))];
-  if (!ids.length) return NO_NAMES;
+  if (!ids.length) return fixed;
   const { data } = await supabase.from("profiles").select("id,full_name").in("id", ids);
   const byId = new Map((data ?? []).map((p) => [p.id, p.full_name]));
-  return sellers.flatMap((s) => {
-    const name = s.profile_id ? byId.get(s.profile_id) : undefined;
-    return name ? [{ code: s.code, name }] : [];
-  });
+  return [
+    ...fixed,
+    ...sellers.flatMap((s) => {
+      const name = s.profile_id ? byId.get(s.profile_id) : undefined;
+      return name ? [{ code: s.code, name }] : [];
+    }),
+  ];
 }
 
 type GoalRefs = Database["public"]["Functions"]["parts_goal_reference_base"]["Returns"];
