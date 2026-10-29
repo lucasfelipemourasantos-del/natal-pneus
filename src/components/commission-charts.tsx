@@ -125,6 +125,7 @@ export function CommissionCharts({
 
   return (
     <section
+      data-print-block="grafico"
       className="mt-6 rounded-xl border border-border bg-card p-5"
       aria-labelledby="chart-title"
     >

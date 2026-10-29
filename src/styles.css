@@ -258,4 +258,21 @@
   *::after {
     box-shadow: none !important;
   }
+
+  /* Opções de "Gerar PDF": a página marca as partes com data-print-block ("grafico", "itens"). */
+  html[data-print-mode="relatorio"] [data-print-block] {
+    display: none !important;
+  }
+  html[data-print-mode="graficos"]
+    main
+    *:not(:has([data-print-block="grafico"])):not([data-print-block="grafico"]):not(
+      [data-print-block="grafico"] *
+    ):not([data-print-keep]):not([data-print-keep] *),
+  html[data-print-mode="itens"]
+    main
+    *:not(:has([data-print-block="itens"])):not([data-print-block="itens"]):not(
+      [data-print-block="itens"] *
+    ):not([data-print-keep]):not([data-print-keep] *) {
+    display: none !important;
+  }
 }

@@ -1138,7 +1138,10 @@ function SoldItems({ reportIds, showPlate }: { reportIds: string[]; showPlate?: 
   const multiStore = new Set(shown.map((i) => i.unit_code)).size > 1;
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+    <section
+      data-print-block="itens"
+      className="space-y-4 rounded-xl border border-border bg-card p-5"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold">Itens vendidos</h3>

@@ -135,7 +135,7 @@ function CompanyDocuments() {
   }
 
   return (
-    <PortalShell title="Documentos da empresa" eyebrow="Gestão">
+    <PortalShell printable title="Documentos da empresa" eyebrow="Gestão">
       <div className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <p className="max-w-[70ch] text-sm text-muted-foreground">
@@ -207,6 +207,9 @@ function CompanyDocuments() {
           </section>
         )}
 
+        <h2 className="hidden text-lg font-bold print:block">
+          Pasta: {FOLDERS.find((x) => x.key === folder)?.label}
+        </h2>
         <div role="tablist" aria-label="Pastas" className="flex flex-wrap gap-2">
           {FOLDERS.map((f) => (
             <button

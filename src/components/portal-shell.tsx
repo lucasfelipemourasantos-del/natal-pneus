@@ -40,6 +40,7 @@ import { useQuery } from "@tanstack/react-query";
 import { countDocAlerts } from "@/lib/company-docs";
 import { catalogOptions } from "@/lib/portal-data";
 import { Button } from "@/components/ui/button";
+import { PrintMenu } from "@/components/print-menu";
 import { AnnouncementBell, AnnouncementGate } from "@/components/announcements";
 import { ChartNoAxesCombined } from "lucide-react";
 
@@ -350,7 +351,10 @@ export function PortalShell({
             {eyebrow && <p className="text-xs font-bold uppercase text-primary">{eyebrow}</p>}
             <h1 className="mt-1 text-2xl font-bold text-foreground">{title}</h1>
           </div>
-          <div className="mb-5 hidden items-center justify-between gap-4 border-b border-border pb-3 print:flex">
+          <div
+            data-print-keep
+            className="mb-5 hidden items-center justify-between gap-4 border-b border-border pb-3 print:flex"
+          >
             <img src={logo} alt="Natal Pneus" className="h-auto w-[130px]" />
             <div className="text-right">
               <p className="text-lg font-bold">{title}</p>
@@ -362,10 +366,7 @@ export function PortalShell({
           </div>
           {printable && access.isAdmin && (
             <div className="mb-4 flex justify-end print:hidden">
-              <Button type="button" variant="outline" onClick={() => window.print()}>
-                <Printer size={17} aria-hidden="true" className="mr-2" />
-                Gerar PDF
-              </Button>
+              <PrintMenu />
             </div>
           )}
           {children}

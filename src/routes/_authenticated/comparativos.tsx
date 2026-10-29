@@ -384,7 +384,10 @@ function Comparativos() {
         />
 
         {allFields.length > 0 && (
-          <section className="space-y-6 rounded-xl border border-border bg-card p-5">
+          <section
+            data-print-block="grafico"
+            className="space-y-6 rounded-xl border border-border bg-card p-5"
+          >
             <div className="space-y-2">
               <h2 className="text-lg font-bold">Gráfico por categoria</h2>
               <CompareBars
@@ -474,7 +477,10 @@ function Comparativos() {
           }}
         />
 
-        <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+        <section
+          data-print-block="grafico"
+          className="space-y-2 rounded-xl border border-border bg-card p-5"
+        >
           <h2 className="text-lg font-bold">Evolução mês a mês</h2>
           <div className="mt-4 grid gap-6 xl:grid-cols-2">
             <div className="space-y-2">
