@@ -235,7 +235,7 @@
     print-color-adjust: exact;
   }
   aside,
-  button,
+  button:not([data-print-show]),
   [role="tablist"] {
     display: none !important;
   }

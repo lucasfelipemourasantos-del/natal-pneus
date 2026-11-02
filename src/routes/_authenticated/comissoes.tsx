@@ -1165,6 +1165,7 @@ function StoreView({
                   <td className="min-w-48 py-2.5 pr-2">
                     <button
                       type="button"
+                      data-print-show
                       onClick={() => onPick(s.code)}
                       className="text-left font-semibold hover:text-primary hover:underline"
                     >
