@@ -55,6 +55,7 @@ function MetasPage() {
   const leader = Boolean(access.canReadAll || access.isAdmin);
   const [team, setTeam] = useState<"vendedores" | "operadores">("vendedores");
   const [pickedOp, setPickedOp] = useState<number | null>(null);
+  const [opMonth, setOpMonth] = useState<string | null>(null);
   // Leadership can look at the operators' labor goals too; an operator sees only his own.
   const teamSwitch = leader ? (
     <div
@@ -77,8 +78,8 @@ function MetasPage() {
   ) : null;
   const operator = leader ? team === "operadores" : !allowed && Boolean(access.hasService);
   const tech = useQuery({
-    queryKey: ["tech-commissions", null],
-    queryFn: () => readTechCommissions({ data: { competence: null } }),
+    queryKey: ["tech-commissions", opMonth],
+    queryFn: () => readTechCommissions({ data: { competence: opMonth } }),
     enabled: operator,
   });
   const { data, isPending, error } = useQuery({
@@ -97,15 +98,10 @@ function MetasPage() {
     const people =
       td && month
         ? [
-            // Anyone with commission in the loaded months, not only this month: the goal is fixed and the month may just have started.
-            ...new Set(td.reports.map((r) => r.seller_code)),
+            ...new Set(td.reports.filter((r) => r.competence === month).map((r) => r.seller_code)),
           ].filter((code) => {
             const p = td.sellers.find((x) => x.code === code);
-            return (
-              !p?.ignored &&
-              p?.is_person !== false &&
-              (own.includes(code) || (leader && p?.active !== false))
-            );
+            return !p?.ignored && p?.is_person !== false && (leader || own.includes(code));
           })
         : [];
     const options = people
@@ -123,6 +119,21 @@ function MetasPage() {
             <p className="text-sm text-muted-foreground">
               Meta de mão de obra de {monthLabel(month)}. As metas são fixas até o fim do ano.
             </p>
+            <label className="block max-w-sm text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Mês
+              <select
+                id="goal-op-month"
+                value={month}
+                onChange={(e) => setOpMonth(e.target.value)}
+                className={fieldClass}
+              >
+                {td.available.map((m) => (
+                  <option key={m} value={m}>
+                    {monthLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </label>
             {leader && options.length > 0 && (
               <label className="block max-w-sm text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Operador
