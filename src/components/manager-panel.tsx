@@ -5,6 +5,7 @@ import {
   MANAGER_RULE,
   managerMonth,
   managerSeries,
+  type ManagerExtraSale,
   type SalesWithoutCommission,
 } from "@/lib/manager-commission";
 import { cleanName } from "@/lib/names";
@@ -18,6 +19,7 @@ export function ManagerPanel({
   extra,
   monthReports,
   monthExtra,
+  managerExtra = [],
   periodControl,
   periodLabel,
   month,
@@ -31,6 +33,8 @@ export function ManagerPanel({
   monthReports?: ReportRow[];
   /** Whole-month sales of sellers without commission, for the same charts. */
   monthExtra?: SalesWithoutCommission[];
+  /** Whole-month services that pay no seller commission but count in this base (not available for chosen days). */
+  managerExtra?: ManagerExtraSale[];
   periodControl?: ReactNode;
   periodLabel?: string;
   ignored: Set<number>;
@@ -41,7 +45,8 @@ export function ManagerPanel({
   nameOf: (code: number) => string;
   partialCompetence: string | null;
 }) {
-  const m = managerMonth(reports, ignored, extra, month);
+  const daysOnly = Boolean(periodLabel);
+  const m = managerMonth(reports, ignored, extra, month, daysOnly ? [] : managerExtra);
   const rate = (MANAGER_RULE.rateBp / 100).toFixed(2).replace(".", ",");
   return (
     <div className="space-y-6">
@@ -106,6 +111,12 @@ export function ManagerPanel({
 
       <section className="space-y-3 rounded-xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">Vendas que entram, por loja</h3>
+        {daysOnly && (
+          <p className="text-sm text-muted-foreground">
+            Nos dias escolhidos não entram os serviços sem comissão do vendedor (rodízio truck e os
+            serviços do atacado); eles só entram com o mês inteiro.
+          </p>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm tabular-nums">
             <thead>
@@ -129,6 +140,15 @@ export function ManagerPanel({
                     key: `${u.unit}-${s.code}`,
                     name: nameOf(s.code),
                     tag: "",
+                    cents: s.soldCents,
+                  })),
+                  ...u.services.map((s) => ({
+                    key: `${u.unit}-srv-${s.code}-${s.kind}`,
+                    name:
+                      s.kind === "rodizio"
+                        ? `Rodízio truck · ${nameOf(s.code)}`
+                        : `Todos os serviços · ${nameOf(s.code)}`,
+                    tag: "Sem comissão do vendedor",
                     cents: s.soldCents,
                   })),
                   ...u.noCommission.map((s) => ({
@@ -187,7 +207,13 @@ export function ManagerPanel({
       )}
 
       <CommissionCharts
-        points={managerSeries(monthReports ?? reports, ignored, monthExtra ?? extra, month)}
+        points={managerSeries(
+          monthReports ?? reports,
+          ignored,
+          monthExtra ?? extra,
+          month,
+          managerExtra,
+        )}
         partialCompetence={partialCompetence}
       />
     </div>

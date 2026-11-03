@@ -63,3 +63,18 @@ describe("manager commission (0,21% over NP1, NP2 and NP3)", () => {
     ]);
   });
 });
+
+describe("manager base with services that pay the sellers no commission", () => {
+  const month = "2026-10-01";
+  it("adds Maurício's services and the rodízio truck in NP1-NP3 only, as extra base", () => {
+    const reports = [report(111, "NP2", month, 1000000)];
+    const managerExtra = [
+      { competence: month, unit_code: "NP2", seller_code: 111, kind: "servico", sold_cents: 95300 },
+      { competence: month, unit_code: "NP1", seller_code: 49, kind: "rodizio", sold_cents: 10400 },
+      { competence: month, unit_code: "NP4", seller_code: 70, kind: "rodizio", sold_cents: 5000 },
+    ];
+    const m = managerMonth(reports, new Set(), [], month, managerExtra);
+    expect(m.baseCents).toBe(1000000 + 95300 + 10400);
+    expect(managerMonth(reports, new Set(), [], month).baseCents).toBe(1000000);
+  });
+});

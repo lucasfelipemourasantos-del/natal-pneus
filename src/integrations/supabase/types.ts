@@ -299,6 +299,12 @@ export type Database = {
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
         Relationships: []
       }
+      manager_extra_sales: {
+        Row: { competence: string; kind: string; seller_code: number; sold_cents: number; unit_code: string }
+        Insert: { competence: string; kind: string; seller_code: number; sold_cents: number; unit_code: string }
+        Update: { competence?: string; kind?: string; seller_code?: number; sold_cents?: number; unit_code?: string }
+        Relationships: []
+      }
       sales_without_commission: {
         Row: { competence: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
         Insert: { competence: string; sales_count: number; seller_code: number; seller_name: string; sold_cents: number; unit_code: string }
@@ -810,6 +816,7 @@ export type Database = {
         Returns: number
       }
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
+      replace_manager_extra_sales: { Args: { _competence: string; _rows: Json }; Returns: number }
       replace_sales_without_commission: { Args: { _competence: string; _rows: Json }; Returns: number }
       claim_decision_codes: { Args: { _codes: number[] }; Returns: Json }
       technician_os_summary: {

@@ -141,6 +141,93 @@ async function syncRoles(env: Record<string, string>, token: string) {
   return (await res.json()) as number;
 }
 
+/** Sellers whose sales never count in the manager's extra base (user decision 03/11/2026: 80 and 202). */
+const MANAGER_EXTRA_SKIP = new Set([80, 202]);
+/** Seller whose services all count for the manager (wholesale: he earns commission on tires only). */
+const MANAGER_ALL_SERVICES_SELLER = 111;
+
+/**
+ * Sales the Decision does not pay commission on but that count in the manager's base: every service of Maurício (111) and the
+ * "RODIZIO TRUCK" of everybody. It compares the finished sales with the commission report items, line by line.
+ */
+async function syncManagerExtra(
+  env: Record<string, string>,
+  token: string,
+  competence: string,
+  de: string,
+  ate: string,
+  commissioned: Set<string>,
+  commissionItems: { venda: number | string; descricao: string | null }[],
+) {
+  type Sale = {
+    venda: number;
+    loja: number;
+    vendedor: number;
+    situacao: string;
+    itens: { descricao: string; servico: boolean; liquido: number; cancelado: boolean }[];
+  };
+  const paid = new Map<string, string[]>();
+  for (const i of commissionItems) {
+    const k = String(i.venda);
+    const list = paid.get(k) ?? [];
+    list.push(i.descricao ?? "");
+    paid.set(k, list);
+  }
+  const totals = new Map<string, number>();
+  for (const loja of [1, 2, 3, 4]) {
+    let after: number | null = null;
+    do {
+      const page: { vendas: Sale[]; proximo: number | null } = await decisionGet(
+        env,
+        token,
+        `/vendas?de=${de}&ate=${ate}&loja=${loja}${after === null ? "" : `&apos=${after}`}`,
+      );
+      for (const sale of page.vendas) {
+        if (sale.situacao !== "finalizada") continue;
+        if (
+          MANAGER_EXTRA_SKIP.has(sale.vendedor) ||
+          !commissioned.has(`${sale.loja}:${sale.vendedor}`)
+        )
+          continue;
+        const left = [...(paid.get(String(sale.venda)) ?? [])];
+        for (const item of sale.itens) {
+          if (item.cancelado) continue;
+          const at = left.indexOf(item.descricao);
+          if (at >= 0) {
+            left.splice(at, 1);
+            continue;
+          }
+          const kind = /^RODIZIO TRUCK/i.test(item.descricao)
+            ? "rodizio"
+            : sale.vendedor === MANAGER_ALL_SERVICES_SELLER && item.servico
+              ? "servico"
+              : null;
+          if (!kind) continue;
+          const key = `NP${sale.loja}|${sale.vendedor}|${kind}`;
+          totals.set(key, (totals.get(key) ?? 0) + Math.round(item.liquido * 100));
+        }
+      }
+      after = page.proximo ?? null;
+    } while (after !== null);
+  }
+  const rows = [...totals].map(([key, sold_cents]) => {
+    const [unit_code, seller, kind] = key.split("|");
+    return { unit_code, seller_code: Number(seller), kind, sold_cents };
+  });
+  const keyAuth = env.SUPABASE_SECRET_KEY!;
+  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/replace_manager_extra_sales`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: keyAuth,
+      ...(keyAuth.startsWith("eyJ") ? { Authorization: `Bearer ${keyAuth}` } : {}),
+    },
+    body: JSON.stringify({ _competence: competence, _rows: rows }),
+  });
+  if (!res.ok) throw new Error(`Supabase recusou as vendas extras do gerente (${res.status})`);
+  return rows.length;
+}
+
 /**
  * The Decision commission report only lists items that earn commission, so a seller who earns none (Humberto, NP2)
  * is missing from the store total. The sales summary has every seller: the ones without a commission report are saved
@@ -295,8 +382,15 @@ for (const month of monthsToSync()) {
   } catch (err) {
     semComissao = ` · sem comissão: ERRO ${err instanceof Error ? err.message : String(err)}`;
   }
+  let gerente = "";
+  try {
+    const commissioned = new Set(api.totais.map((t) => `${t.loja}:${t.pessoa}`));
+    gerente = ` · gerente extra: ${await syncManagerExtra(env, token, competence, de, ate, commissioned, api.itens)}`;
+  } catch (err) {
+    gerente = ` · gerente extra: ERRO ${err instanceof Error ? err.message : String(err)}`;
+  }
   console.log(
-    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
+    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao}${gerente} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
 }
 // Aviso por e-mail dos documentos da empresa que vencem (45 dias, 15 dias, vencido). Nunca atrapalha a atualização.

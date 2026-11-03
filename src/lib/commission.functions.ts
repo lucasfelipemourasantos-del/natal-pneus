@@ -46,6 +46,13 @@ async function salesWithoutCommission(supabase: ExtraClient, from: string, to: s
     .lte("competence", to);
   return error ? NO_EXTRA : (data ?? NO_EXTRA);
 }
+const NO_MANAGER_EXTRA = [] as {
+  competence: string;
+  unit_code: string;
+  seller_code: number;
+  kind: string;
+  sold_cents: number;
+}[];
 const NO_EXTRA = [] as {
   unit_code: string;
   competence: string;
@@ -127,6 +134,7 @@ export const readCommissions = createServerFn({ method: "GET" })
         teams: NO_TEAMS,
         names: NO_NAMES,
         noCommission: NO_EXTRA,
+        managerExtra: NO_MANAGER_EXTRA,
       };
     const oldest = monthsBefore(goalBaseMonth(competence), GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, refs] = await Promise.all([
@@ -146,10 +154,17 @@ export const readCommissions = createServerFn({ method: "GET" })
     ]);
     for (const res of [reports, os, sellers])
       if (res.error) throw new Error("Não foi possível consultar as comissões.");
+    // Only the admin can read this table (RLS); for anybody else it comes back empty.
+    const managerExtra = await context.supabase
+      .from("manager_extra_sales")
+      .select("competence,unit_code,seller_code,kind,sold_cents")
+      .gte("competence", oldest)
+      .lte("competence", competence);
     return {
       available,
       competence,
       syncedAt,
+      managerExtra: managerExtra.error ? NO_MANAGER_EXTRA : (managerExtra.data ?? NO_MANAGER_EXTRA),
       reports: reports.data ?? [],
       os: os.data ?? [],
       sellers: sellers.data ?? [],
@@ -319,6 +334,7 @@ export const readTechCommissions = createServerFn({ method: "GET" })
         teams: NO_TEAMS,
         names: NO_NAMES,
         noCommission: NO_EXTRA,
+        managerExtra: NO_MANAGER_EXTRA,
       };
     const oldest = monthsBefore(competence, GOAL_HISTORY_MONTHS).at(-1)!;
     const [reports, os, sellers, goals, teams] = await Promise.all([
@@ -351,6 +367,7 @@ export const readTechCommissions = createServerFn({ method: "GET" })
       teams: teams.error ? NO_TEAMS : (teams.data ?? NO_TEAMS),
       names: await linkedNames(context.supabase as unknown as ProfilesClient, sellers.data ?? []),
       noCommission: NO_EXTRA,
+      managerExtra: NO_MANAGER_EXTRA,
     };
   });
 

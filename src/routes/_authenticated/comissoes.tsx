@@ -444,6 +444,7 @@ function Comissoes() {
           reports={pReports}
           monthReports={data.reports}
           monthExtra={data.noCommission}
+          managerExtra={data.managerExtra}
           periodControl={periodControl}
           periodLabel={periodLabel}
           ignored={ignored}

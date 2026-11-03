@@ -28,21 +28,38 @@ export type SalesWithoutCommission = {
   sold_cents: number;
 };
 
+/** Sales that pay no commission to the seller but count in the manager's base (Maurício's services, rodízio truck). */
+export type ManagerExtraSale = {
+  competence: string;
+  unit_code: string;
+  seller_code: number;
+  kind: string;
+  sold_cents: number;
+};
+
 export function managerMonth(
   reports: ReportRow[],
   ignored: Set<number>,
   extra: SalesWithoutCommission[],
   month: string,
+  managerExtra: ManagerExtraSale[] = [],
 ) {
   const units = MANAGER_RULE.units.map((unit) => {
     const team = storeMonth(reports, [], month, ignored, unit);
     const noCommission = extra
       .filter((r) => r.competence === month && r.unit_code === unit)
       .map((r) => ({ code: r.seller_code, name: r.seller_name, soldCents: r.sold_cents }));
-    const soldCents = team.soldCents + noCommission.reduce((t, r) => t + r.soldCents, 0);
+    const services = managerExtra
+      .filter((r) => r.competence === month && r.unit_code === unit)
+      .map((r) => ({ code: r.seller_code, kind: r.kind, soldCents: r.sold_cents }));
+    const soldCents =
+      team.soldCents +
+      noCommission.reduce((t, r) => t + r.soldCents, 0) +
+      services.reduce((t, r) => t + r.soldCents, 0);
     return {
       unit,
       soldCents,
+      services,
       sellers: team.sellers.map((s) => ({ code: s.code, soldCents: s.soldCents })),
       noCommission,
     };
@@ -82,12 +99,13 @@ export function managerSeries(
   ignored: Set<number>,
   extra: SalesWithoutCommission[],
   competence: string,
+  managerExtra: ManagerExtraSale[] = [],
 ) {
   return [...monthsBefore(competence, GOAL_HISTORY_MONTHS)]
     .reverse()
     .concat(competence)
     .map((month) => {
-      const m = managerMonth(reports, ignored, extra, month);
+      const m = managerMonth(reports, ignored, extra, month, managerExtra);
       return { competence: month, soldCents: m.baseCents, commissionCents: m.commissionCents };
     });
 }
