@@ -97,10 +97,15 @@ function MetasPage() {
     const people =
       td && month
         ? [
-            ...new Set(td.reports.filter((r) => r.competence === month).map((r) => r.seller_code)),
+            // Anyone with commission in the loaded months, not only this month: the goal is fixed and the month may just have started.
+            ...new Set(td.reports.map((r) => r.seller_code)),
           ].filter((code) => {
             const p = td.sellers.find((x) => x.code === code);
-            return !p?.ignored && p?.is_person !== false && (leader || own.includes(code));
+            return (
+              !p?.ignored &&
+              p?.is_person !== false &&
+              (own.includes(code) || (leader && p?.active !== false))
+            );
           })
         : [];
     const options = people
