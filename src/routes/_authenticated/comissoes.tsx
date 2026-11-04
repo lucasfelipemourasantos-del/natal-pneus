@@ -457,7 +457,19 @@ function Comissoes() {
         />
       </PortalShell>
     );
-  const sellerCodes = [...new Set(inMonth.map((r) => r.seller_code))].filter((code) => {
+  // Leadership also finds the active operators who have not sold yet this month (the month just started): they show an empty month.
+  const withoutSalesYet =
+    operators && (access.canReadAll || access.isAdmin)
+      ? data.reports
+          .filter(
+            (r) =>
+              !ignored.has(r.seller_code) && !inMonth.some((m) => m.seller_code === r.seller_code),
+          )
+          .map((r) => r.seller_code)
+      : [];
+  const sellerCodes = [
+    ...new Set([...inMonth.map((r) => r.seller_code), ...withoutSalesYet]),
+  ].filter((code) => {
     const p = data.sellers.find((s) => s.code === code);
     // Generic Decision users (TECNICO PNEUS) only add up in the totals; they are not people.
     if (operators && p?.is_person === false) return false;
