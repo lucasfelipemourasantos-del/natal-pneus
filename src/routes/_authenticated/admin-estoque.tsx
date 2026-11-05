@@ -1,7 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { AlertTriangle, CarFront, FileText, Lock, PackageCheck, Warehouse } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Lock } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
-import { demoDate, demoDay } from "@/lib/demo-dates";
+import { monthLabel } from "@/lib/commissions";
+import { fieldClass } from "@/lib/portal-data";
+import { isPurchase } from "@/lib/purchases";
+import { readPurchaseItems, readPurchases } from "@/lib/purchases.functions";
+import { money } from "@/lib/results";
 
 export const Route = createFileRoute("/_authenticated/admin-estoque")({
   beforeLoad: ({ context }) => {
@@ -12,10 +18,10 @@ export const Route = createFileRoute("/_authenticated/admin-estoque")({
       { title: "Controle de estoque — Gestão — Natal Pneus" },
       {
         name: "description",
-        content: "Conferência entre compras (notas fiscais de entrada) e o destino de cada item.",
+        content: "Notas fiscais de entrada por loja, com fornecedor, valor e itens.",
       },
       { property: "og:title", content: "Controle de estoque — Gestão — Natal Pneus" },
-      { property: "og:description", content: "Compras x destino de cada item: OS ou estoque." },
+      { property: "og:description", content: "Compras (notas de entrada) por loja." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -23,220 +29,237 @@ export const Route = createFileRoute("/_authenticated/admin-estoque")({
   component: AdminEstoque,
 });
 
-const steps = [
-  {
-    icon: FileText,
-    title: "1. Entrada da nota",
-    text: "O funcionário dá entrada na nota fiscal de compra no Decision. Cada item entra no estoque da loja.",
-  },
-  {
-    icon: CarFront,
-    title: "2. Destino de cada item",
-    text: "O portal acompanha para onde cada item foi: para uma OS (com o carro, o modelo e a placa) ou se continua no estoque.",
-  },
-  {
-    icon: PackageCheck,
-    title: "3. Conferência automática",
-    text: "No fim do dia, ou na manhã seguinte, o portal confere tudo o que foi comprado com o que saiu em OS.",
-  },
-  {
-    icon: AlertTriangle,
-    title: "4. Alerta de item parado",
-    text: "Item que segue em estoque gera um alerta, para o balanço confirmar se ele está mesmo lá.",
-  },
-];
+const KINDS = [
+  { key: "compras", label: "Compras" },
+  { key: "transferencias", label: "Transferências" },
+  { key: "devolucoes", label: "Devoluções" },
+  { key: "todas", label: "Todas as notas" },
+] as const;
+type KindKey = (typeof KINDS)[number]["key"];
 
-/** Illustrative purchase, fictitious data. */
-const example = {
-  supplier: "Fornecedor Exemplo Autopeças LTDA",
-  invoice: "NF 004.512",
-  date: demoDate(1),
-  unit: "NP2",
-  item: "Pastilha de freio dianteira (cód. 40853)",
-  qty: 10,
-  minimum: true,
-  destinations: [
-    {
-      kind: "os" as const,
-      qty: 2,
-      os: "169950",
-      car: "Gol 1.6 2015",
-      plate: "ABC1D23",
-      date: demoDay(1),
-    },
-    {
-      kind: "os" as const,
-      qty: 2,
-      os: "169958",
-      car: "Onix 1.0 2020",
-      plate: "QWE4R56",
-      date: demoDay(1),
-    },
-    {
-      kind: "os" as const,
-      qty: 2,
-      os: "169971",
-      car: "HB20 1.0 2019",
-      plate: "RTY7U89",
-      date: demoDay(),
-    },
-    { kind: "stock" as const, qty: 4 },
-  ],
-};
+function lastMonths(count: number) {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" }));
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
+const day = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 
 function AdminEstoque() {
-  const out = example.destinations.filter((d) => d.kind === "os").reduce((t, d) => t + d.qty, 0);
-  const stock = example.qty - out;
+  const months = lastMonths(12);
+  const [month, setMonth] = useState(months[0]!);
+  const [unit, setUnit] = useState("");
+  const [kind, setKind] = useState<KindKey>("compras");
+  const { data, isPending, error } = useQuery({
+    queryKey: ["purchases", month],
+    queryFn: () => readPurchases({ data: { month } }),
+  });
+
+  const supplierName = (code: number | null) => {
+    const s = data?.suppliers.find((x) => x.code === code);
+    return s ? (s.fantasy ?? s.name) : code === null ? "—" : `Fornecedor ${code}`;
+  };
+  const all = data?.notes ?? [];
+  const inUnit = all.filter((n) => !unit || n.unit_code === unit);
+  const counted = new Set(
+    inUnit
+      .filter((n) =>
+        isPurchase(
+          {
+            nota: n.nota,
+            kind: n.kind,
+            total_cents: n.total_cents,
+            advance_notes: n.advance_notes,
+          },
+          all.map((o) => ({
+            nota: o.nota,
+            kind: o.kind,
+            total_cents: o.total_cents,
+            advance_notes: o.advance_notes,
+          })),
+        ),
+      )
+      .map((n) => n.nota),
+  );
+  const shown = inUnit.filter((n) =>
+    kind === "compras"
+      ? counted.has(n.nota)
+      : kind === "transferencias"
+        ? n.kind === 2
+        : kind === "devolucoes"
+          ? n.kind === 3 || n.kind === 4
+          : true,
+  );
+  const purchases = inUnit.filter((n) => counted.has(n.nota));
+  const total = purchases.reduce((t, n) => t + n.total_cents, 0);
+  const byUnit = ["NP1", "NP2", "NP3", "NP4"].map((u) => ({
+    unit: u,
+    cents: all.filter((n) => n.unit_code === u).reduce((t, n) => t + n.total_cents, 0),
+  }));
+  const transfers = inUnit.filter((n) => n.kind === 2);
+
   return (
     <PortalShell title="Controle de estoque" eyebrow="Gestão · ADM RH">
       <p className="flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm">
         <Lock size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
-          <b>Experimental, em preparação.</b> Começa a funcionar quando a API do Decision liberar as
-          compras (notas fiscais de entrada) e os movimentos de estoque. Os dados abaixo são
-          ilustrativos.
+          <b>Etapa 1: entradas.</b> Mostra as notas fiscais de compra dadas entrada em cada loja. O
+          destino de cada item (OS ou estoque) entra quando o Decision liberar os movimentos de
+          estoque.
         </span>
       </p>
 
-      <section className="mt-6" aria-labelledby="como">
-        <h2 id="como" className="text-lg font-bold">
-          Como funciona
-        </h2>
-        <ol className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {steps.map(({ icon: Icon, title, text }) => (
-            <li
-              key={title}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
-            >
-              <span className="grid size-9 place-items-center rounded-lg bg-accent text-accent-foreground">
-                <Icon size={18} aria-hidden="true" />
-              </span>
-              <span className="font-semibold">{title}</span>
-              <span className="text-sm text-muted-foreground">{text}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Mês
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className={fieldClass}>
+            {months.map((m) => (
+              <option key={m} value={m}>
+                {monthLabel(`${m}-01`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Loja
+          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={fieldClass}>
+            <option value="">Todas as lojas</option>
+            {["NP1", "NP2", "NP3", "NP4"].map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Notas
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as KindKey)}
+            className={fieldClass}
+          >
+            {KINDS.map((k) => (
+              <option key={k.key} value={k.key}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <section
-        className="mt-6 rounded-xl border border-border bg-card p-5"
-        aria-labelledby="exemplo"
-      >
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="exemplo" className="text-lg font-bold">
-            Conferência de compra
-          </h2>
-          <span className="text-xs text-muted-foreground">
-            Exemplo ilustrativo, dados fictícios
-          </span>
-        </div>
-
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ["Fornecedor", example.supplier],
-            ["Nota fiscal", `${example.invoice} · ${example.date}`],
-            ["Loja", example.unit],
-            ["Item comprado", `${example.qty} × ${example.item}`],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-lg bg-muted p-3">
-              <dt className="text-xs text-muted-foreground">{k}</dt>
-              <dd className="mt-0.5 font-semibold">{v}</dd>
+      {isPending && <p className="mt-6 text-muted-foreground">Carregando…</p>}
+      {error && (
+        <p role="alert" className="mt-6 text-destructive">
+          {error.message}
+        </p>
+      )}
+      {data && (
+        <>
+          <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Compras do mês</p>
+              <p className="text-2xl font-extrabold tabular-nums">{money(total)}</p>
+              <p className="text-xs text-muted-foreground">{purchases.length} notas de compra</p>
             </div>
-          ))}
-        </dl>
+            {byUnit
+              .filter((u) => !unit || u.unit === unit)
+              .map((u) => (
+                <div key={u.unit} className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{u.unit}</p>
+                  <p className="text-xl font-extrabold tabular-nums">{money(u.cents)}</p>
+                </div>
+              ))}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Transferências entre lojas</p>
+              <p className="text-xl font-extrabold tabular-nums">{transfers.length} notas</p>
+              <p className="text-xs text-muted-foreground">Não são compra</p>
+            </div>
+          </section>
 
-        <div
-          className="mt-5"
-          role="img"
-          aria-label={`${out} de ${example.qty} itens saíram em OS, ${stock} em estoque`}
-        >
-          <div className="flex h-4 overflow-hidden rounded-full bg-muted">
-            <div className="bg-primary" style={{ width: `${(out / example.qty) * 100}%` }} />
-            <div className="bg-accent" style={{ width: `${(stock / example.qty) * 100}%` }} />
-          </div>
-          <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-sm bg-primary" /> Saíram em OS:{" "}
-              <b className="text-foreground">{out}</b>
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-sm bg-accent" /> Em estoque:{" "}
-              <b className="text-foreground">{stock}</b>
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="py-2 pr-2 font-semibold">Destino</th>
-                <th className="px-2 text-right font-semibold">Qtd</th>
-                <th className="px-2 font-semibold">OS</th>
-                <th className="px-2 font-semibold">Veículo</th>
-                <th className="px-2 font-semibold">Placa</th>
-                <th className="pl-2 font-semibold">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {example.destinations.map((d, i) =>
-                d.kind === "os" ? (
-                  <tr key={i} className="border-t border-border">
-                    <td className="py-2.5 pr-2">
-                      <span className="inline-flex items-center gap-1.5 font-semibold">
-                        <CarFront size={15} aria-hidden="true" /> Saiu em OS
+          <section className="mt-6 min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
+            <h2 className="text-lg font-bold">
+              Notas de {monthLabel(`${month}-01`)} ({shown.length})
+            </h2>
+            {shown.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma nota neste filtro. Se o mês é novo, a atualização do Decision traz as notas
+                a cada 30 minutos.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {shown.map((n) => (
+                  <details key={n.nota} className="group py-2">
+                    <summary className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      <span className="w-12 tabular-nums text-muted-foreground">
+                        {day(n.received_on)}
                       </span>
-                    </td>
-                    <td className="px-2 text-right tabular-nums">{d.qty}</td>
-                    <td className="px-2 tabular-nums">{d.os}</td>
-                    <td className="px-2">{d.car}</td>
-                    <td className="px-2 tabular-nums">{d.plate}</td>
-                    <td className="pl-2 tabular-nums">{d.date}</td>
-                  </tr>
-                ) : (
-                  <tr key={i} className="border-t border-border bg-warning-soft/60">
-                    <td className="py-2.5 pr-2">
-                      <span className="inline-flex items-center gap-1.5 font-semibold">
-                        <Warehouse size={15} aria-hidden="true" /> Em estoque
+                      <span className="w-12 font-semibold">{n.unit_code}</span>
+                      <span className="min-w-48 flex-1 font-semibold">
+                        {supplierName(n.supplier_code)}
                       </span>
-                    </td>
-                    <td className="px-2 text-right tabular-nums">{d.qty}</td>
-                    <td className="px-2 text-muted-foreground" colSpan={4}>
-                      Aguardando saída · conferir no balanço
-                    </td>
-                  </tr>
-                ),
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-3 text-sm">
-          <p className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2">
-            <AlertTriangle size={16} className="text-primary" aria-hidden="true" />
-            <b>Alerta:</b> {stock} itens desta nota seguem em estoque. Conferir no balanço da{" "}
-            {example.unit}.
-          </p>
-          {example.minimum && (
-            <p className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-muted-foreground">
-              Compra mínima exigida pelo fornecedor: a sobra é esperada, mas continua na
-              conferência.
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-xl border border-border bg-card p-5">
-        <h2 className="text-lg font-bold">O que o painel vai trazer</h2>
-        <ul className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-          <li>• Todas as compras do dia por loja, com fornecedor e número da nota.</li>
-          <li>• Cada item comprado com o destino: OS (carro, modelo e placa) ou estoque.</li>
-          <li>• Conferência automática no fim do dia ou na manhã seguinte.</li>
-          <li>• Alerta de itens parados em estoque, para o balanço físico.</li>
-          <li>• Marcação de compras com quantidade mínima do fornecedor.</li>
-          <li>• Itens que saíram por outra loja (transferência) ou devolução ao fornecedor.</li>
-        </ul>
-      </section>
+                      <span className="tabular-nums text-muted-foreground">
+                        NF {n.number ?? "—"}
+                        {n.series && n.series !== "0" ? `/${n.series}` : ""}
+                      </span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+                        {n.kind_name}
+                        {n.kind === 0 && !counted.has(n.nota) && n.advance_notes.length
+                          ? " · já contada no adiantamento"
+                          : ""}
+                      </span>
+                      <span className="w-28 text-right font-semibold tabular-nums">
+                        {money(n.total_cents)}
+                      </span>
+                    </summary>
+                    <NoteItems nota={n.nota} warehouse={n.warehouse} />
+                  </details>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </PortalShell>
+  );
+}
+
+function NoteItems({ nota, warehouse }: { nota: number; warehouse: number }) {
+  const { data, isPending } = useQuery({
+    queryKey: ["purchase-items", nota],
+    queryFn: () => readPurchaseItems({ data: { nota } }),
+  });
+  return (
+    <div className="mt-2 overflow-x-auto rounded-lg bg-muted/50 p-3">
+      <p className="mb-2 text-xs text-muted-foreground">Almoxarifado {warehouse}</p>
+      {isPending ? (
+        <p className="text-sm text-muted-foreground">Carregando itens…</p>
+      ) : (
+        <table className="w-full text-sm tabular-nums">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+              <th className="py-1 pr-2 font-semibold">Item</th>
+              <th className="px-2 text-right font-semibold">Qtd</th>
+              <th className="px-2 text-right font-semibold">Valor unitário</th>
+              <th className="pl-2 text-right font-semibold">Valor do item</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map((i) => (
+              <tr key={i.position} className="border-t border-border">
+                <td className="py-1.5 pr-2">
+                  {i.product_code} · {i.description}
+                  {i.is_service ? " (serviço)" : ""}
+                </td>
+                <td className="px-2 text-right">{i.quantity}</td>
+                <td className="px-2 text-right">{money(i.unit_cents)}</td>
+                <td className="pl-2 text-right">{money(i.item_total_cents)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }

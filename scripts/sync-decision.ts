@@ -13,6 +13,12 @@ import {
   type ApiCommissions,
   type ApiTechnicianCommissions,
 } from "../src/lib/decision-sync.ts";
+import {
+  purchaseRows,
+  supplierRows,
+  type ApiPurchase,
+  type ApiSupplier,
+} from "../src/lib/purchases.ts";
 
 /** Network blips (timeouts, resets) are retried a few times; HTTP errors are returned as-is. */
 async function fetchRetry(url: string, init?: RequestInit, attempts = 3): Promise<Response> {
@@ -320,6 +326,51 @@ async function syncSalesWithoutCommission(
   return rows.length;
 }
 
+/** Purchase notes (entries) of the period, with their items; replaces what was saved for those days. */
+async function syncPurchases(env: Record<string, string>, token: string, de: string, ate: string) {
+  const notes: ApiPurchase[] = [];
+  let after: number | null = null;
+  do {
+    const page: { compras: ApiPurchase[]; proximo: number | null } = await decisionGet(
+      env,
+      token,
+      `/compras?de=${de}&ate=${ate}${after === null ? "" : `&apos=${after}`}`,
+    );
+    notes.push(...page.compras);
+    after = page.proximo ?? null;
+  } while (after !== null);
+  return rpcCall(env, "replace_purchase_notes", {
+    _from: de,
+    _to: ate,
+    _notes: purchaseRows(notes),
+  });
+}
+
+async function syncSuppliers(env: Record<string, string>, token: string) {
+  const { fornecedores } = await decisionGet<{ fornecedores: ApiSupplier[] }>(
+    env,
+    token,
+    "/fornecedores",
+  );
+  return rpcCall(env, "upsert_suppliers", { _rows: supplierRows(fornecedores) });
+}
+
+async function rpcCall(env: Record<string, string>, rpc: string, args: Record<string, unknown>) {
+  const key = env.SUPABASE_SECRET_KEY!;
+  const res = await fetchRetry(`${env.SUPABASE_URL}/rest/v1/rpc/${rpc}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: key,
+      ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}),
+    },
+    body: JSON.stringify(args),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(`Supabase recusou ${rpc} (${res.status}): ${JSON.stringify(body)}`);
+  return body as number;
+}
+
 function monthsToSync() {
   const asked = process.argv.filter((a) => a.startsWith("--mes=")).map((a) => a.slice(6));
   if (asked.some((m) => !/^\d{4}-\d{2}$/.test(m))) throw new Error("Use --mes=AAAA-MM");
@@ -334,6 +385,12 @@ function monthsToSync() {
 const env = loadConfig();
 const token = await decisionToken(env);
 const withTechnicians = !process.argv.includes("--sem-tecnicos");
+// Suppliers change rarely: refreshed on every run (one request). Never stops the sync.
+try {
+  console.log(`fornecedores: ${await syncSuppliers(env, token)}`);
+} catch (err) {
+  console.log(`fornecedores: ${"ERRO " + (err instanceof Error ? err.message : String(err))}`);
+}
 for (const month of monthsToSync()) {
   const { competence, de, ate } = monthRange(month);
   const started = Date.now();
@@ -382,6 +439,12 @@ for (const month of monthsToSync()) {
   } catch (err) {
     semComissao = ` · sem comissão: ERRO ${err instanceof Error ? err.message : String(err)}`;
   }
+  let compras = "";
+  try {
+    compras = ` · notas de compra: ${await syncPurchases(env, token, de, ate)}`;
+  } catch (err) {
+    compras = ` · notas de compra: ERRO ${err instanceof Error ? err.message : String(err)}`;
+  }
   let gerente = "";
   try {
     const commissioned = new Set(api.totais.map((t) => `${t.loja}:${t.pessoa}`));
@@ -390,7 +453,7 @@ for (const month of monthsToSync()) {
     gerente = ` · gerente extra: ERRO ${err instanceof Error ? err.message : String(err)}`;
   }
   console.log(
-    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao}${gerente} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
+    `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao}${gerente}${compras} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
 }
 // Aviso por e-mail dos documentos da empresa que vencem (45 dias, 15 dias, vencido). Nunca atrapalha a atualização.

@@ -299,6 +299,24 @@ export type Database = {
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
         Relationships: []
       }
+      suppliers: {
+        Row: { active: boolean; city: string | null; cnpj: string | null; code: number; fantasy: string | null; name: string; uf: string | null }
+        Insert: { active?: boolean; city?: string | null; cnpj?: string | null; code: number; fantasy?: string | null; name: string; uf?: string | null }
+        Update: { active?: boolean; city?: string | null; cnpj?: string | null; code?: number; fantasy?: string | null; name?: string; uf?: string | null }
+        Relationships: []
+      }
+      purchase_notes: {
+        Row: { access_key: string | null; discount_cents: number; issued_on: string | null; kind: number; kind_name: string; nota: number; number: string | null; received_on: string; series: string | null; supplier_code: number | null; total_cents: number; unit_code: string; warehouse: number }
+        Insert: { access_key?: string | null; discount_cents?: number; issued_on?: string | null; kind: number; kind_name: string; nota: number; number?: string | null; received_on: string; series?: string | null; supplier_code?: number | null; total_cents: number; unit_code: string; warehouse: number }
+        Update: { access_key?: string | null; discount_cents?: number; issued_on?: string | null; kind?: number; kind_name?: string; nota?: number; number?: string | null; received_on?: string; series?: string | null; supplier_code?: number | null; total_cents?: number; unit_code?: string; warehouse?: number }
+        Relationships: []
+      }
+      purchase_note_items: {
+        Row: { advance_note: number | null; cfop: string | null; description: string; is_service: boolean; item_total_cents: number; nota: number; position: number; product_code: number; quantity: number; unit_cents: number }
+        Insert: { advance_note?: number | null; cfop?: string | null; description: string; is_service?: boolean; item_total_cents: number; nota: number; position: number; product_code: number; quantity: number; unit_cents: number }
+        Update: { advance_note?: number | null; cfop?: string | null; description?: string; is_service?: boolean; item_total_cents?: number; nota?: number; position?: number; product_code?: number; quantity?: number; unit_cents?: number }
+        Relationships: []
+      }
       manager_extra_sales: {
         Row: { competence: string; kind: string; seller_code: number; sold_cents: number; unit_code: string }
         Insert: { competence: string; kind: string; seller_code: number; sold_cents: number; unit_code: string }
@@ -816,6 +834,8 @@ export type Database = {
         Returns: number
       }
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
+      replace_purchase_notes: { Args: { _from: string; _notes: Json; _to: string }; Returns: number }
+      upsert_suppliers: { Args: { _rows: Json }; Returns: number }
       replace_manager_extra_sales: { Args: { _competence: string; _rows: Json }; Returns: number }
       replace_sales_without_commission: { Args: { _competence: string; _rows: Json }; Returns: number }
       claim_decision_codes: { Args: { _codes: number[] }; Returns: Json }
