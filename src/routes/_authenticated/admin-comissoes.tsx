@@ -589,7 +589,9 @@ function AdminComissoes() {
             supervisors={data.sellers.flatMap((s) =>
               s.supervisor_unit
                 ? [{ code: s.code, name: cleanName(s.name), unit: s.supervisor_unit }]
-                : [],
+                : s.active !== false && !s.ignored && (s.operator_roles ?? []).includes("chefe")
+                  ? [{ code: s.code, name: cleanName(s.name), unit: "NP1", chefe: true }]
+                  : [],
             )}
           />
 

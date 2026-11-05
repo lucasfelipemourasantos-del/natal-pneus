@@ -18,16 +18,22 @@ const reais = (cents: number) =>
 export function SupervisorEntry({
   supervisors,
 }: {
-  supervisors: { code: number; name: string; unit: string }[];
+  /** "chefe": a chefe de pista, whose rate is 0,80% over the whole store; the store is chosen in the form. */
+  supervisors: { code: number; name: string; unit: string; chefe?: boolean }[];
 }) {
   const qc = useQueryClient();
   const [code, setCode] = useState(supervisors[0]?.code ?? 0);
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [until, setUntil] = useState("");
-  const [lines, setLines] = useState<Line[]>(GROUPS.map(() => ({ ...EMPTY })));
+  const rateFor = (chefe?: boolean) => (chefe ? "0,80" : EMPTY.rate);
+  const [lines, setLines] = useState<Line[]>(
+    GROUPS.map(() => ({ ...EMPTY, rate: rateFor(supervisors[0]?.chefe) })),
+  );
+  const [unitSel, setUnitSel] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const supervisor = supervisors.find((s) => s.code === code);
+  const unit = unitSel || supervisor?.unit || "NP1";
   const competence = `${month}-01`;
 
   const saved = useQuery({
@@ -55,7 +61,7 @@ export function SupervisorEntry({
               rate: (r.rate_bp / 100).toFixed(2).replace(".", ","),
               commission: reais(r.commission_cents),
             }
-          : { ...EMPTY };
+          : { ...EMPTY, rate: rateFor(supervisor?.chefe) };
       }),
     );
     setNotice("Valores já lançados carregados.");
@@ -72,7 +78,7 @@ export function SupervisorEntry({
         return [
           {
             seller_code: supervisor.code,
-            unit_code: supervisor.unit,
+            unit_code: unit,
             competence,
             period_end: until,
             group_name,
@@ -116,26 +122,48 @@ export function SupervisorEntry({
 
   return (
     <section className="min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
-      <h2 className="text-lg font-bold">Comissão de supervisor</h2>
+      <h2 className="text-lg font-bold">Comissão de supervisor e chefe de pista</h2>
       <p className="text-sm text-muted-foreground">
         O Decision ainda não envia esse relatório. Digite os valores de "Comissões por Supervisor"
-        exatamente como estão impressos; o portal mostra o mesmo para o supervisor.
+        exatamente como estão impressos (para o chefe de pista, escolha o chefe no relatório); o
+        portal mostra o mesmo para a pessoa.
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Supervisor
           <select
             value={code}
-            onChange={(e) => setCode(Number(e.target.value))}
+            onChange={(e) => {
+              const next = supervisors.find((s) => s.code === Number(e.target.value));
+              setCode(Number(e.target.value));
+              setUnitSel("");
+              setLines(GROUPS.map(() => ({ ...EMPTY, rate: rateFor(next?.chefe) })));
+            }}
             className={fieldClass}
           >
             {supervisors.map((s) => (
               <option key={s.code} value={s.code}>
-                {s.code} · {s.name} · {s.unit}
+                {s.code} · {s.name} · {s.chefe ? "chefe de pista" : s.unit}
               </option>
             ))}
           </select>
         </label>
+        {supervisor?.chefe && (
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Loja do relatório
+            <select
+              value={unit}
+              onChange={(e) => setUnitSel(e.target.value)}
+              className={fieldClass}
+            >
+              {["NP1", "NP2", "NP3", "NP4"].map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Mês
           <input

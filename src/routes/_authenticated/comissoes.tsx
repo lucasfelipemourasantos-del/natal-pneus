@@ -331,7 +331,6 @@ function Comissoes() {
   // Supervisor commission: mirror of the Decision report typed in by the RH (empty until the 0021 update is applied).
   const supervisor = useQuery({
     queryKey: ["supervisor-commissions"],
-    enabled: !operators,
     queryFn: async () => {
       const { data: rows, error: err } = await supabase
         .from("supervisor_commissions")
@@ -480,6 +479,8 @@ function Comissoes() {
     return operatorTypes(p).includes(role);
   });
   const supRows = operators ? [] : (supervisor.data ?? []);
+  // Chefe de pista: 0,80% over the whole store, mirrored from the Decision "Comissões por Supervisor" report (typed by the RH).
+  const chefeRows = operators ? (supervisor.data ?? []) : [];
   const supCodes = [
     ...new Set([
       ...supRows.map((r) => r.seller_code),
@@ -503,6 +504,8 @@ function Comissoes() {
   const sellerCode = sellers.some((s) => s.code === picked) ? picked! : (sellers[0]?.code ?? null);
   const seller = sellers.find((s) => s.code === sellerCode);
   const isSupervisor = sellerCode !== null && supCodes.includes(sellerCode);
+  const hasChefeReport =
+    operators && sellerCode !== null && chefeRows.some((r) => r.seller_code === sellerCode);
   const leader = Boolean(access.canReadAll || access.isAdmin);
   const byStore = leader && mode === "loja";
   const units = [
@@ -702,6 +705,21 @@ function Comissoes() {
         <p className="mt-6 text-muted-foreground">Não há relatórios seus neste mês.</p>
       ) : (
         <div className="mt-6 space-y-6">
+          {hasChefeReport && sellerCode !== null && (
+            <section className="space-y-3">
+              <h3 className="text-lg font-bold">Comissão de chefe de pista (0,80% da loja)</h3>
+              <p className="text-sm text-muted-foreground">
+                Espelho do relatório "Comissões por Supervisor" do Decision. A comissão dos itens
+                que você mesmo fez (inspeção veicular e outros) aparece abaixo, em separado.
+              </p>
+              <SupervisorPanel
+                rows={chefeRows}
+                code={sellerCode}
+                month={month}
+                partialCompetence={currentCompetence()}
+              />
+            </section>
+          )}
           {allChecked ? (
             <p className="inline-flex flex-wrap items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-sm font-semibold text-success">
               <CircleCheck size={17} aria-hidden="true" />
