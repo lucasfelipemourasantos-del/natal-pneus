@@ -93,10 +93,68 @@ export const readPurchaseItems = createServerFn({ method: "GET" })
         .order("position"),
       context.supabase
         .from("purchase_exits")
-        .select("position,sale,plate,client,sold_on,quantity")
+        .select(
+          "position,movement,kind,kind_name,dest_warehouse,sale,plate,client,moved_on,quantity",
+        )
         .eq("nota", data.nota)
-        .order("sold_on"),
+        .order("moved_on"),
     ]);
     if (items.error) throw new Error("Não foi possível consultar os itens.");
     return { items: items.data ?? [], exits: exits.error ? [] : (exits.data ?? []) };
+  });
+
+/**
+ * Stock that has not left for a while: balance per warehouse (stores only) whose last sale seen in the last 62 days is older than
+ * the limit, or that had no sale at all in that period. Value = balance × cost. Admin only (RLS).
+ */
+export const readStalledStock = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      warehouse: z.number().int().min(1).max(4).nullable(),
+      days: z.number().int().min(1).max(62),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const limit = new Date(Date.now() - data.days * 86_400_000).toISOString().slice(0, 10);
+    const rows: {
+      warehouse: number;
+      product: number;
+      balance: number;
+      cost_cents: number;
+      last_sale_on: string | null;
+    }[] = [];
+    for (let start = 0; start < 30000; start += 1000) {
+      let query = context.supabase
+        .from("stock_balances")
+        .select("warehouse,product,balance,cost_cents,last_sale_on")
+        .gt("balance", 0)
+        .lte("warehouse", 4)
+        .or(`last_sale_on.is.null,last_sale_on.lt.${limit}`)
+        .order("warehouse")
+        .order("product")
+        .range(start, start + 999);
+      if (data.warehouse) query = query.eq("warehouse", data.warehouse);
+      const { data: page, error } = await query;
+      if (error) throw new Error("Não foi possível consultar o estoque.");
+      rows.push(...(page ?? []));
+      if ((page ?? []).length < 1000) break;
+    }
+    const valued = rows
+      .map((r) => ({ ...r, value_cents: Math.round(Number(r.balance) * Number(r.cost_cents)) }))
+      .sort((a, b) => b.value_cents - a.value_cents);
+    const top = valued.slice(0, 40);
+    const names = await context.supabase
+      .from("products")
+      .select("product,description")
+      .in(
+        "product",
+        top.map((r) => r.product),
+      );
+    const nameOf = new Map((names.data ?? []).map((n) => [n.product, n.description]));
+    return {
+      items: valued.length,
+      valueCents: valued.reduce((t, r) => t + r.value_cents, 0),
+      top: top.map((r) => ({ ...r, description: nameOf.get(r.product) ?? `Produto ${r.product}` })),
+    };
   });

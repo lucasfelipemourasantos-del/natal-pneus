@@ -14,13 +14,15 @@ import {
   type ApiTechnicianCommissions,
 } from "../src/lib/decision-sync.ts";
 import {
-  allocateExits,
+  allocateLedger,
   purchaseRows,
   supplierRows,
   type ApiPurchase,
-  type ApiSale,
+  type ApiBalance,
+  type ApiMovement,
+  type ApiProduct,
   type ApiSupplier,
-  type SaleLine,
+  type SaleInfo,
 } from "../src/lib/purchases.ts";
 
 /** Network blips (timeouts, resets) are retried a few times; HTTP errors are returned as-is. */
@@ -350,57 +352,118 @@ async function syncPurchases(env: Record<string, string>, token: string, de: str
 }
 
 /**
- * Probable destination of the purchased items (see allocateExits): last 62 days of notes against the sales of the same days
- * until today. Needs the 0031 database update; never stops the sync.
+ * Stock ledger of the Decision: where each purchased item went (sale, transfer, return, adjustment), the current balance per
+ * warehouse and the product names. Last 62 days of notes and movements. Needs the 0032 database update; never stops the sync.
  */
-async function syncPurchaseExits(env: Record<string, string>, token: string) {
+async function syncStock(env: Record<string, string>, token: string) {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" }));
   const iso = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const to = iso(now);
   const from = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 62));
-  const notes: ApiPurchase[] = [];
-  let after: number | null = null;
-  do {
-    const page: { compras: ApiPurchase[]; proximo: number | null } = await decisionGet(
-      env,
-      token,
-      `/compras?de=${from}&ate=${to}${after === null ? "" : `&apos=${after}`}`,
-    );
-    notes.push(...page.compras);
-    after = page.proximo ?? null;
-  } while (after !== null);
-  const lines: SaleLine[] = [];
-  for (const loja of [1, 2, 3, 4]) {
-    let cursor: number | null = null;
+  const before = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 63));
+
+  const pages = async <T extends { proximo: number | null }>(path: string) => {
+    const all: T[] = [];
+    let after: number | null = null;
     do {
-      const page: { vendas: ApiSale[]; proximo: number | null } = await decisionGet(
+      const page: T = await decisionGet(
         env,
         token,
-        `/vendas?de=${from}&ate=${to}&loja=${loja}${cursor === null ? "" : `&apos=${cursor}`}`,
+        `${path}${after === null ? "" : `&apos=${after}`}`,
       );
-      for (const sale of page.vendas) {
-        if (sale.situacao !== "finalizada") continue;
-        for (const item of sale.itens)
-          if (!item.cancelado && !item.servico)
-            lines.push({
-              loja,
-              venda: sale.venda,
-              placa: sale.placa,
-              cliente: sale.clienteNome,
-              data: sale.data.slice(0, 10),
-              produto: item.produto,
-              quantidade: item.quantidade,
-            });
-      }
-      cursor = page.proximo ?? null;
-    } while (cursor !== null);
+      all.push(page);
+      after = page.proximo ?? null;
+    } while (after !== null);
+    return all;
+  };
+
+  const notes = (
+    await pages<{ compras: ApiPurchase[]; proximo: number | null }>(`/compras?de=${from}&ate=${to}`)
+  ).flatMap((p) => p.compras);
+  const movements = (
+    await pages<{ movimentos: ApiMovement[]; proximo: number | null }>(
+      `/estoque/movimentos?de=${from}&ate=${to}`,
+    )
+  ).flatMap((p) => p.movimentos);
+
+  // Sale number -> plate and customer (only the sales the movements point to).
+  const saleIds = new Set(movements.map((m) => m.venda).filter((v): v is number => v !== null));
+  const sales = new Map<number, SaleInfo>();
+  for (const loja of [1, 2, 3, 4]) {
+    const list = await pages<{
+      vendas: { venda: number; placa: string | null; clienteNome: string | null }[];
+      proximo: number | null;
+    }>(`/vendas?de=${from}&ate=${to}&loja=${loja}`);
+    for (const v of list.flatMap((p) => p.vendas))
+      if (saleIds.has(v.venda)) sales.set(v.venda, { placa: v.placa, cliente: v.clienteNome });
   }
-  return rpcCall(env, "replace_purchase_exits", {
+
+  const opening = new Map<string, number>();
+  const old = await decisionGet<{ saldos: ApiBalance[] }>(
+    env,
+    token,
+    `/estoque/saldos?data=${before}`,
+  );
+  for (const s of old.saldos) opening.set(`${s.almoxarifado}|${s.produto}`, s.saldo);
+
+  const { exits, lastSale } = allocateLedger(notes, movements, opening, sales);
+  const saved = await rpcCall(env, "replace_purchase_exits", {
     _from: from,
     _to: to,
-    _rows: allocateExits(notes, lines),
+    _rows: exits,
   });
+
+  // Current balance per warehouse, with the date of the last sale seen in the period.
+  const current = await decisionGet<{ saldos: ApiBalance[] }>(env, token, "/estoque/saldos");
+  await rpcCall(env, "replace_stock_balances", {
+    _rows: current.saldos
+      .filter((s) => s.saldo > 0)
+      .map((s) => ({
+        warehouse: s.almoxarifado,
+        product: s.produto,
+        balance: s.saldo,
+        cost_cents: Math.round(s.custo * 100),
+        last_sale_on: lastSale.get(`${s.almoxarifado}|${s.produto}`) ?? null,
+      })),
+  });
+
+  // Product names change rarely: once a day.
+  let names = 0;
+  const last = await fetchRetry(
+    `${env.SUPABASE_URL}/rest/v1/decision_sync_status?scope=eq.produtos&select=synced_at`,
+    { headers: restHeaders(env) },
+  );
+  const lastRows = (await last.json()) as { synced_at: string }[];
+  if (!lastRows[0] || Date.now() - new Date(lastRows[0].synced_at).getTime() > 20 * 3_600_000) {
+    const all = (
+      await pages<{ produtos: ApiProduct[]; proximo: number | null }>("/produtos?")
+    ).flatMap((p) => p.produtos);
+    for (let i = 0; i < all.length; i += 2000)
+      names += await rpcCall(env, "upsert_products", {
+        _rows: all.slice(i, i + 2000).map((p) => ({
+          product: p.produto,
+          description: p.descricao,
+          is_service: p.servico,
+          class_name: p.classeDescricao,
+        })),
+      });
+    await fetchRetry(`${env.SUPABASE_URL}/rest/v1/decision_sync_status?on_conflict=scope`, {
+      method: "POST",
+      headers: {
+        ...restHeaders(env),
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({ scope: "produtos", synced_at: new Date().toISOString() }),
+    });
+  }
+  return `${saved} destinos · ${current.saldos.length} saldos${names ? ` · ${names} produtos` : ""}`;
+}
+
+function restHeaders(env: Record<string, string>): Record<string, string> {
+  const key = env.SUPABASE_SECRET_KEY!;
+  return { apikey: key, ...(key.startsWith("eyJ") ? { Authorization: `Bearer ${key}` } : {}) };
 }
 
 async function syncSuppliers(env: Record<string, string>, token: string) {
@@ -515,9 +578,9 @@ for (const month of monthsToSync()) {
 }
 // Destino provável dos itens comprados (precisa das notas já gravadas acima). Nunca atrapalha a atualização.
 try {
-  console.log(`destino das compras: ${await syncPurchaseExits(env, token)}`);
+  console.log(`estoque: ${await syncStock(env, token)}`);
 } catch (err) {
-  console.log(`destino das compras: ERRO ${err instanceof Error ? err.message : String(err)}`);
+  console.log(`estoque: ERRO ${err instanceof Error ? err.message : String(err)}`);
 }
 // Aviso por e-mail dos documentos da empresa que vencem (45 dias, 15 dias, vencido). Nunca atrapalha a atualização.
 try {

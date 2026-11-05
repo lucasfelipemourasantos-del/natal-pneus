@@ -300,9 +300,21 @@ export type Database = {
         Relationships: []
       }
       purchase_exits: {
-        Row: { client: string | null; nota: number; plate: string | null; position: number; quantity: number; sale: number; sold_on: string }
-        Insert: { client?: string | null; nota: number; plate?: string | null; position: number; quantity: number; sale: number; sold_on: string }
-        Update: { client?: string | null; nota?: number; plate?: string | null; position?: number; quantity?: number; sale?: number; sold_on?: string }
+        Row: { client: string | null; dest_warehouse: number | null; kind: string; kind_name: string; moved_on: string; movement: number; nota: number; plate: string | null; position: number; quantity: number; sale: number | null }
+        Insert: { client?: string | null; dest_warehouse?: number | null; kind: string; kind_name: string; moved_on: string; movement: number; nota: number; plate?: string | null; position: number; quantity: number; sale?: number | null }
+        Update: { client?: string | null; dest_warehouse?: number | null; kind?: string; kind_name?: string; moved_on?: string; movement?: number; nota?: number; plate?: string | null; position?: number; quantity?: number; sale?: number | null }
+        Relationships: []
+      }
+      products: {
+        Row: { class_name: string | null; description: string; is_service: boolean; product: number }
+        Insert: { class_name?: string | null; description: string; is_service?: boolean; product: number }
+        Update: { class_name?: string | null; description?: string; is_service?: boolean; product?: number }
+        Relationships: []
+      }
+      stock_balances: {
+        Row: { balance: number; cost_cents: number; last_sale_on: string | null; product: number; warehouse: number }
+        Insert: { balance: number; cost_cents?: number; last_sale_on?: string | null; product: number; warehouse: number }
+        Update: { balance?: number; cost_cents?: number; last_sale_on?: string | null; product?: number; warehouse?: number }
         Relationships: []
       }
       suppliers: {
@@ -842,6 +854,8 @@ export type Database = {
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
       replace_purchase_notes: { Args: { _from: string; _notes: Json; _to: string }; Returns: number }
       replace_purchase_exits: { Args: { _from: string; _rows: Json; _to: string }; Returns: number }
+      replace_stock_balances: { Args: { _rows: Json }; Returns: number }
+      upsert_products: { Args: { _rows: Json }; Returns: number }
       upsert_suppliers: { Args: { _rows: Json }; Returns: number }
       replace_manager_extra_sales: { Args: { _competence: string; _rows: Json }; Returns: number }
       replace_sales_without_commission: { Args: { _competence: string; _rows: Json }; Returns: number }

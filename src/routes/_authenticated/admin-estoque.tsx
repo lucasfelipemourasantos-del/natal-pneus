@@ -6,7 +6,7 @@ import { PortalShell } from "@/components/portal-shell";
 import { monthLabel } from "@/lib/commissions";
 import { fieldClass } from "@/lib/portal-data";
 import { isPurchase } from "@/lib/purchases";
-import { readPurchaseItems, readPurchases } from "@/lib/purchases.functions";
+import { readPurchaseItems, readPurchases, readStalledStock } from "@/lib/purchases.functions";
 import { money } from "@/lib/results";
 
 export const Route = createFileRoute("/_authenticated/admin-estoque")({
@@ -50,6 +50,21 @@ const STALLED_DAYS = 30;
 const daysSince = (iso: string) =>
   Math.floor((Date.now() - new Date(iso + "T12:00:00").getTime()) / 86_400_000);
 const qty = (n: number) => String(Math.round(n * 1000) / 1000).replace(".", ",");
+
+/** What happened to the units: sale (exact sale number), transfer (destination store), return, adjustment... */
+const exitText = (x: {
+  kind: string;
+  kind_name: string;
+  dest_warehouse: number | null;
+  sale: number | null;
+  plate: string | null;
+  client: string | null;
+}) =>
+  x.kind === "S1"
+    ? `Saída por venda: OS ${x.sale}${x.plate ? ` · placa ${x.plate}` : ""}${x.client ? ` · ${x.client}` : ""}`
+    : x.kind === "S2"
+      ? `Transferido para ${x.dest_warehouse && x.dest_warehouse <= 4 ? `NP${x.dest_warehouse}` : `almoxarifado ${x.dest_warehouse ?? "?"}`}`
+      : x.kind_name.charAt(0) + x.kind_name.slice(1).toLowerCase();
 
 const day = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 
@@ -115,10 +130,10 @@ function AdminEstoque() {
       <p className="flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm">
         <Lock size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
-          <b>Entradas e destino provável.</b> Mostra as notas de compra de cada loja. A saída de
-          cada item em OS é uma estimativa (mesmo produto, mesma loja, depois da entrada, da nota
-          mais antiga para a mais nova); ela fica exata quando o Decision liberar os movimentos de
-          estoque.
+          <b>Entradas, destino e saldo real.</b> Mostra as notas de compra de cada loja e, em cada
+          item, a venda, a transferência ou o ajuste que tirou o produto do estoque, pelos
+          movimentos do Decision. Quando há mais de uma compra do mesmo produto, a ligação com a
+          nota segue a regra da mais antiga primeiro.
         </span>
       </p>
 
@@ -188,7 +203,9 @@ function AdminEstoque() {
                   Notas com item parado há mais de {STALLED_DAYS} dias
                 </p>
                 <p className="text-xl font-extrabold tabular-nums">{stalled.length} notas</p>
-                <p className="text-xs text-muted-foreground">Provável, conferir no balanço</p>
+                <p className="text-xs text-muted-foreground">
+                  Ainda em estoque, conferir no balanço
+                </p>
               </div>
             )}
             <div className="rounded-xl border border-border bg-card p-4">
@@ -197,6 +214,8 @@ function AdminEstoque() {
               <p className="text-xs text-muted-foreground">Não são compra</p>
             </div>
           </section>
+
+          <StalledStock warehouse={unit ? Number(unit.slice(2)) : null} />
 
           <section className="mt-6 min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
             <h2 className="text-lg font-bold">
@@ -233,7 +252,7 @@ function AdminEstoque() {
                         <span
                           className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${daysSince(n.received_on) > STALLED_DAYS ? "bg-warning-soft text-foreground" : "bg-muted text-muted-foreground"}`}
                         >
-                          Em estoque (provável): {qty(n.in_stock)}
+                          Em estoque: {qty(n.in_stock)}
                         </span>
                       )}
                       <span className="w-28 text-right font-semibold tabular-nums">
@@ -249,6 +268,90 @@ function AdminEstoque() {
         </>
       )}
     </PortalShell>
+  );
+}
+
+function StalledStock({ warehouse }: { warehouse: number | null }) {
+  const [days, setDays] = useState(30);
+  const { data, isPending } = useQuery({
+    queryKey: ["stalled-stock", warehouse, days],
+    queryFn: () => readStalledStock({ data: { warehouse, days } }),
+  });
+  return (
+    <section className="mt-6 min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Estoque parado</h2>
+          <p className="text-sm text-muted-foreground">
+            Produtos com saldo que não tiveram venda nos últimos {days} dias (o Decision mostra só
+            os últimos 62 dias; sem venda nesse período também entra). Valor = saldo × custo.
+          </p>
+        </div>
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Sem venda há mais de
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className={fieldClass}
+          >
+            {[15, 30, 45, 62].map((d) => (
+              <option key={d} value={d}>
+                {d} dias
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {isPending ? (
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : !data || data.items === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nada para mostrar ainda. Os saldos chegam na próxima atualização do Decision.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm tabular-nums">
+            <b>{data.items.toLocaleString("pt-BR")}</b> produtos parados ·{" "}
+            <b>{money(data.valueCents)}</b> parados
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <th className="py-2 pr-2 font-semibold">Produto</th>
+                  <th className="px-2 font-semibold">Loja</th>
+                  <th className="px-2 text-right font-semibold">Saldo</th>
+                  <th className="px-2 text-right font-semibold">Valor parado</th>
+                  <th className="pl-2 font-semibold">Última venda</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.top.map((r) => (
+                  <tr key={`${r.warehouse}-${r.product}`} className="border-t border-border">
+                    <td className="py-1.5 pr-2">
+                      {r.product} · {r.description}
+                    </td>
+                    <td className="px-2">NP{r.warehouse}</td>
+                    <td className="px-2 text-right">{qty(Number(r.balance))}</td>
+                    <td className="px-2 text-right">{money(r.value_cents)}</td>
+                    <td className="pl-2 text-muted-foreground">
+                      {r.last_sale_on
+                        ? `${r.last_sale_on.slice(8, 10)}/${r.last_sale_on.slice(5, 7)}`
+                        : "sem venda há mais de 62 dias"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {data.items > data.top.length && (
+            <p className="text-xs text-muted-foreground">
+              Mostrando os {data.top.length} de maior valor.
+            </p>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -303,17 +406,15 @@ function NoteItems({
                     out.map((x) => (
                       <tr key={x.sale} className="text-xs text-muted-foreground">
                         <td className="pb-1 pl-4" colSpan={4}>
-                          Provável saída: OS {x.sale}
-                          {x.plate ? ` · placa ${x.plate}` : ""}
-                          {x.client ? ` · ${x.client}` : ""} · {x.sold_on.slice(8, 10)}/
-                          {x.sold_on.slice(5, 7)} · {qty(Number(x.quantity))} un.
+                          {exitText(x)} · {x.moved_on.slice(8, 10)}/{x.moved_on.slice(5, 7)} ·{" "}
+                          {qty(Number(x.quantity))} un.
                         </td>
                       </tr>
                     ))}
                   {ready && !i.is_service && left > 0 && (
                     <tr className="text-xs">
                       <td className="pb-1 pl-4 font-semibold" colSpan={4}>
-                        Em estoque (provável): {qty(left)} un.
+                        Ainda em estoque (desta nota): {qty(left)} un.
                       </td>
                     </tr>
                   )}

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  allocateExits,
+  allocateLedger,
   isPurchase,
   itemTotalCents,
   purchaseRows,
   type ApiPurchase,
-  type SaleLine,
+  type ApiMovement,
 } from "@/lib/purchases";
 
 const item = {
@@ -64,8 +64,8 @@ describe("purchase notes", () => {
   });
 });
 
-describe("probable destination of purchased items", () => {
-  const note = (nota: number, received: string, qty: number): ApiPurchase => ({
+describe("destination of purchased items from the stock ledger", () => {
+  const note = (nota: number, qty: number, tipo = 0): ApiPurchase => ({
     nota,
     numero: String(nota),
     serie: "1",
@@ -73,48 +73,84 @@ describe("probable destination of purchased items", () => {
     loja: 2,
     almoxarifado: 2,
     fornecedor: 1,
-    tipo: 0,
+    tipo,
     tipoNome: "Faturada",
-    dataEmissao: received,
-    dataRecepcao: received,
+    dataEmissao: "2026-10-02",
+    dataRecepcao: "2026-10-02",
     valorTotal: 100,
     valorDesconto: 0,
     itens: [{ ...item, produto: 7, quantidade: qty, valorIcmsSt: 0 }],
   });
-  const sale = (venda: number, data: string, qtd: number, loja = 2): SaleLine => ({
-    loja,
-    venda,
-    placa: "ABC1D23",
-    cliente: "CLIENTE",
-    data,
+  const move = (
+    movimento: number,
+    tipo: string,
+    data: string,
+    quantidade: number,
+    extra: Partial<ApiMovement> = {},
+  ): ApiMovement => ({
+    movimento,
+    almoxarifado: 2,
+    almoxarifadoDestino: null,
     produto: 7,
-    quantidade: qtd,
+    tipo,
+    tipoNome: tipo,
+    entrada: tipo.startsWith("E"),
+    data,
+    quantidade,
+    venda: null,
+    notaRecebida: null,
+    ...extra,
   });
+  const sales = new Map([[11, { placa: "ABC1D23", cliente: "CLIENTE" }]]);
 
-  it("takes the oldest note first and only sales after the entry, in the same store", () => {
-    const rows = allocateExits(
-      [note(2, "2026-10-10", 5), note(1, "2026-10-02", 2)],
+  it("takes first from the stock that was already there, then from the purchase", () => {
+    const { exits } = allocateLedger(
+      [note(1, 5)],
       [
-        sale(10, "2026-10-01", 1),
-        sale(11, "2026-10-05", 3),
-        sale(12, "2026-10-12", 1),
-        sale(13, "2026-10-12", 1, 3),
+        move(1, "E1", "2026-10-02", 5, { notaRecebida: 1 }),
+        move(2, "S1", "2026-10-05", 3, { venda: 11 }),
       ],
+      new Map([["2|7", 2]]),
+      sales,
     );
-    expect(rows.map((r) => [r.nota, r.sale, r.quantity])).toEqual([
-      [1, 11, 2],
-      [2, 12, 1],
+    // 2 units were already in stock: only 1 of the 3 sold comes from this purchase
+    expect(exits.map((e) => [e.nota, e.sale, e.quantity, e.plate])).toEqual([
+      [1, 11, 1, "ABC1D23"],
     ]);
   });
 
-  it("ignores transfers and faturadas covered by an advance", () => {
-    const transfer = { ...note(3, "2026-10-02", 5), tipo: 2 };
-    const advance = { ...note(4, "2026-10-02", 5), tipo: 1 };
+  it("shows a transfer with its destination store and the kind of movement", () => {
+    const { exits } = allocateLedger(
+      [note(1, 4)],
+      [
+        move(1, "E1", "2026-10-02", 4, { notaRecebida: 1 }),
+        move(2, "S2", "2026-10-06", 4, { almoxarifadoDestino: 3 }),
+      ],
+      new Map(),
+      sales,
+    );
+    expect(exits.map((e) => [e.kind, e.dest_warehouse, e.quantity, e.sale])).toEqual([
+      ["S2", 3, 4, null],
+    ]);
+  });
+
+  it("ignores transfers-in and faturadas covered by an advance, and records the last sale", () => {
+    const advance = note(4, 5, 1);
     const covered = {
-      ...note(5, "2026-10-03", 5),
+      ...note(5, 5),
       itens: [{ ...item, produto: 7, quantidade: 5, valorIcmsSt: 0, notaAdiantamento: 4 }],
     };
-    const rows = allocateExits([transfer, advance, covered], [sale(20, "2026-10-08", 2)]);
-    expect(rows.map((r) => r.nota)).toEqual([4]);
+    const { exits, lastSale } = allocateLedger(
+      [advance, covered],
+      [
+        move(1, "E1", "2026-10-02", 5, { notaRecebida: 5 }),
+        move(2, "E1", "2026-10-03", 5, { notaRecebida: 4 }),
+        move(3, "S1", "2026-10-08", 2, { venda: 11 }),
+      ],
+      new Map(),
+      sales,
+    );
+    expect(exits.every((e) => e.nota === 4 || e.nota === 5)).toBe(true);
+    expect(lastSale.get("2|7")).toBe("2026-10-08");
   });
 });

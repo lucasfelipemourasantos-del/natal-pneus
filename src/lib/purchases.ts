@@ -33,14 +33,18 @@ export type ApiPurchase = {
   itens: ApiPurchaseItem[];
 };
 
-/** The part of a sale the destination of purchases needs. */
-export type ApiSale = {
-  venda: number;
-  situacao: string;
-  data: string;
-  placa: string | null;
-  clienteNome: string | null;
-  itens: { produto: number; servico: boolean; cancelado: boolean; quantidade: number }[];
+export type ApiBalance = {
+  almoxarifado: number;
+  produto: number;
+  saldo: number;
+  custo: number;
+};
+
+export type ApiProduct = {
+  produto: number;
+  descricao: string;
+  servico: boolean;
+  classeDescricao: string | null;
 };
 
 export type ApiSupplier = {
@@ -132,80 +136,136 @@ export function isPurchase(note: StoredNote, all: StoredNote[]) {
   return true;
 }
 
-/** A product line of a finished sale (services are left out by the caller). */
-export type SaleLine = {
-  loja: number;
-  venda: number;
-  placa: string | null;
-  cliente: string | null;
-  data: string;
+/** One stock movement of the Decision (/estoque/movimentos). */
+export type ApiMovement = {
+  movimento: number;
+  almoxarifado: number;
+  almoxarifadoDestino: number | null;
   produto: number;
+  tipo: string;
+  tipoNome: string;
+  entrada: boolean;
+  data: string;
   quantidade: number;
+  venda: number | null;
+  notaRecebida: number | null;
 };
+
+export type SaleInfo = { placa: string | null; cliente: string | null };
 
 export type ExitRow = {
   nota: number;
   position: number;
-  sale: number;
+  movement: number;
+  kind: string;
+  kind_name: string;
+  dest_warehouse: number | null;
+  sale: number | null;
   plate: string | null;
   client: string | null;
-  sold_on: string;
+  moved_on: string;
   quantity: number;
 };
 
 /**
- * Probable destination of each purchased item: the sales of the same product in the same store, after the note was received,
- * taken from the oldest note first. It is an inference (older stock may have been used), shown as "provável".
- * Transfers, returns, services and faturadas already covered by an advance are not allocated.
+ * Where each purchased item went, from the real stock ledger of the Decision. Per warehouse and product the stock is a queue:
+ * what was there before the period first, then each entry in order (purchases of the notes are tracked, the other entries are not).
+ * Every exit (sale, transfer, return, adjustment...) takes from the oldest quantity first; the part taken from a tracked purchase
+ * becomes a row. The sale number, the transfer destination and the kind of movement are exact; which purchase lot a sale
+ * took from is the oldest-first rule.
  */
-export function allocateExits(notes: ApiPurchase[], sales: SaleLine[]): ExitRow[] {
+export function allocateLedger(
+  notes: ApiPurchase[],
+  movements: ApiMovement[],
+  opening: Map<string, number>,
+  sales: Map<number, SaleInfo>,
+) {
   const advances = new Set(notes.filter((n) => n.tipo === 1).map((n) => n.nota));
-  const candidates = notes
-    .filter(
-      (n) =>
-        (n.tipo === 0 || n.tipo === 1) &&
-        !n.itens.some((i) => i.notaAdiantamento !== null && advances.has(i.notaAdiantamento)),
+  const tracked = new Map<string, { position: number; left: number }[]>();
+  const noteById = new Map(notes.map((n) => [n.nota, n]));
+  for (const n of notes) {
+    if (
+      !(n.tipo === 0 || n.tipo === 1) ||
+      n.itens.some((i) => i.notaAdiantamento !== null && advances.has(i.notaAdiantamento))
     )
-    .sort((a, b) => a.dataRecepcao.localeCompare(b.dataRecepcao) || a.nota - b.nota);
-  const byKey = new Map<
-    string,
-    { nota: number; position: number; received: string; left: number }[]
-  >();
-  for (const n of candidates)
+      continue;
     n.itens.forEach((i, index) => {
       if (i.servico) return;
-      const key = `${n.loja}|${i.produto}`;
-      const list = byKey.get(key) ?? [];
-      list.push({
-        nota: n.nota,
-        position: index + 1,
-        received: n.dataRecepcao,
-        left: i.quantidade,
-      });
-      byKey.set(key, list);
+      const key = `${n.nota}|${i.produto}`;
+      const list = tracked.get(key) ?? [];
+      list.push({ position: index + 1, left: i.quantidade });
+      tracked.set(key, list);
     });
-  const out = new Map<string, ExitRow>();
-  for (const s of [...sales].sort((a, b) => a.data.localeCompare(b.data) || a.venda - b.venda)) {
-    let need = s.quantidade;
-    for (const slot of byKey.get(`${s.loja}|${s.produto}`) ?? []) {
+  }
+  type Slot = { nota: number | null; position: number; left: number };
+  const queues = new Map<string, Slot[]>();
+  const queue = (key: string) => {
+    let q = queues.get(key);
+    if (!q) {
+      q = [{ nota: null, position: 0, left: opening.get(key) ?? 0 }];
+      queues.set(key, q);
+    }
+    return q;
+  };
+  const exits: ExitRow[] = [];
+  const lastSale = new Map<string, string>();
+  const ordered = [...movements].sort(
+    (a, b) => a.data.localeCompare(b.data) || a.movimento - b.movimento,
+  );
+  for (const m of ordered) {
+    const key = `${m.almoxarifado}|${m.produto}`;
+    const q = queue(key);
+    if (m.entrada) {
+      const lots =
+        m.tipo === "E1" && m.notaRecebida !== null
+          ? tracked.get(`${m.notaRecebida}|${m.produto}`)
+          : undefined;
+      if (m.tipo === "E1" && m.notaRecebida !== null && lots && noteById.has(m.notaRecebida)) {
+        let rest = m.quantidade;
+        for (const lot of lots) {
+          if (rest <= 0) break;
+          const take = Math.min(lot.left, rest);
+          if (take <= 0) continue;
+          lot.left -= take;
+          rest -= take;
+          q.push({ nota: m.notaRecebida, position: lot.position, left: take });
+        }
+        if (rest > 0) q.push({ nota: null, position: 0, left: rest });
+      } else q.push({ nota: null, position: 0, left: m.quantidade });
+      continue;
+    }
+    if (m.tipo === "S1") lastSale.set(key, m.data);
+    let need = m.quantidade;
+    for (const slot of q) {
       if (need <= 0) break;
-      if (slot.left <= 0 || slot.received > s.data) continue;
+      if (slot.left <= 0) continue;
       const take = Math.min(slot.left, need);
       slot.left -= take;
       need -= take;
-      const key = `${slot.nota}|${slot.position}|${s.venda}`;
-      const row = out.get(key) ?? {
+      if (slot.nota === null) continue;
+      const sale = m.venda !== null ? sales.get(m.venda) : undefined;
+      exits.push({
         nota: slot.nota,
         position: slot.position,
-        sale: s.venda,
-        plate: s.placa,
-        client: s.cliente,
-        sold_on: s.data,
-        quantity: 0,
-      };
-      row.quantity += take;
-      out.set(key, row);
+        movement: m.movimento,
+        kind: m.tipo,
+        kind_name: m.tipoNome,
+        dest_warehouse: m.almoxarifadoDestino,
+        sale: m.venda,
+        plate: sale?.placa ?? null,
+        client: sale?.cliente ?? null,
+        moved_on: m.data,
+        quantity: take,
+      });
     }
   }
-  return [...out.values()];
+  // The same movement may take from two slots of one purchase item: one row per note, item and movement.
+  const merged = new Map<string, ExitRow>();
+  for (const e of exits) {
+    const k = `${e.nota}|${e.position}|${e.movement}`;
+    const cur = merged.get(k);
+    if (cur) cur.quantity += e.quantity;
+    else merged.set(k, { ...e });
+  }
+  return { exits: [...merged.values()], lastSale };
 }
