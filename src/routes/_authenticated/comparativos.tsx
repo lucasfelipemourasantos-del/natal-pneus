@@ -174,6 +174,18 @@ function Comparativos() {
     enabled: needsOs(sideB),
   });
 
+  // Sales of sellers without commission (Humberto): they have OS and value but no breakdown by category.
+  const undetailedOf = (s: Side) => {
+    if (selected.size || s.kind === "vendedor" || s.kind === "operador" || !s.month) return null;
+    const rows = source.extra.filter(
+      (r) => r.competence === s.month && (!s.unit || r.unit_code === s.unit),
+    );
+    return {
+      os: rows.reduce((t, r) => t + r.sales_count, 0),
+      cents: rows.reduce((t, r) => t + r.sold_cents, 0),
+    };
+  };
+
   if (api.isPending)
     return (
       <PortalShell printable title="Vendas e resultados" eyebrow="Comparativos">
@@ -468,12 +480,14 @@ function Comparativos() {
             data: osA.data ?? null,
             enabled: needsOs(sideA),
             loading: osA.isFetching,
+            undetailed: undetailedOf(sideA),
           }}
           b={{
             title: describe(sideB),
             data: osB.data ?? null,
             enabled: needsOs(sideB),
             loading: osB.isFetching,
+            undetailed: undetailedOf(sideB),
           }}
         />
 
@@ -620,14 +634,30 @@ function Kpis({
   );
 }
 
-function OsPanel({
-  a,
-  b,
-}: {
-  a: { title: string; data: OsData | null; enabled: boolean; loading: boolean };
-  b: { title: string; data: OsData | null; enabled: boolean; loading: boolean };
-}) {
-  const cats = Object.keys(categoryLabels) as Category[];
+type Side3 = {
+  title: string;
+  data: OsData | null;
+  enabled: boolean;
+  loading: boolean;
+  undetailed: { os: number; cents: number } | null;
+};
+
+function OsPanel({ a, b }: { a: Side3; b: Side3 }) {
+  // Categories with no OS on either side are left out (the store simply does not sell that group).
+  const cats = (Object.keys(categoryLabels) as Category[]).filter(
+    (c) =>
+      (!a.data && !b.data) ||
+      (a.data?.categories[c].osCount ?? 0) > 0 ||
+      (b.data?.categories[c].osCount ?? 0) > 0,
+  );
+  const totalOf = (x: Side3) =>
+    x.data
+      ? {
+          os: x.data.osCount + (x.undetailed?.os ?? 0),
+          cents: x.data.osTotalCents + (x.undetailed?.cents ?? 0),
+        }
+      : null;
+  const ticketOf = (os: number, cents: number) => (os ? money(Math.round(cents / os)) : "—");
   const line = (x: typeof a, c: Category) => {
     const v = x.data?.categories[c];
     if (!v || !x.data) return { os: "—", share: "—", ticket: "—" };
@@ -644,9 +674,9 @@ function OsPanel({
     <section className="space-y-3 rounded-xl border border-border bg-card p-5">
       <h2 className="text-lg font-bold">OS que tiveram cada campo</h2>
       <p className="max-w-[75ch] text-sm text-muted-foreground">
-        Mostra em quantas OS houve pneus, peças, óleos ou serviços, quanto isso representa do total
-        de OS e o ticket médio dessas OS. O valor da OS é o total dela inteira (peças mais mão de
-        obra, por exemplo), não só do campo.
+        Mostra em quantas OS houve pneus, peças, óleos ou serviços e quanto isso representa das OS
+        que têm detalhamento. O ticket é o valor da <b>OS inteira</b> (pneus mais serviços, por
+        exemplo), não só do campo: por isso as linhas se sobrepõem e não devem ser somadas.
       </p>
       {a.data && b.data && (
         <CompareBars
@@ -688,7 +718,7 @@ function OsPanel({
                   % das OS
                 </th>,
                 <th key={`t${i}`} className="px-2 font-semibold">
-                  Ticket médio
+                  Ticket da OS inteira
                 </th>,
               ])}
             </tr>
@@ -696,17 +726,26 @@ function OsPanel({
           <tbody>
             <tr className="border-t border-border font-bold">
               <td className="py-2 pr-2">Todas as OS</td>
-              {[a, b].map((x, i) => (
-                <td key={i} colSpan={3} className="px-2 text-right">
-                  {x.data
-                    ? `${x.data.osCount.toLocaleString("pt-BR")} OS · ticket ${x.data.osCount ? money(Math.round(x.data.osTotalCents / x.data.osCount)) : "—"}`
-                    : x.enabled
-                      ? x.loading
-                        ? "Calculando…"
-                        : "—"
-                      : "Não se aplica"}
-                </td>
-              ))}
+              {[a, b].flatMap((x, i) => {
+                const all = totalOf(x);
+                return all
+                  ? [
+                      <td key={`o${i}`} className="px-2 text-right">
+                        {all.os.toLocaleString("pt-BR")}
+                      </td>,
+                      <td key={`s${i}`} className="px-2 text-right text-muted-foreground">
+                        100%
+                      </td>,
+                      <td key={`t${i}`} className="px-2 text-right">
+                        {ticketOf(all.os, all.cents)}
+                      </td>,
+                    ]
+                  : [
+                      <td key={`m${i}`} colSpan={3} className="px-2 text-right">
+                        {x.enabled ? (x.loading ? "Calculando…" : "—") : "Não se aplica"}
+                      </td>,
+                    ];
+              })}
             </tr>
             {cats.map((c) => {
               const la = line(a, c);
@@ -723,9 +762,28 @@ function OsPanel({
                 </tr>
               );
             })}
+            {(a.undetailed?.os || b.undetailed?.os) && (
+              <tr className="border-t border-border text-muted-foreground">
+                <td className="py-2 pr-2">Sem detalhamento (vendedor sem comissão)</td>
+                {[a, b].flatMap((x, i) => [
+                  <td key={`o${i}`} className="px-2 text-right">
+                    {x.undetailed ? x.undetailed.os.toLocaleString("pt-BR") : "—"}
+                  </td>,
+                  <td key={`s${i}`} className="px-2 text-right" />,
+                  <td key={`t${i}`} className="px-2 text-right">
+                    {x.undetailed ? ticketOf(x.undetailed.os, x.undetailed.cents) : "—"}
+                  </td>,
+                ])}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-muted-foreground">
+        "Todas as OS" inclui as OS dos vendedores sem comissão (como o Humberto), que não têm
+        categoria. Os percentuais das categorias são sobre as OS que têm detalhamento. Ficam de
+        fora, de propósito, o estoque e o usuário SUPERVISOR.
+      </p>
     </section>
   );
 }
