@@ -393,6 +393,7 @@ function Comparativos() {
           b={{ title: describe(sideB), result: rb, os: osB.data ?? null, loading: osB.isFetching }}
           filtered={selected.size > 0}
           osAvailable={[needsOs(sideA), needsOs(sideB)]}
+          extraOs={[undetailedOf(sideA)?.os ?? 0, undetailedOf(sideB)?.os ?? 0]}
         />
 
         {allFields.length > 0 && (
@@ -550,17 +551,26 @@ function Kpis({
   b,
   filtered,
   osAvailable,
+  extraOs,
 }: {
   a: { title: string; result: ReturnType<typeof sideResult>; os: OsData | null; loading: boolean };
   b: { title: string; result: ReturnType<typeof sideResult>; os: OsData | null; loading: boolean };
   filtered: boolean;
   osAvailable: [boolean, boolean];
+  /** OS of the sellers without commission, per side (they have no commission report to count from). */
+  extraOs: [number, number];
 }) {
   // With fields chosen, the OS count and the average ticket are about the OS that contain those fields.
   const figures = (
     x: typeof a,
     hasOs: boolean,
+    extra: number,
   ): { sold: number; os: number | null; ticket: number | null } => {
+    if (!filtered && hasOs) {
+      // The OS are counted from the sale items of the chosen month itself (the monthly summary only covers the latest month).
+      const os = x.os ? x.os.osCount + extra : null;
+      return { sold: x.result.soldCents, os, ticket: os ? ticketOf(x.result.soldCents, os) : null };
+    }
     if (!filtered) {
       return {
         sold: x.result.soldCents,
@@ -575,8 +585,8 @@ function Kpis({
       ticket: sel && sel.osCount ? Math.round(sel.osTotalCents / sel.osCount) : null,
     };
   };
-  const fa = figures(a, osAvailable[0]);
-  const fb = figures(b, osAvailable[1]);
+  const fa = figures(a, osAvailable[0], extraOs[0]);
+  const fb = figures(b, osAvailable[1], extraOs[1]);
   const cards: { k: string; a: string; b: string; d: string | null; hint: string }[] = [
     {
       k: filtered ? "Vendido nos campos" : "Vendido",
