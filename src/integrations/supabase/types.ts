@@ -299,6 +299,12 @@ export type Database = {
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
         Relationships: []
       }
+      purchase_exits: {
+        Row: { client: string | null; nota: number; plate: string | null; position: number; quantity: number; sale: number; sold_on: string }
+        Insert: { client?: string | null; nota: number; plate?: string | null; position: number; quantity: number; sale: number; sold_on: string }
+        Update: { client?: string | null; nota?: number; plate?: string | null; position?: number; quantity?: number; sale?: number; sold_on?: string }
+        Relationships: []
+      }
       suppliers: {
         Row: { active: boolean; city: string | null; cnpj: string | null; code: number; fantasy: string | null; name: string; uf: string | null }
         Insert: { active?: boolean; city?: string | null; cnpj?: string | null; code: number; fantasy?: string | null; name: string; uf?: string | null }
@@ -835,6 +841,7 @@ export type Database = {
       }
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
       replace_purchase_notes: { Args: { _from: string; _notes: Json; _to: string }; Returns: number }
+      replace_purchase_exits: { Args: { _from: string; _rows: Json; _to: string }; Returns: number }
       upsert_suppliers: { Args: { _rows: Json }; Returns: number }
       replace_manager_extra_sales: { Args: { _competence: string; _rows: Json }; Returns: number }
       replace_sales_without_commission: { Args: { _competence: string; _rows: Json }; Returns: number }

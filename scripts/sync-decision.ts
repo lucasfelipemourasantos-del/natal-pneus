@@ -14,10 +14,13 @@ import {
   type ApiTechnicianCommissions,
 } from "../src/lib/decision-sync.ts";
 import {
+  allocateExits,
   purchaseRows,
   supplierRows,
   type ApiPurchase,
+  type ApiSale,
   type ApiSupplier,
+  type SaleLine,
 } from "../src/lib/purchases.ts";
 
 /** Network blips (timeouts, resets) are retried a few times; HTTP errors are returned as-is. */
@@ -346,6 +349,60 @@ async function syncPurchases(env: Record<string, string>, token: string, de: str
   });
 }
 
+/**
+ * Probable destination of the purchased items (see allocateExits): last 62 days of notes against the sales of the same days
+ * until today. Needs the 0031 database update; never stops the sync.
+ */
+async function syncPurchaseExits(env: Record<string, string>, token: string) {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" }));
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const to = iso(now);
+  const from = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 62));
+  const notes: ApiPurchase[] = [];
+  let after: number | null = null;
+  do {
+    const page: { compras: ApiPurchase[]; proximo: number | null } = await decisionGet(
+      env,
+      token,
+      `/compras?de=${from}&ate=${to}${after === null ? "" : `&apos=${after}`}`,
+    );
+    notes.push(...page.compras);
+    after = page.proximo ?? null;
+  } while (after !== null);
+  const lines: SaleLine[] = [];
+  for (const loja of [1, 2, 3, 4]) {
+    let cursor: number | null = null;
+    do {
+      const page: { vendas: ApiSale[]; proximo: number | null } = await decisionGet(
+        env,
+        token,
+        `/vendas?de=${from}&ate=${to}&loja=${loja}${cursor === null ? "" : `&apos=${cursor}`}`,
+      );
+      for (const sale of page.vendas) {
+        if (sale.situacao !== "finalizada") continue;
+        for (const item of sale.itens)
+          if (!item.cancelado && !item.servico)
+            lines.push({
+              loja,
+              venda: sale.venda,
+              placa: sale.placa,
+              cliente: sale.clienteNome,
+              data: sale.data.slice(0, 10),
+              produto: item.produto,
+              quantidade: item.quantidade,
+            });
+      }
+      cursor = page.proximo ?? null;
+    } while (cursor !== null);
+  }
+  return rpcCall(env, "replace_purchase_exits", {
+    _from: from,
+    _to: to,
+    _rows: allocateExits(notes, lines),
+  });
+}
+
 async function syncSuppliers(env: Record<string, string>, token: string) {
   const { fornecedores } = await decisionGet<{ fornecedores: ApiSupplier[] }>(
     env,
@@ -455,6 +512,12 @@ for (const month of monthsToSync()) {
   console.log(
     `${new Date().toLocaleString("pt-BR")} · ${month} · ${api.itens.length} itens · ${changes.join(" · ")}${techs}${semComissao}${gerente}${compras} · ${((Date.now() - started) / 1000).toFixed(1)}s`,
   );
+}
+// Destino provável dos itens comprados (precisa das notas já gravadas acima). Nunca atrapalha a atualização.
+try {
+  console.log(`destino das compras: ${await syncPurchaseExits(env, token)}`);
+} catch (err) {
+  console.log(`destino das compras: ERRO ${err instanceof Error ? err.message : String(err)}`);
 }
 // Aviso por e-mail dos documentos da empresa que vencem (45 dias, 15 dias, vencido). Nunca atrapalha a atualização.
 try {

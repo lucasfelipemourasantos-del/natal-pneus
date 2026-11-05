@@ -33,6 +33,16 @@ export type ApiPurchase = {
   itens: ApiPurchaseItem[];
 };
 
+/** The part of a sale the destination of purchases needs. */
+export type ApiSale = {
+  venda: number;
+  situacao: string;
+  data: string;
+  placa: string | null;
+  clienteNome: string | null;
+  itens: { produto: number; servico: boolean; cancelado: boolean; quantidade: number }[];
+};
+
 export type ApiSupplier = {
   fornecedor: number;
   nome: string;
@@ -120,4 +130,82 @@ export function isPurchase(note: StoredNote, all: StoredNote[]) {
   )
     return false;
   return true;
+}
+
+/** A product line of a finished sale (services are left out by the caller). */
+export type SaleLine = {
+  loja: number;
+  venda: number;
+  placa: string | null;
+  cliente: string | null;
+  data: string;
+  produto: number;
+  quantidade: number;
+};
+
+export type ExitRow = {
+  nota: number;
+  position: number;
+  sale: number;
+  plate: string | null;
+  client: string | null;
+  sold_on: string;
+  quantity: number;
+};
+
+/**
+ * Probable destination of each purchased item: the sales of the same product in the same store, after the note was received,
+ * taken from the oldest note first. It is an inference (older stock may have been used), shown as "provável".
+ * Transfers, returns, services and faturadas already covered by an advance are not allocated.
+ */
+export function allocateExits(notes: ApiPurchase[], sales: SaleLine[]): ExitRow[] {
+  const advances = new Set(notes.filter((n) => n.tipo === 1).map((n) => n.nota));
+  const candidates = notes
+    .filter(
+      (n) =>
+        (n.tipo === 0 || n.tipo === 1) &&
+        !n.itens.some((i) => i.notaAdiantamento !== null && advances.has(i.notaAdiantamento)),
+    )
+    .sort((a, b) => a.dataRecepcao.localeCompare(b.dataRecepcao) || a.nota - b.nota);
+  const byKey = new Map<
+    string,
+    { nota: number; position: number; received: string; left: number }[]
+  >();
+  for (const n of candidates)
+    n.itens.forEach((i, index) => {
+      if (i.servico) return;
+      const key = `${n.loja}|${i.produto}`;
+      const list = byKey.get(key) ?? [];
+      list.push({
+        nota: n.nota,
+        position: index + 1,
+        received: n.dataRecepcao,
+        left: i.quantidade,
+      });
+      byKey.set(key, list);
+    });
+  const out = new Map<string, ExitRow>();
+  for (const s of [...sales].sort((a, b) => a.data.localeCompare(b.data) || a.venda - b.venda)) {
+    let need = s.quantidade;
+    for (const slot of byKey.get(`${s.loja}|${s.produto}`) ?? []) {
+      if (need <= 0) break;
+      if (slot.left <= 0 || slot.received > s.data) continue;
+      const take = Math.min(slot.left, need);
+      slot.left -= take;
+      need -= take;
+      const key = `${slot.nota}|${slot.position}|${s.venda}`;
+      const row = out.get(key) ?? {
+        nota: slot.nota,
+        position: slot.position,
+        sale: s.venda,
+        plate: s.placa,
+        client: s.cliente,
+        sold_on: s.data,
+        quantity: 0,
+      };
+      row.quantity += take;
+      out.set(key, row);
+    }
+  }
+  return [...out.values()];
 }

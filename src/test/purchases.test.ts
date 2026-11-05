@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isPurchase, itemTotalCents, purchaseRows, type ApiPurchase } from "@/lib/purchases";
+import {
+  allocateExits,
+  isPurchase,
+  itemTotalCents,
+  purchaseRows,
+  type ApiPurchase,
+  type SaleLine,
+} from "@/lib/purchases";
 
 const item = {
   produto: 1501,
@@ -54,5 +61,60 @@ describe("purchase notes", () => {
       { nota: 5, kind: 0, total_cents: 5000, advance_notes: [4] },
     ];
     expect(notes.filter((n) => isPurchase(n, notes)).map((n) => n.nota)).toEqual([1, 4]);
+  });
+});
+
+describe("probable destination of purchased items", () => {
+  const note = (nota: number, received: string, qty: number): ApiPurchase => ({
+    nota,
+    numero: String(nota),
+    serie: "1",
+    chave: null,
+    loja: 2,
+    almoxarifado: 2,
+    fornecedor: 1,
+    tipo: 0,
+    tipoNome: "Faturada",
+    dataEmissao: received,
+    dataRecepcao: received,
+    valorTotal: 100,
+    valorDesconto: 0,
+    itens: [{ ...item, produto: 7, quantidade: qty, valorIcmsSt: 0 }],
+  });
+  const sale = (venda: number, data: string, qtd: number, loja = 2): SaleLine => ({
+    loja,
+    venda,
+    placa: "ABC1D23",
+    cliente: "CLIENTE",
+    data,
+    produto: 7,
+    quantidade: qtd,
+  });
+
+  it("takes the oldest note first and only sales after the entry, in the same store", () => {
+    const rows = allocateExits(
+      [note(2, "2026-10-10", 5), note(1, "2026-10-02", 2)],
+      [
+        sale(10, "2026-10-01", 1),
+        sale(11, "2026-10-05", 3),
+        sale(12, "2026-10-12", 1),
+        sale(13, "2026-10-12", 1, 3),
+      ],
+    );
+    expect(rows.map((r) => [r.nota, r.sale, r.quantity])).toEqual([
+      [1, 11, 2],
+      [2, 12, 1],
+    ]);
+  });
+
+  it("ignores transfers and faturadas covered by an advance", () => {
+    const transfer = { ...note(3, "2026-10-02", 5), tipo: 2 };
+    const advance = { ...note(4, "2026-10-02", 5), tipo: 1 };
+    const covered = {
+      ...note(5, "2026-10-03", 5),
+      itens: [{ ...item, produto: 7, quantidade: 5, valorIcmsSt: 0, notaAdiantamento: 4 }],
+    };
+    const rows = allocateExits([transfer, advance, covered], [sale(20, "2026-10-08", 2)]);
+    expect(rows.map((r) => r.nota)).toEqual([4]);
   });
 });

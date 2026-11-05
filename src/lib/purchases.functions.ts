@@ -39,23 +39,45 @@ export const readPurchases = createServerFn({ method: "GET" })
       notes.push(...(rows ?? []));
       if ((rows ?? []).length < 1000) break;
     }
-    // Which notes point to an advance note (the same purchase, counted once).
+    // Per note: which advance note it points to (the same purchase, counted once) and how many product units are still in stock
+    // (bought minus the probable exits; empty exits mean nothing was matched, so the whole quantity is still there).
     const advance = new Map<number, number[]>();
-    for (let i = 0; i < notes.length; i += 100) {
-      const ids = notes.slice(i, i + 100).map((n) => n.nota);
-      const { data: rows } = await context.supabase
+    const bought = new Map<number, number>();
+    const exited = new Map<number, number>();
+    let exitsReady = true;
+    for (let i = 0; i < notes.length; i += 50) {
+      const ids = notes.slice(i, i + 50).map((n) => n.nota);
+      const { data: items } = await context.supabase
         .from("purchase_note_items")
-        .select("nota,advance_note")
+        .select("nota,quantity,is_service,advance_note")
         .in("nota", ids)
-        .not("advance_note", "is", null);
-      for (const r of rows ?? [])
+        .range(0, 9999);
+      for (const r of items ?? []) {
         if (r.advance_note !== null)
           advance.set(r.nota, [...new Set([...(advance.get(r.nota) ?? []), r.advance_note])]);
+        if (!r.is_service) bought.set(r.nota, (bought.get(r.nota) ?? 0) + Number(r.quantity));
+      }
+      const { data: exits, error: exitsError } = await context.supabase
+        .from("purchase_exits")
+        .select("nota,quantity")
+        .in("nota", ids)
+        .range(0, 9999);
+      if (exitsError) exitsReady = false;
+      for (const r of exits ?? [])
+        exited.set(r.nota, (exited.get(r.nota) ?? 0) + Number(r.quantity));
     }
-    const suppliers = await context.supabase.from("suppliers").select("code,name,fantasy");
+    const suppliers = await context.supabase
+      .from("suppliers")
+      .select("code,name,fantasy")
+      .range(0, 4999);
     return {
-      notes: notes.map((n) => ({ ...n, advance_notes: advance.get(n.nota) ?? [] })),
+      notes: notes.map((n) => ({
+        ...n,
+        advance_notes: advance.get(n.nota) ?? [],
+        in_stock: Math.max(0, (bought.get(n.nota) ?? 0) - (exited.get(n.nota) ?? 0)),
+      })),
       suppliers: suppliers.data ?? [],
+      exitsReady,
     };
   });
 
@@ -63,11 +85,18 @@ export const readPurchaseItems = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ nota: z.number().int() }))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("purchase_note_items")
-      .select("position,product_code,description,is_service,quantity,unit_cents,item_total_cents")
-      .eq("nota", data.nota)
-      .order("position");
-    if (error) throw new Error("Não foi possível consultar os itens.");
-    return rows ?? [];
+    const [items, exits] = await Promise.all([
+      context.supabase
+        .from("purchase_note_items")
+        .select("position,product_code,description,is_service,quantity,unit_cents,item_total_cents")
+        .eq("nota", data.nota)
+        .order("position"),
+      context.supabase
+        .from("purchase_exits")
+        .select("position,sale,plate,client,sold_on,quantity")
+        .eq("nota", data.nota)
+        .order("sold_on"),
+    ]);
+    if (items.error) throw new Error("Não foi possível consultar os itens.");
+    return { items: items.data ?? [], exits: exits.error ? [] : (exits.data ?? []) };
   });

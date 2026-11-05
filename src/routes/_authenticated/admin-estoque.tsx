@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Lock } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
 import { monthLabel } from "@/lib/commissions";
@@ -44,6 +44,12 @@ function lastMonths(count: number) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
 }
+
+/** Days after the entry when an item still in stock raises the alert. */
+const STALLED_DAYS = 30;
+const daysSince = (iso: string) =>
+  Math.floor((Date.now() - new Date(iso + "T12:00:00").getTime()) / 86_400_000);
+const qty = (n: number) => String(Math.round(n * 1000) / 1000).replace(".", ",");
 
 const day = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 
@@ -99,14 +105,19 @@ function AdminEstoque() {
     cents: all.filter((n) => n.unit_code === u).reduce((t, n) => t + n.total_cents, 0),
   }));
   const transfers = inUnit.filter((n) => n.kind === 2);
+  const ready = data?.exitsReady ?? false;
+  const stalled = purchases.filter(
+    (n) => ready && n.in_stock > 0 && daysSince(n.received_on) > STALLED_DAYS,
+  );
 
   return (
     <PortalShell title="Controle de estoque" eyebrow="Gestão · ADM RH">
       <p className="flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm">
         <Lock size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
-          <b>Etapa 1: entradas.</b> Mostra as notas fiscais de compra dadas entrada em cada loja. O
-          destino de cada item (OS ou estoque) entra quando o Decision liberar os movimentos de
+          <b>Entradas e destino provável.</b> Mostra as notas de compra de cada loja. A saída de
+          cada item em OS é uma estimativa (mesmo produto, mesma loja, depois da entrada, da nota
+          mais antiga para a mais nova); ela fica exata quando o Decision liberar os movimentos de
           estoque.
         </span>
       </p>
@@ -171,6 +182,15 @@ function AdminEstoque() {
                   <p className="text-xl font-extrabold tabular-nums">{money(u.cents)}</p>
                 </div>
               ))}
+            {ready && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-sm text-muted-foreground">
+                  Notas com item parado há mais de {STALLED_DAYS} dias
+                </p>
+                <p className="text-xl font-extrabold tabular-nums">{stalled.length} notas</p>
+                <p className="text-xs text-muted-foreground">Provável, conferir no balanço</p>
+              </div>
+            )}
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">Transferências entre lojas</p>
               <p className="text-xl font-extrabold tabular-nums">{transfers.length} notas</p>
@@ -209,11 +229,18 @@ function AdminEstoque() {
                           ? " · já contada no adiantamento"
                           : ""}
                       </span>
+                      {ready && counted.has(n.nota) && n.in_stock > 0 && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${daysSince(n.received_on) > STALLED_DAYS ? "bg-warning-soft text-foreground" : "bg-muted text-muted-foreground"}`}
+                        >
+                          Em estoque (provável): {qty(n.in_stock)}
+                        </span>
+                      )}
                       <span className="w-28 text-right font-semibold tabular-nums">
                         {money(n.total_cents)}
                       </span>
                     </summary>
-                    <NoteItems nota={n.nota} warehouse={n.warehouse} />
+                    <NoteItems nota={n.nota} warehouse={n.warehouse} ready={ready} />
                   </details>
                 ))}
               </div>
@@ -225,7 +252,15 @@ function AdminEstoque() {
   );
 }
 
-function NoteItems({ nota, warehouse }: { nota: number; warehouse: number }) {
+function NoteItems({
+  nota,
+  warehouse,
+  ready,
+}: {
+  nota: number;
+  warehouse: number;
+  ready: boolean;
+}) {
   const { data, isPending } = useQuery({
     queryKey: ["purchase-items", nota],
     queryFn: () => readPurchaseItems({ data: { nota } }),
@@ -246,17 +281,45 @@ function NoteItems({ nota, warehouse }: { nota: number; warehouse: number }) {
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((i) => (
-              <tr key={i.position} className="border-t border-border">
-                <td className="py-1.5 pr-2">
-                  {i.product_code} · {i.description}
-                  {i.is_service ? " (serviço)" : ""}
-                </td>
-                <td className="px-2 text-right">{i.quantity}</td>
-                <td className="px-2 text-right">{money(i.unit_cents)}</td>
-                <td className="pl-2 text-right">{money(i.item_total_cents)}</td>
-              </tr>
-            ))}
+            {(data?.items ?? []).map((i) => {
+              const out = (data?.exits ?? []).filter((x) => x.position === i.position);
+              const left = Math.max(
+                0,
+                Number(i.quantity) - out.reduce((t, x) => t + Number(x.quantity), 0),
+              );
+              return (
+                <Fragment key={i.position}>
+                  <tr className="border-t border-border">
+                    <td className="py-1.5 pr-2">
+                      {i.product_code} · {i.description}
+                      {i.is_service ? " (serviço)" : ""}
+                    </td>
+                    <td className="px-2 text-right">{i.quantity}</td>
+                    <td className="px-2 text-right">{money(i.unit_cents)}</td>
+                    <td className="pl-2 text-right">{money(i.item_total_cents)}</td>
+                  </tr>
+                  {ready &&
+                    !i.is_service &&
+                    out.map((x) => (
+                      <tr key={x.sale} className="text-xs text-muted-foreground">
+                        <td className="pb-1 pl-4" colSpan={4}>
+                          Provável saída: OS {x.sale}
+                          {x.plate ? ` · placa ${x.plate}` : ""}
+                          {x.client ? ` · ${x.client}` : ""} · {x.sold_on.slice(8, 10)}/
+                          {x.sold_on.slice(5, 7)} · {qty(Number(x.quantity))} un.
+                        </td>
+                      </tr>
+                    ))}
+                  {ready && !i.is_service && left > 0 && (
+                    <tr className="text-xs">
+                      <td className="pb-1 pl-4 font-semibold" colSpan={4}>
+                        Em estoque (provável): {qty(left)} un.
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       )}
