@@ -25,11 +25,21 @@ import {
   type SaleInfo,
 } from "../src/lib/purchases.ts";
 
-/** Network blips (timeouts, resets) are retried a few times; HTTP errors are returned as-is. */
+/**
+ * Network blips (timeouts, resets) are retried a few times. The Decision allows 60 requests a minute: on a 429 it waits the
+ * seconds it asks for (up to 4 times) and tries again. Other HTTP errors are returned as-is.
+ */
 async function fetchRetry(url: string, init?: RequestInit, attempts = 3): Promise<Response> {
-  for (let i = 1; ; i++) {
+  for (let i = 1, waits = 0; ; i++) {
     try {
-      return await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+      if (res.status === 429 && waits < 4) {
+        waits++;
+        const seconds = Number(res.headers.get("retry-after")) || 40;
+        await new Promise((r) => setTimeout(r, (seconds + 2) * 1000));
+        continue;
+      }
+      return res;
     } catch (err) {
       if (i >= attempts) throw err;
       await new Promise((r) => setTimeout(r, 2000 * i));
