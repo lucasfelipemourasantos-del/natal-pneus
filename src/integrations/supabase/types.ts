@@ -299,6 +299,12 @@ export type Database = {
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
         Relationships: []
       }
+      customer_type_changes: {
+        Row: { customer_code: number; customer_name: string | null; event_at: string | null; new_name: string | null; new_type: number | null; notice: number; old_name: string | null; old_type: number | null; received_at: string; seen_at: string | null; seen_by: string | null }
+        Insert: { customer_code: number; customer_name?: string | null; event_at?: string | null; new_name?: string | null; new_type?: number | null; notice: number; old_name?: string | null; old_type?: number | null; received_at?: string; seen_at?: string | null; seen_by?: string | null }
+        Update: { customer_code?: number; customer_name?: string | null; event_at?: string | null; new_name?: string | null; new_type?: number | null; notice?: number; old_name?: string | null; old_type?: number | null; received_at?: string; seen_at?: string | null; seen_by?: string | null }
+        Relationships: []
+      }
       purchase_exits: {
         Row: { client: string | null; dest_warehouse: number | null; kind: string; kind_name: string; moved_on: string; movement: number; nota: number; plate: string | null; position: number; quantity: number; sale: number | null }
         Insert: { client?: string | null; dest_warehouse?: number | null; kind: string; kind_name: string; moved_on: string; movement: number; nota: number; plate?: string | null; position: number; quantity: number; sale?: number | null }
@@ -854,6 +860,7 @@ export type Database = {
       set_decision_roles: { Args: { _roles: Json }; Returns: number }
       replace_purchase_notes: { Args: { _from: string; _notes: Json; _to: string }; Returns: number }
       replace_purchase_exits: { Args: { _from: string; _rows: Json; _to: string }; Returns: number }
+      record_customer_type_change: { Args: { _code: number; _event_at: string; _name: string; _new: number; _new_name: string; _notice: number; _old: number; _old_name: string; _secret: string }; Returns: boolean }
       replace_stock_balances: { Args: { _rows: Json }; Returns: number }
       upsert_products: { Args: { _rows: Json }; Returns: number }
       upsert_suppliers: { Args: { _rows: Json }; Returns: number }

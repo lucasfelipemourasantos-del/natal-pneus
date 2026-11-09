@@ -1,7 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ArrowRight, BadgePercent, BellRing, Lock, UserPlus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { ArrowRight, BadgePercent, Lock } from "lucide-react";
 import { PortalShell } from "@/components/portal-shell";
-import { demoDay } from "@/lib/demo-dates";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { CUSTOMER_TYPES } from "@/lib/customer-webhook";
+import { fieldClass } from "@/lib/portal-data";
 
 export const Route = createFileRoute("/_authenticated/admin-alertas")({
   beforeLoad: ({ context }) => {
@@ -12,8 +17,7 @@ export const Route = createFileRoute("/_authenticated/admin-alertas")({
       { title: "Alertas de clientes — Gestão — Natal Pneus" },
       {
         name: "description",
-        content:
-          "Alertas de novos clientes de atacado e de mudanças de tipo de cliente no Decision.",
+        content: "Mudanças de tipo de cliente no Decision: varejo, frota e atacado.",
       },
       { property: "og:title", content: "Alertas de clientes — Gestão — Natal Pneus" },
       {
@@ -27,131 +31,150 @@ export const Route = createFileRoute("/_authenticated/admin-alertas")({
   component: AdminAlertas,
 });
 
-const rules = [
-  {
-    icon: UserPlus,
-    title: "Novo cliente de atacado",
-    text: "Todo cliente cadastrado como atacado gera um alerta.",
-  },
-  { icon: ArrowRight, title: "Varejo → Frota", text: "Cliente que passou de varejo para frota." },
-  {
-    icon: ArrowRight,
-    title: "Varejo → Atacado",
-    text: "Cliente que passou de varejo para atacado.",
-  },
-  { icon: ArrowRight, title: "Frota → Atacado", text: "Cliente que passou de frota para atacado." },
-  {
-    icon: BadgePercent,
-    title: "Desconto acima do limite",
-    text: "Item vendido com desconto maior que o limite permitido ao vendedor.",
-  },
-];
+const FILTERS = [
+  { key: "", label: "Todas as mudanças" },
+  { key: "2-3", label: "Varejo → Atacado" },
+  { key: "4-3", label: "Frota → Atacado" },
+  { key: "2-4", label: "Varejo → Frota" },
+] as const;
 
-const examples = [
-  [
-    `${demoDay()} · 11:20`,
-    "Desconto de 18% (limite 10%)",
-    "OS 169950 · Pneu 205/55R16",
-    "NP3",
-    "Vendedor 105",
-  ],
-  [
-    `${demoDay()} · 10:42`,
-    "Novo cliente de atacado",
-    "Cód. 58213 · Transportes Exemplo LTDA",
-    "NP2",
-    "Vendedor 111",
-  ],
-  [
-    `${demoDay()} · 09:15`,
-    "Varejo → Atacado",
-    "Cód. 40177 · Cliente Exemplo",
-    "NP1",
-    "Vendedor 36",
-  ],
-  [
-    `${demoDay(1)} · 16:03`,
-    "Varejo → Frota",
-    "Cód. 39920 · Locadora Exemplo",
-    "NP4",
-    "Vendedor 185",
-  ],
-];
+const typeName = (code: number | null, name: string | null) =>
+  (name && name.trim()) || (code !== null ? (CUSTOMER_TYPES[code] ?? String(code)) : "—");
 
 function AdminAlertas() {
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<string>("");
+  const [onlyNew, setOnlyNew] = useState(false);
+  const { data, isPending, error } = useQuery({
+    queryKey: ["customer-type-changes"],
+    queryFn: async () => {
+      const { data: rows, error: err } = await supabase
+        .from("customer_type_changes")
+        .select(
+          "notice,customer_code,customer_name,old_type,new_type,old_name,new_name,event_at,received_at,seen_at",
+        )
+        .order("received_at", { ascending: false })
+        .limit(300);
+      if (err)
+        throw new Error(
+          "Não foi possível consultar os alertas. A atualização do banco (0033) já foi aplicada?",
+        );
+      return rows ?? [];
+    },
+  });
+
+  const rows = (data ?? []).filter(
+    (r) => (!filter || `${r.old_type}-${r.new_type}` === filter) && (!onlyNew || !r.seen_at),
+  );
+  const unseen = (data ?? []).filter((r) => !r.seen_at).length;
+
+  async function markSeen() {
+    await supabase
+      .from("customer_type_changes")
+      .update({ seen_at: new Date().toISOString() })
+      .is("seen_at", null);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["customer-type-changes"] }),
+      qc.invalidateQueries({ queryKey: ["customer-alerts-count"] }),
+    ]);
+  }
+
   return (
     <PortalShell title="Alertas de clientes" eyebrow="Gestão · ADM RH">
-      <p className="flex items-start gap-3 rounded-xl border border-border bg-warning-soft p-4 text-sm">
-        <Lock size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <span>
-          <b>Em preparação.</b> Os alertas começam a funcionar quando a API do Decision liberar os
-          dados de clientes (tipo varejo, frota ou atacado e as alterações) e o limite de desconto
-          de cada vendedor estiver definido. Os exemplos abaixo são ilustrativos.
-        </span>
+      <p className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+        O Decision avisa o portal, na hora, quando o tipo de um cliente muda de varejo para frota,
+        de varejo para atacado ou de frota para atacado. Outras mudanças não geram aviso.
       </p>
 
-      <section className="mt-6" aria-labelledby="regras">
-        <h2 id="regras" className="text-lg font-bold">
-          O que gera alerta
-        </h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {rules.map(({ icon: Icon, title, text }) => (
-            <li
-              key={title}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
-            >
-              <span className="grid size-9 place-items-center rounded-lg bg-accent text-accent-foreground">
-                <Icon size={18} aria-hidden="true" />
-              </span>
-              <span className="font-semibold">{title}</span>
-              <span className="text-sm text-muted-foreground">{text}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 max-w-[75ch] text-sm text-muted-foreground">
-          Cada alerta traz o <b className="text-foreground">código do cliente</b>, a loja, quando
-          aconteceu e, se o Decision informar, quem fez o cadastro ou a alteração, para você
-          verificar o que aconteceu.
-        </p>
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Mudança
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className={fieldClass}>
+            {FILTERS.map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} />
+          Só os novos
+        </label>
+        {unseen > 0 && (
+          <Button variant="outline" onClick={markSeen}>
+            Marcar {unseen} como visto{unseen > 1 ? "s" : ""}
+          </Button>
+        )}
+      </div>
+
+      <section className="mt-5 min-w-0 space-y-3 rounded-xl border border-border bg-card p-5">
+        {isPending ? (
+          <p className="text-muted-foreground">Carregando…</p>
+        ) : error ? (
+          <p role="alert" className="text-destructive">
+            {error.message}
+          </p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhum aviso ainda. Quando um cliente mudar de tipo no Decision, ele aparece aqui.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {rows.map((r) => (
+              <div
+                key={r.notice}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm"
+              >
+                <span className="w-32 tabular-nums text-muted-foreground">
+                  {r.event_at
+                    ? new Date(r.event_at).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}
+                </span>
+                <span className="min-w-56 flex-1 font-semibold">
+                  {r.customer_code} · {r.customer_name || "Cliente sem nome"}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${r.new_type === 3 ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
+                >
+                  {typeName(r.old_type, r.old_name)}
+                  <ArrowRight size={13} aria-hidden="true" />
+                  {typeName(r.new_type, r.new_name)}
+                </span>
+                {!r.seen_at && (
+                  <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-white">
+                    Novo
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section
-        className="mt-6 rounded-xl border border-border bg-card p-5"
-        aria-labelledby="exemplos"
-      >
-        <h2 id="exemplos" className="inline-flex items-center gap-2 text-lg font-bold">
-          <BellRing size={18} className="text-primary" aria-hidden="true" /> Alertas recentes
-          <span className="text-xs font-normal text-muted-foreground">
-            (exemplo ilustrativo, dados fictícios)
-          </span>
-        </h2>
-        <div className="mt-3 overflow-x-auto opacity-80">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="py-2 pr-2 font-semibold">Quando</th>
-                <th className="px-2 font-semibold">Alerta</th>
-                <th className="px-2 font-semibold">Cliente</th>
-                <th className="px-2 font-semibold">Loja</th>
-                <th className="pl-2 font-semibold">Feito por</th>
-              </tr>
-            </thead>
-            <tbody>
-              {examples.map((r) => (
-                <tr key={r.join("|")} className="border-t border-border">
-                  <td className="whitespace-nowrap py-2.5 pr-2 tabular-nums">{r[0]}</td>
-                  <td className="whitespace-nowrap px-2 font-semibold">{r[1]}</td>
-                  <td className="min-w-48 px-2">{r[2]}</td>
-                  <td className="px-2">{r[3]}</td>
-                  <td className="whitespace-nowrap pl-2 text-muted-foreground">{r[4]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Os alertas também poderão aparecer no sininho do topo e, se desejado, chegar por e-mail.
-        </p>
+      <section className="mt-6 rounded-xl border border-border bg-card p-5">
+        <h2 className="text-lg font-bold">Ainda em preparação</h2>
+        <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
+          <li className="flex items-start gap-3">
+            <Lock size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>
+              <b className="text-foreground">Novo cliente de atacado:</b> o Decision ainda não avisa
+              cadastros novos.
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <BadgePercent size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>
+              <b className="text-foreground">Desconto acima do limite:</b> precisa do limite de
+              desconto de cada vendedor.
+            </span>
+          </li>
+        </ul>
       </section>
     </PortalShell>
   );

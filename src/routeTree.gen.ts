@@ -39,6 +39,7 @@ import { Route as AuthenticatedTrajetoriaRouteImport } from './routes/_authentic
 import { Route as AuthenticatedUnidadesRouteImport } from './routes/_authenticated/unidades'
 import { Route as AuthenticatedPatrimonioIndexRouteImport } from './routes/_authenticated/patrimonio.index'
 import { Route as AuthenticatedPatrimonioCodeRouteImport } from './routes/_authenticated/patrimonio.$code'
+import { Route as ApiPublicDecisionClienteRouteImport } from './routes/api/public/decision-cliente'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -201,6 +202,12 @@ const AuthenticatedPatrimonioCodeRoute =
     path: '/patrimonio/$code',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicDecisionClienteRoute =
+  ApiPublicDecisionClienteRouteImport.update({
+    id: '/api/public/decision-cliente',
+    path: '/api/public/decision-cliente',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
   '/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/api/public/decision-cliente': typeof ApiPublicDecisionClienteRoute
   '/patrimonio/': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRoutesByTo {
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/unidades': typeof AuthenticatedUnidadesRoute
   '/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/api/public/decision-cliente': typeof ApiPublicDecisionClienteRoute
   '/patrimonio': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRoutesById {
@@ -295,6 +304,7 @@ export interface FileRoutesById {
   '/_authenticated/trajetoria': typeof AuthenticatedTrajetoriaRoute
   '/_authenticated/unidades': typeof AuthenticatedUnidadesRoute
   '/_authenticated/patrimonio/$code': typeof AuthenticatedPatrimonioCodeRoute
+  '/api/public/decision-cliente': typeof ApiPublicDecisionClienteRoute
   '/_authenticated/patrimonio/': typeof AuthenticatedPatrimonioIndexRoute
 }
 export interface FileRouteTypes {
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/trajetoria'
     | '/unidades'
     | '/patrimonio/$code'
+    | '/api/public/decision-cliente'
     | '/patrimonio/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/trajetoria'
     | '/unidades'
     | '/patrimonio/$code'
+    | '/api/public/decision-cliente'
     | '/patrimonio'
   id:
     | '__root__'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trajetoria'
     | '/_authenticated/unidades'
     | '/_authenticated/patrimonio/$code'
+    | '/api/public/decision-cliente'
     | '/_authenticated/patrimonio/'
   fileRoutesById: FileRoutesById
 }
@@ -402,6 +415,7 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   ConfirmarEmailRoute: typeof ConfirmarEmailRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
+  ApiPublicDecisionClienteRoute: typeof ApiPublicDecisionClienteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -616,6 +630,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPatrimonioCodeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/decision-cliente': {
+      id: '/api/public/decision-cliente'
+      path: '/api/public/decision-cliente'
+      fullPath: '/api/public/decision-cliente'
+      preLoaderRoute: typeof ApiPublicDecisionClienteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -682,6 +703,7 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   ConfirmarEmailRoute: ConfirmarEmailRoute,
   NovaSenhaRoute: NovaSenhaRoute,
+  ApiPublicDecisionClienteRoute: ApiPublicDecisionClienteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

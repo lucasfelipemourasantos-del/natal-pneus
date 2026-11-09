@@ -162,6 +162,20 @@ export function PortalShell({
     retry: false,
     queryFn: countDocAlerts,
   });
+  // Customer type changes not seen yet (ADM only): a number next to "Alertas de clientes".
+  const { data: clientAlerts = 0 } = useQuery({
+    queryKey: ["customer-alerts-count"],
+    enabled: access.isAdmin,
+    retry: false,
+    refetchInterval: 120_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("customer_type_changes")
+        .select("notice", { count: "exact", head: true })
+        .is("seen_at", null);
+      return count ?? 0;
+    },
+  });
   const allStores = hasAllStoresAccess(access);
   const store = allStores
     ? undefined
@@ -202,9 +216,9 @@ export function PortalShell({
                     className="flex w-full items-center justify-between rounded-md px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wider text-sidebar-muted/70 hover:text-sidebar-foreground"
                   >
                     {group.label}
-                    {docAlerts > 0 && !open && (
+                    {docAlerts + clientAlerts > 0 && !open && (
                       <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold normal-case text-white">
-                        {docAlerts}
+                        {docAlerts + clientAlerts}
                       </span>
                     )}
                     <ChevronDown
@@ -241,6 +255,14 @@ export function PortalShell({
                           aria-label={`${docAlerts} documento(s) vencendo`}
                         >
                           {docAlerts}
+                        </span>
+                      )}
+                      {to === "/admin-alertas" && clientAlerts > 0 && (
+                        <span
+                          className="ml-auto rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-white"
+                          aria-label={`${clientAlerts} aviso(s) de cliente novos`}
+                        >
+                          {clientAlerts}
                         </span>
                       )}
                     </Link>
