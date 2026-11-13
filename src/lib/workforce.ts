@@ -96,6 +96,8 @@ export const STAFF = [
   { key: "financeiro", label: "Financeiro" },
   { key: "rh", label: "RH" },
   { key: "dp", label: "DP" },
+  { key: "marketing", label: "Suporte de marketing" },
+  { key: "conciliacao_cartoes", label: "Conciliação de cartões de crédito" },
 ] as const;
 export type StaffKey = (typeof STAFF)[number]["key"];
 
