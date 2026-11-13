@@ -72,6 +72,9 @@ type PersonRow = {
 const COLUMNS =
   "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities";
 
+/** Suporte volante: a pessoa não é fixa numa loja e aparece em todas (marcada com "volante" na observação do rodízio). */
+const isVolante = (x: PersonRow) => x.rotates && /volante/i.test(x.rotation_note);
+
 const levelOf = (x: PersonRow, fn: AbilityKey): LevelKey | undefined => x.abilities?.[fn];
 // Verde = principal, laranja = complementar, amarelo = potencial (linhas e etiquetas usam as mesmas cores).
 const LEVEL_COLOR: Record<LevelKey, string> = {
@@ -371,10 +374,11 @@ function StoreBoard({
     .filter((x) => x.unit_code === unit)
     .sort((a, b) => sectorOrder(a.sector) - sectorOrder(b.sector) || a.name.localeCompare(b.name));
   const others = people.filter((x) => x.unit_code !== unit);
+  const volantes = others.filter(isVolante);
   const found = search.trim()
     ? others.filter((x) => x.name.toLowerCase().includes(search.trim().toLowerCase()))
     : [];
-  const pickedHere = picked && picked.unit_code === unit ? picked : null;
+  const pickedHere = picked && (picked.unit_code === unit || isVolante(picked)) ? picked : null;
 
   // Recalculates the lines after every render; only updates state when something moved.
   useLayoutEffect(() => {
@@ -389,7 +393,7 @@ function StoreBoard({
           if (l) pairs.push({ fn: f.key, id: pickedHere.id, level: l });
         }
       } else if (selFn) {
-        for (const x of group) {
+        for (const x of [...group, ...volantes]) {
           const l = levelOf(x, selFn);
           if (l) pairs.push({ fn: selFn, id: x.id, level: l });
         }
@@ -554,7 +558,7 @@ function StoreBoard({
             Funcionários da {unit}
           </h3>
           <ul className="space-y-2">
-            {group.map((x) => {
+            {[...group, ...volantes].map((x) => {
               const sec = SECTORS.find((s) => s.key === x.sector);
               const isPicked = picked?.id === x.id;
               const lit = selFn ? levelOf(x, selFn) : undefined;
@@ -587,7 +591,10 @@ function StoreBoard({
                           </span>
                         )}
                       </span>
-                      <span className="block text-sm text-muted-foreground">{x.role}</span>
+                      <span className="block text-sm text-muted-foreground">
+                        {x.unit_code !== unit ? `Suporte volante · ${x.unit_code} · ` : ""}
+                        {x.role}
+                      </span>
                     </span>
                     <span className="shrink-0 text-right text-xs text-muted-foreground">
                       {lit ? (
@@ -1094,7 +1101,9 @@ function Formation({ people }: { people: PersonRow[] }) {
   const group = people
     .filter((x) => x.unit_code === unit)
     .sort((a, b) => a.name.localeCompare(b.name));
-  const drivers = people.filter((x) => x.unit_code !== unit && levelOf(x, "motorista"));
+  const drivers = people.filter(
+    (x) => x.unit_code !== unit && (levelOf(x, "motorista") || isVolante(x)),
+  );
   const found = search.trim()
     ? people.filter(
         (x) => x.unit_code !== unit && x.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -1556,7 +1565,7 @@ function Formation({ people }: { people: PersonRow[] }) {
             {drivers.length > 0 && (
               <>
                 <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                  Apoio do grupo (motorista)
+                  Apoio do grupo (motoristas e volantes)
                 </h3>
                 <ul className="space-y-2">{drivers.map(benchCard)}</ul>
               </>
