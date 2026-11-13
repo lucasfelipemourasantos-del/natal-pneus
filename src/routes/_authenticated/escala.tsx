@@ -21,7 +21,6 @@ import {
   SECTORS,
   UNITS,
   UNIT_NAME,
-  bySector,
   shortName,
   type Abilities,
   type FunctionKey,
@@ -144,6 +143,38 @@ function MindMap({ people, onSaved }: { people: PersonRow[]; onSaved: () => void
   const [selFn, setSelFn] = useState<FunctionKey | null>(null);
   const [editing, setEditing] = useState<PersonRow | null>(null);
   const picked = people.find((x) => x.id === selPerson) ?? null;
+  const qc = useQueryClient();
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [moved, setMoved] = useState<{
+    id: string;
+    name: string;
+    from: { unit: string; sector: string };
+    to: { unit: string; sector: string };
+  } | null>(null);
+  const [moveError, setMoveError] = useState("");
+
+  /** Moves a person to another store and/or sector, on screen first and then in the database. */
+  async function move(id: string, unit: string, sector: string, undo = false) {
+    const person = people.find((x) => x.id === id);
+    if (!person || (person.unit_code === unit && person.sector === sector)) return;
+    const from = { unit: person.unit_code, sector: person.sector };
+    setMoveError("");
+    qc.setQueryData<PersonRow[]>(["workforce-people"], (cur) =>
+      (cur ?? []).map((x) => (x.id === id ? { ...x, unit_code: unit, sector } : x)),
+    );
+    const { error } = await supabase
+      .from("workforce_people")
+      .update({ unit_code: unit, sector, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      setMoveError("Não foi possível mover. Tente de novo.");
+      onSaved();
+      return;
+    }
+    setMoved(undo ? null : { id, name: person.name, from, to: { unit, sector } });
+    setSelPerson(null);
+  }
   const unconfirmed = people.filter((x) => x.status === "a_confirmar");
   const special = people.filter((x) => x.rotates || x.rotation_note);
   return (
@@ -177,75 +208,115 @@ function MindMap({ people, onSaved }: { people: PersonRow[]; onSaved: () => void
                 selFn={selFn}
                 onPickFn={(k) => setSelFn((cur) => (cur === k ? null : k))}
               />
-              {bySector(group).map((s) => (
-                <div
-                  key={s.key}
-                  className="space-y-1.5 border-l-4 pl-3"
-                  style={{ borderColor: s.color }}
-                >
-                  <p
-                    className="text-xs font-bold uppercase tracking-wide"
-                    style={{ color: s.color }}
+              {SECTORS.map((sec) => ({
+                ...sec,
+                people: group.filter((x) => x.sector === sec.key),
+              }))
+                .filter((s) => s.people.length > 0 || dragId || picked)
+                .map((s) => (
+                  <div
+                    key={s.key}
+                    onDragOver={(e) => {
+                      if (!dragId) return;
+                      e.preventDefault();
+                      setOver(`${u}:${s.key}`);
+                    }}
+                    onDragLeave={() => setOver((cur) => (cur === `${u}:${s.key}` ? null : cur))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain") || dragId;
+                      setOver(null);
+                      setDragId(null);
+                      if (id) void move(id, u, s.key);
+                    }}
+                    className={`space-y-1.5 rounded-r-md border-l-4 pl-3 ${over === `${u}:${s.key}` ? "bg-primary/10" : ""} ${dragId || picked ? "min-h-9" : ""}`}
+                    style={{ borderColor: s.color }}
                   >
-                    {s.label} · {s.people.length}
-                  </p>
-                  <ul className="space-y-1">
-                    {s.people.map((x) => (
-                      <li
-                        key={x.id}
-                        className={`rounded-md bg-muted/60 px-2 py-1.5 text-sm ${selFn && levelOf(x, selFn) ? "ring-2 ring-primary" : ""} ${picked?.id === x.id ? "outline outline-2 outline-primary" : ""}`}
-                        title={[x.name, x.role, x.skills.join(", "), x.rotation_note]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      >
+                    <p
+                      className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide"
+                      style={{ color: s.color }}
+                    >
+                      <span>
+                        {s.label} · {s.people.length}
+                      </span>
+                      {picked && !(picked.unit_code === u && picked.sector === s.key) && (
                         <button
                           type="button"
-                          onClick={() => setSelPerson((cur) => (cur === x.id ? null : x.id))}
-                          aria-pressed={picked?.id === x.id}
-                          className="font-semibold underline-offset-2 hover:underline"
+                          onClick={() => void move(picked.id, u, s.key)}
+                          className="rounded-full border border-primary bg-card px-2 py-0.5 text-[10px] font-bold normal-case text-primary print:hidden"
                         >
-                          {shortName(x.name)}
+                          Colocar aqui
                         </button>
-                        {x.rotates && (
-                          <Repeat2
-                            size={13}
-                            className="ml-1 inline text-primary"
-                            aria-label="Faz rodízio entre lojas"
-                          />
-                        )}
-                        {x.status === "a_confirmar" && (
-                          <span className="ml-1 rounded-full bg-warning-soft px-1.5 text-[10px] font-bold">
-                            a confirmar
-                          </span>
-                        )}
-                        <span className="block text-xs text-muted-foreground">{x.role}</span>
-                        {x.skills.length > 0 && (
-                          <span className="block text-[11px] text-muted-foreground/80">
-                            também: {x.skills.join(", ")}
-                          </span>
-                        )}
-                        {selFn && levelOf(x, selFn) && (
-                          <span
-                            className={`mt-1 inline-block rounded-full px-2 text-[10px] font-bold ${LEVEL_STYLE[levelOf(x, selFn)!]}`}
+                      )}
+                    </p>
+                    <ul className="space-y-1">
+                      {s.people.map((x) => (
+                        <li
+                          key={x.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", x.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragId(x.id);
+                            setSelPerson(null);
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setOver(null);
+                          }}
+                          className={`cursor-grab rounded-md bg-muted/60 ${dragId === x.id ? "opacity-40" : ""} px-2 py-1.5 text-sm ${selFn && levelOf(x, selFn) ? "ring-2 ring-primary" : ""} ${picked?.id === x.id ? "outline outline-2 outline-primary" : ""}`}
+                          title={[x.name, x.role, x.skills.join(", "), x.rotation_note]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setSelPerson((cur) => (cur === x.id ? null : x.id))}
+                            aria-pressed={picked?.id === x.id}
+                            className="font-semibold underline-offset-2 hover:underline"
                           >
-                            {LEVELS.find((l) => l.key === levelOf(x, selFn))?.label}
-                          </span>
-                        )}
-                        {picked?.id === x.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-1.5 print:hidden"
-                            onClick={() => setEditing(x)}
-                          >
-                            Editar funções
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+                            {shortName(x.name)}
+                          </button>
+                          {x.rotates && (
+                            <Repeat2
+                              size={13}
+                              className="ml-1 inline text-primary"
+                              aria-label="Faz rodízio entre lojas"
+                            />
+                          )}
+                          {x.status === "a_confirmar" && (
+                            <span className="ml-1 rounded-full bg-warning-soft px-1.5 text-[10px] font-bold">
+                              a confirmar
+                            </span>
+                          )}
+                          <span className="block text-xs text-muted-foreground">{x.role}</span>
+                          {x.skills.length > 0 && (
+                            <span className="block text-[11px] text-muted-foreground/80">
+                              também: {x.skills.join(", ")}
+                            </span>
+                          )}
+                          {selFn && levelOf(x, selFn) && (
+                            <span
+                              className={`mt-1 inline-block rounded-full px-2 text-[10px] font-bold ${LEVEL_STYLE[levelOf(x, selFn)!]}`}
+                            >
+                              {LEVELS.find((l) => l.key === levelOf(x, selFn))?.label}
+                            </span>
+                          )}
+                          {picked?.id === x.id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-1.5 print:hidden"
+                              onClick={() => setEditing(x)}
+                            >
+                              Editar funções
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
             </section>
           );
         })}
@@ -265,6 +336,32 @@ function MindMap({ people, onSaved }: { people: PersonRow[]; onSaved: () => void
           </ul>
         </section>
       )}
+
+      {(moved || moveError) && (
+        <p role="status" className="flex flex-wrap items-center gap-2 text-sm print:hidden">
+          {moveError ? (
+            <span className="text-destructive">{moveError}</span>
+          ) : (
+            moved && (
+              <>
+                <b>{shortName(moved.name)}</b> foi para {moved.to.unit} ·{" "}
+                {SECTORS.find((s) => s.key === moved.to.sector)?.label}.
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void move(moved.id, moved.from.unit, moved.from.sector, true)}
+                >
+                  Desfazer
+                </Button>
+              </>
+            )
+          )}
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground print:hidden">
+        Para mover alguém: arraste o nome até a loja e o setor desejados, ou clique no nome e depois
+        em "Colocar aqui" no destino. As 4 lojas ficam abertas ao mesmo tempo.
+      </p>
 
       {editing && (
         <EditAbilities
@@ -345,8 +442,8 @@ function StructurePanel({
         })}
       </div>
       <p className="mt-1.5 text-[10px] text-muted-foreground">
-        Número = pessoas que cobrem (principal ou complementar); (+n) = potencial. Vermelho: ninguém;
-        amarelo: sem reserva. Clique numa função ou numa pessoa para acender.
+        Número = pessoas que cobrem (principal ou complementar); (+n) = potencial. Vermelho:
+        ninguém; amarelo: sem reserva. Clique numa função ou numa pessoa para acender.
       </p>
     </div>
   );
@@ -372,7 +469,8 @@ function EditAbilities({
       .update({ abilities: ab, updated_at: new Date().toISOString() })
       .eq("id", person.id);
     setBusy(false);
-    if (err) return setError("Não foi possível salvar. A atualização do banco (0035) já foi aplicada?");
+    if (err)
+      return setError("Não foi possível salvar. A atualização do banco (0035) já foi aplicada?");
     onSaved();
   }
   return (
@@ -381,8 +479,8 @@ function EditAbilities({
         <DialogHeader>
           <DialogTitle>Funções de {person.name}</DialogTitle>
           <DialogDescription>
-            Principal: faz hoje. Complementar: faz quando precisa. Potencial: pode aprender, ainda não
-            faz.
+            Principal: faz hoje. Complementar: faz quando precisa. Potencial: pode aprender, ainda
+            não faz.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
