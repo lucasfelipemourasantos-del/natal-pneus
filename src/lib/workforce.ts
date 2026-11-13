@@ -88,6 +88,13 @@ export const LEVELS = [
 ] as const;
 export type LevelKey = (typeof LEVELS)[number]["key"];
 
+/** Serviços que a loja NÃO tem: a camisa fica vaga e não é cobrada. A NP2 não tem mecânica nem chefe de pista. */
+export const NOT_OFFERED: Partial<Record<WorkUnit, readonly FunctionKey[]>> = {
+  NP2: ["chefe_pista", "mecanico"],
+};
+export const isOffered = (unit: string, fn: FunctionKey) =>
+  !(NOT_OFFERED[unit as WorkUnit] ?? []).includes(fn);
+
 /** Comissão técnica: funções de gerência e administrativas. Ficam fora do campo (não entram nas 11 camisas). */
 export const STAFF = [
   { key: "gerente", label: "Gerente" },

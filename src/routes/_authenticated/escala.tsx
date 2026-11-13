@@ -22,6 +22,7 @@ import {
   SECTORS,
   STAFF,
   UNITS,
+  isOffered,
   UNIT_NAME,
   shortName,
   type Abilities,
@@ -257,7 +258,9 @@ function MindMap({ people, onSaved }: { people: PersonRow[]; onSaved: () => void
       >
         {UNITS.map((u) => {
           const group = people.filter((x) => x.unit_code === u);
-          const missing = FUNCTIONS.filter((f) => coverOf(f.key, group, people).cover === 0).length;
+          const missing = FUNCTIONS.filter(
+            (f) => isOffered(u, f.key) && coverOf(f.key, group, people).cover === 0,
+          ).length;
           return (
             <button
               key={u}
@@ -498,6 +501,15 @@ function StoreBoard({
           </h3>
           <ul className="space-y-2">
             {FUNCTIONS.map((fn) => {
+              if (!isOffered(unit, fn.key))
+                return (
+                  <li key={fn.key}>
+                    <div className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border-2 border-dashed border-border px-4 py-2 text-muted-foreground opacity-70">
+                      <span className="text-lg font-bold leading-tight">{fnLabel(fn.key)}</span>
+                      <span className="text-right text-xs">Esta loja não tem este serviço</span>
+                    </div>
+                  </li>
+                );
               const { cover, potential } = coverOf(fn.key, group, people);
               const mine = pickedHere ? levelOf(pickedHere, fn.key) : undefined;
               const lit = selFn === fn.key;
@@ -863,6 +875,16 @@ function Summary({ people, onOpen }: { people: PersonRow[]; onOpen: (u: WorkUnit
               </header>
               <ul className="grid gap-1.5 sm:grid-cols-2">
                 {FUNCTIONS.map((fn) => {
+                  if (!isOffered(u, fn.key))
+                    return (
+                      <li
+                        key={fn.key}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground"
+                      >
+                        <span className="font-semibold">{fnLabel(fn.key)}</span>
+                        <span className="text-xs">sem este serviço</span>
+                      </li>
+                    );
                   const { cover } = coverOf(fn.key, group, people);
                   return (
                     <li
@@ -1113,10 +1135,11 @@ function Formation({ people }: { people: PersonRow[] }) {
   const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
   const placedOn = (fn: AbilityKey) => rows.filter((r) => r.fn === fn);
 
-  const filled = FUNCTIONS.filter((f) => placedOn(f.key).length > 0).length;
-  const missing = FUNCTIONS.filter((f) => placedOn(f.key).length === 0);
+  const required = FUNCTIONS.filter((f) => isOffered(unit, f.key));
+  const filled = required.filter((f) => placedOn(f.key).length > 0).length;
+  const missing = required.filter((f) => placedOn(f.key).length === 0);
   const overloaded = group.filter((x) => placedCount(x.id) > 2);
-  const complete = filled === FUNCTIONS.length;
+  const complete = filled === required.length;
 
   const fail = (msg: string) => {
     setError(msg);
@@ -1301,7 +1324,7 @@ function Formation({ people }: { people: PersonRow[] }) {
               >
                 <span className="block text-base font-extrabold">{u}</span>
                 <span className="block text-[11px] opacity-80">
-                  {n} de {FUNCTIONS.length} camisas
+                  {n} de {FUNCTIONS.filter((f) => isOffered(u, f.key)).length} camisas
                 </span>
               </button>
             );
@@ -1324,7 +1347,7 @@ function Formation({ people }: { people: PersonRow[] }) {
           <p className="text-lg font-extrabold">
             {complete
               ? `Arena ${unit} completa em ${monthLabel(month)}`
-              : `${filled} de ${FUNCTIONS.length} camisas preenchidas em ${monthLabel(month)}`}
+              : `${filled} de ${required.length} camisas preenchidas em ${monthLabel(month)}`}
           </p>
           <div className="flex flex-wrap gap-2 print:hidden">
             {ready ? (
@@ -1381,12 +1404,12 @@ function Formation({ people }: { people: PersonRow[] }) {
           role="progressbar"
           aria-valuenow={filled}
           aria-valuemin={0}
-          aria-valuemax={FUNCTIONS.length}
+          aria-valuemax={required.length}
         >
           <div
             className="h-full rounded-full transition-all"
             style={{
-              width: `${(filled / FUNCTIONS.length) * 100}%`,
+              width: `${(filled / required.length) * 100}%`,
               background: complete ? LEVEL_COLOR.principal : LEVEL_COLOR.complementar,
             }}
           />
@@ -1466,6 +1489,25 @@ function Formation({ people }: { people: PersonRow[] }) {
             </p>
 
             {FUNCTIONS.map((fn) => {
+              if (!isOffered(unit, fn.key)) {
+                const gp = PITCH[fn.key];
+                return (
+                  <div
+                    key={fn.key}
+                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${gp.x}%`, top: `${gp.y}%` }}
+                  >
+                    <div className="flex w-24 flex-col items-center gap-1 opacity-40 sm:w-28">
+                      <div className="size-20 grayscale sm:size-24 print:size-[5.5rem]">
+                        <Shirt />
+                      </div>
+                      <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
+                        {fnLabel(fn.key)} · vaga, sem este serviço
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
               const pos = PITCH[fn.key];
               const placed = placedOn(fn.key);
               const activeLevel = active ? levelOf(active, fn.key) : undefined;
@@ -1670,6 +1712,16 @@ function Formation({ people }: { people: PersonRow[] }) {
           <h3 className="mb-2 text-lg font-extrabold">Escalação · {monthLabel(month)}</h3>
           <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
             {FUNCTIONS.map((fn) => {
+              if (!isOffered(unit, fn.key))
+                return (
+                  <li
+                    key={fn.key}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border pb-1.5"
+                  >
+                    <b className="w-36 shrink-0">{fnLabel(fn.key)}</b>
+                    <span className="text-muted-foreground">vaga: a loja não tem este serviço</span>
+                  </li>
+                );
               const placed = placedOn(fn.key);
               return (
                 <li
