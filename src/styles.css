@@ -259,6 +259,16 @@
     box-shadow: none !important;
   }
 
+  /* Escalação do mês (aba Formação, modo Pronto): sem o cabeçalho do portal, para o campo usar a folha toda. */
+  html[data-print-lineup] main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  html[data-print-lineup] main > div[data-print-keep],
+  html[data-print-lineup] main > footer {
+    display: none !important;
+  }
+
   /* Opções de "Gerar PDF": a página marca as partes com data-print-block ("grafico", "itens"). */
   html[data-print-mode="relatorio"] [data-print-block] {
     display: none !important;

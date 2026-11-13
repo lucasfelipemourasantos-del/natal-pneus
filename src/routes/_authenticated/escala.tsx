@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Repeat2, TriangleAlert } from "lucide-react";
 import logo from "@/assets/natal-pneus-logo.png";
 import { PortalShell } from "@/components/portal-shell";
@@ -1054,6 +1054,13 @@ function Formation({ people }: { people: PersonRow[] }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [ready, setReady] = useState(false);
 
+  // Marks the page so the print CSS hides the portal header and the field gets the whole sheet.
+  useEffect(() => {
+    if (!ready) return;
+    document.documentElement.setAttribute("data-print-lineup", "");
+    return () => document.documentElement.removeAttribute("data-print-lineup");
+  }, [ready]);
+
   const lineup = useQuery({
     queryKey: key,
     queryFn: async () => {
@@ -1246,9 +1253,12 @@ function Formation({ people }: { people: PersonRow[] }) {
   return (
     <div className="space-y-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
       {ready && <style>{"@page { size: A4 landscape; margin: 8mm; }"}</style>}
-      <p className="hidden text-lg font-extrabold print:block">
-        Escalação da Arena {unit} · {monthLabel(month)}
-      </p>
+      <div className="hidden items-center justify-between gap-4 print:flex">
+        <img src={logo} alt="Natal Pneus" className="h-9 w-auto rounded bg-black px-2" />
+        <p className="text-xl font-extrabold">
+          Escalação da Arena {unit} · {monthLabel(month)}
+        </p>
+      </div>
       <div className="flex flex-wrap items-end gap-2 print:hidden">
         <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-2">
           {UNITS.map((u) => {
@@ -1407,7 +1417,7 @@ function Formation({ people }: { people: PersonRow[] }) {
       <div className={`grid gap-4 ${ready ? "" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
         <div className="overflow-x-auto rounded-2xl">
           <div
-            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[140mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
+            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[162mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
             style={{
               background:
                 "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
@@ -1467,7 +1477,7 @@ function Formation({ people }: { people: PersonRow[] }) {
                         aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
                         disabled={ready}
                         data-print-show
-                        className={`relative size-20 transition-all print:size-[4.5rem] disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                        className={`relative size-20 transition-all print:size-[5.5rem] disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
                       >
                         <Shirt
                           glow={
