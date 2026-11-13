@@ -1052,6 +1052,7 @@ function Formation({ people }: { people: PersonRow[] }) {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const lineup = useQuery({
     queryKey: key,
@@ -1080,7 +1081,7 @@ function Formation({ people }: { people: PersonRow[] }) {
         (x) => x.unit_code !== unit && x.name.toLowerCase().includes(search.trim().toLowerCase()),
       )
     : [];
-  const active = personById(dragId ?? selId ?? undefined);
+  const active = ready ? undefined : personById(dragId ?? selId ?? undefined);
   const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
   const placedOn = (fn: FunctionKey) => rows.filter((r) => r.fn === fn);
 
@@ -1243,7 +1244,15 @@ function Formation({ people }: { people: PersonRow[] }) {
   const askPerson = personById(ask?.personId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
+      {ready && <style>{"@page { size: A4 landscape; margin: 10mm; }"}</style>}
+      <header className="hidden items-center justify-between gap-4 print:flex">
+        <img src={logo} alt="Natal Pneus" className="h-10 w-auto rounded bg-black px-2" />
+        <div className="text-right">
+          <p className="text-xl font-extrabold">Escalação da Arena {unit}</p>
+          <p className="text-sm">{monthLabel(month)}</p>
+        </div>
+      </header>
       <div className="flex flex-wrap items-end gap-2 print:hidden">
         <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-2">
           {UNITS.map((u) => {
@@ -1283,7 +1292,7 @@ function Formation({ people }: { people: PersonRow[] }) {
         </label>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+      <div className="space-y-2 rounded-xl border border-border bg-card p-4 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-lg font-extrabold">
             {complete
@@ -1291,12 +1300,35 @@ function Formation({ people }: { people: PersonRow[] }) {
               : `${filled} de ${FUNCTIONS.length} camisas preenchidas em ${monthLabel(month)}`}
           </p>
           <div className="flex flex-wrap gap-2 print:hidden">
-            {previousRows.length > 0 && (
+            {ready ? (
+              <>
+                <Button size="sm" onClick={() => window.print()}>
+                  Imprimir a escalação
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setReady(false)}>
+                  Voltar a editar
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                disabled={rows.length === 0}
+                onClick={() => {
+                  setSelId(null);
+                  setAsk(null);
+                  setError("");
+                  setReady(true);
+                }}
+              >
+                Pronto
+              </Button>
+            )}
+            {!ready && previousRows.length > 0 && (
               <Button size="sm" variant="outline" onClick={() => void copyPrevious()}>
                 Copiar de {monthLabel(prevMonth(month))}
               </Button>
             )}
-            {confirmClear ? (
+            {ready ? null : confirmClear ? (
               <>
                 <Button size="sm" variant="destructive" onClick={() => void clearAll()}>
                   Confirmar: limpar a arena
@@ -1376,10 +1408,10 @@ function Formation({ people }: { people: PersonRow[] }) {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={`grid gap-4 ${ready ? "" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
         <div className="overflow-x-auto rounded-2xl">
           <div
-            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
+            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:min-h-0 print:min-w-0"
             style={{
               background:
                 "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
@@ -1437,9 +1469,19 @@ function Formation({ people }: { people: PersonRow[] }) {
                           if (id) tryPlace(fn.key, id);
                         }}
                         aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
-                        className={`relative size-20 transition-all sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? "opacity-80" : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                        disabled={ready}
+                        data-print-show
+                        className={`relative size-20 transition-all disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
                       >
-                        <Shirt glow={canLight ? LEVEL_COLOR[activeLevel!] : undefined} />
+                        <Shirt
+                          glow={
+                            canLight
+                              ? LEVEL_COLOR[activeLevel!]
+                              : ready && placed.length > 0
+                                ? LEVEL_COLOR.principal
+                                : undefined
+                          }
+                        />
                         {placed.length > 0 && (
                           <span
                             className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full text-sm font-extrabold text-white"
@@ -1467,6 +1509,8 @@ function Formation({ people }: { people: PersonRow[] }) {
                           <li key={r.person_id}>
                             <button
                               type="button"
+                              disabled={ready}
+                              data-print-show
                               onClick={() => void remove(fn.key, r.person_id)}
                               title={`${p.name} · ${level ? LEVEL_WORD[level] : "sem a função marcada"}. Clique para tirar.`}
                               className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"} ${active?.id === p.id ? "ring-2 ring-white" : ""}`}
@@ -1485,36 +1529,78 @@ function Formation({ people }: { people: PersonRow[] }) {
           </div>
         </div>
 
-        <aside className="space-y-3 print:hidden">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-            Elenco da {unit}
-          </h3>
-          <ul className="space-y-2">{group.map(benchCard)}</ul>
-          {drivers.length > 0 && (
-            <>
-              <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                Apoio do grupo (motorista)
-              </h3>
-              <ul className="space-y-2">{drivers.map(benchCard)}</ul>
-            </>
-          )}
-          <details className="rounded-xl border border-border bg-card p-3">
-            <summary className="cursor-pointer text-sm font-bold">
-              Buscar funcionário de outra loja
-            </summary>
-            <div className="mt-2 space-y-2">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Digite o nome"
-                aria-label="Buscar funcionário de outra loja"
-                className={fieldClass}
-              />
-              <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
-            </div>
-          </details>
-        </aside>
+        {!ready && (
+          <aside className="space-y-3 print:hidden">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+              Elenco da {unit}
+            </h3>
+            <ul className="space-y-2">{group.map(benchCard)}</ul>
+            {drivers.length > 0 && (
+              <>
+                <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                  Apoio do grupo (motorista)
+                </h3>
+                <ul className="space-y-2">{drivers.map(benchCard)}</ul>
+              </>
+            )}
+            <details className="rounded-xl border border-border bg-card p-3">
+              <summary className="cursor-pointer text-sm font-bold">
+                Buscar funcionário de outra loja
+              </summary>
+              <div className="mt-2 space-y-2">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Digite o nome"
+                  aria-label="Buscar funcionário de outra loja"
+                  className={fieldClass}
+                />
+                <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
+              </div>
+            </details>
+          </aside>
+        )}
       </div>
+
+      {ready && (
+        <section className="rounded-xl border border-border bg-card p-4">
+          <h3 className="mb-2 text-lg font-extrabold">Escalação · {monthLabel(month)}</h3>
+          <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
+            {FUNCTIONS.map((fn) => {
+              const placed = placedOn(fn.key);
+              return (
+                <li
+                  key={fn.key}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border pb-1.5"
+                >
+                  <b className="w-36 shrink-0">{fnLabel(fn.key)}</b>
+                  {placed.length === 0 ? (
+                    <span className="font-semibold text-destructive">vaga em aberto</span>
+                  ) : (
+                    placed.map((r) => {
+                      const p = personById(r.person_id);
+                      if (!p) return null;
+                      const level = levelOf(p, fn.key) ?? (r.authorized ? "potencial" : undefined);
+                      return (
+                        <span
+                          key={r.person_id}
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
+                        >
+                          {shortName(p.name)}
+                          {r.authorized && levelOf(p, fn.key) === "potencial" ? " ✱" : ""}
+                        </span>
+                      );
+                    })
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Verde: função principal · Laranja: função paralela · Amarelo ✱: potencial autorizado.
+          </p>
+        </section>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground print:hidden">
         {LEVELS.map((l) => (
