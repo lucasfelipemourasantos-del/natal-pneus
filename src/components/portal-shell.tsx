@@ -42,7 +42,7 @@ import { catalogOptions } from "@/lib/portal-data";
 import { Button } from "@/components/ui/button";
 import { PrintMenu } from "@/components/print-menu";
 import { AnnouncementBell, AnnouncementGate } from "@/components/announcements";
-import { ChartNoAxesCombined } from "lucide-react";
+import { CalendarDays, ChartNoAxesCombined } from "lucide-react";
 
 type NavLink = {
   to:
@@ -57,6 +57,7 @@ type NavLink = {
     | "/admin-documentos"
     | "/admin-alertas"
     | "/admin-estoque"
+    | "/escala"
     | "/admin-comunicados"
     | "/trajetoria"
     | "/empresa"
@@ -123,6 +124,7 @@ function navGroups(
               },
               { to: "/admin-alertas" as const, label: "Alertas de clientes", icon: BellRing },
               { to: "/admin-estoque" as const, label: "Controle de estoque", icon: Warehouse },
+              { to: "/escala" as const, label: "Escala 5x2", icon: CalendarDays },
               { to: "/admin-comissoes" as const, label: "Comissões do Decision", icon: FileUp },
               { to: "/admin-cursos" as const, label: "Gerenciar cursos", icon: BookOpen },
               { to: "/admin-insignias" as const, label: "Reconhecimentos", icon: Award },

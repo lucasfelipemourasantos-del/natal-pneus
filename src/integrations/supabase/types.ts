@@ -299,6 +299,18 @@ export type Database = {
         Update: { action?: string; actor?: string | null; asset_id?: string; at?: string; changes?: Json | null; id?: number }
         Relationships: []
       }
+      workforce_people: {
+        Row: { active: boolean; cbo: string; cbo_title: string; employer: string; id: string; name: string; notes: string; role: string; rotates: boolean; rotation_note: string; sector: string; skills: string[]; status: string; unit_code: string; updated_at: string }
+        Insert: { active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector: string; skills?: string[]; status?: string; unit_code: string; updated_at?: string }
+        Update: { active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name?: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector?: string; skills?: string[]; status?: string; unit_code?: string; updated_at?: string }
+        Relationships: []
+      }
+      workforce_unit_notes: {
+        Row: { hours: string; manual: string; unit_code: string; updated_at: string }
+        Insert: { hours?: string; manual?: string; unit_code: string; updated_at?: string }
+        Update: { hours?: string; manual?: string; unit_code?: string; updated_at?: string }
+        Relationships: []
+      }
       customer_type_changes: {
         Row: { customer_code: number; customer_name: string | null; event_at: string | null; new_name: string | null; new_type: number | null; notice: number; old_name: string | null; old_type: number | null; received_at: string; seen_at: string | null; seen_by: string | null }
         Insert: { customer_code: number; customer_name?: string | null; event_at?: string | null; new_name?: string | null; new_type?: number | null; notice: number; old_name?: string | null; old_type?: number | null; received_at?: string; seen_at?: string | null; seen_by?: string | null }

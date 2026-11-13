@@ -33,3 +33,5 @@ dist-ssr
 
 # Local copy of Lovable-hosted assets (served by Lovable in production)
 /public/__l5e/
+# Dados de pessoal (quadro funcional): nunca no GitHub
+scripts/*.local.ts

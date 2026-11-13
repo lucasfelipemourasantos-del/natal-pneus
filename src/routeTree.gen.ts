@@ -32,6 +32,7 @@ import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
 import { Route as AuthenticatedDocumentosEmpresaRouteImport } from './routes/_authenticated/documentos-empresa'
 import { Route as AuthenticatedEmpresaRouteImport } from './routes/_authenticated/empresa'
+import { Route as AuthenticatedEscalaRouteImport } from './routes/_authenticated/escala'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
@@ -165,6 +166,11 @@ const AuthenticatedEmpresaRoute = AuthenticatedEmpresaRouteImport.update({
   path: '/empresa',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEscalaRoute = AuthenticatedEscalaRouteImport.update({
+  id: '/escala',
+  path: '/escala',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
   id: '/inicio',
   path: '/inicio',
@@ -232,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/documentos-empresa': typeof AuthenticatedDocumentosEmpresaRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
+  '/escala': typeof AuthenticatedEscalaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByTo {
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/documentos-empresa': typeof AuthenticatedDocumentosEmpresaRoute
   '/empresa': typeof AuthenticatedEmpresaRoute
+  '/escala': typeof AuthenticatedEscalaRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
   '/_authenticated/documentos-empresa': typeof AuthenticatedDocumentosEmpresaRoute
   '/_authenticated/empresa': typeof AuthenticatedEmpresaRoute
+  '/_authenticated/escala': typeof AuthenticatedEscalaRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/documentos-empresa'
     | '/empresa'
+    | '/escala'
     | '/inicio'
     | '/metas'
     | '/resultados'
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/documentos-empresa'
     | '/empresa'
+    | '/escala'
     | '/inicio'
     | '/metas'
     | '/resultados'
@@ -397,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/documentos'
     | '/_authenticated/documentos-empresa'
     | '/_authenticated/empresa'
+    | '/_authenticated/escala'
     | '/_authenticated/inicio'
     | '/_authenticated/metas'
     | '/_authenticated/resultados'
@@ -581,6 +593,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmpresaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/escala': {
+      id: '/_authenticated/escala'
+      path: '/escala'
+      fullPath: '/escala'
+      preLoaderRoute: typeof AuthenticatedEscalaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inicio': {
       id: '/_authenticated/inicio'
       path: '/inicio'
@@ -657,6 +676,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
   AuthenticatedDocumentosEmpresaRoute: typeof AuthenticatedDocumentosEmpresaRoute
   AuthenticatedEmpresaRoute: typeof AuthenticatedEmpresaRoute
+  AuthenticatedEscalaRoute: typeof AuthenticatedEscalaRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
@@ -683,6 +703,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
   AuthenticatedDocumentosEmpresaRoute: AuthenticatedDocumentosEmpresaRoute,
   AuthenticatedEmpresaRoute: AuthenticatedEmpresaRoute,
+  AuthenticatedEscalaRoute: AuthenticatedEscalaRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
