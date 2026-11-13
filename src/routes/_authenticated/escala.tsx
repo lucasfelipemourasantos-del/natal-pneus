@@ -474,6 +474,8 @@ function StoreBoard({
         </div>
       )}
 
+      {pickedHere && <VacationBox key={pickedHere.id} person={pickedHere} people={people} />}
+
       <div
         ref={boardRef}
         className="relative grid gap-x-24 gap-y-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
@@ -658,6 +660,153 @@ function StoreBoard({
           </ul>
         </div>
       </details>
+    </section>
+  );
+}
+
+const LEVEL_WORD: Record<LevelKey, string> = {
+  principal: "Totalmente apto",
+  complementar: "Secundário",
+  potencial: "Potencial",
+};
+
+const brDate = (iso: string) => (iso ? iso.split("-").reverse().join("/") : "");
+
+/** Simulates the person on vacation and suggests substitutes (same store or any store of the group), by function. */
+function VacationBox({ person, people }: { person: PersonRow; people: PersonRow[] }) {
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [shown, setShown] = useState(false);
+
+  const duties = FUNCTIONS.map((fn) => ({ fn, level: levelOf(person, fn.key) }))
+    .filter((d) => d.level === "principal" || d.level === "complementar")
+    .sort(
+      (a, b) =>
+        LEVELS.findIndex((l) => l.key === a.level) - LEVELS.findIndex((l) => l.key === b.level),
+    );
+
+  const candidates = (fn: FunctionKey) =>
+    people
+      .filter((x) => x.id !== person.id && levelOf(x, fn))
+      .sort((a, b) => {
+        const ra = LEVELS.find((l) => l.key === levelOf(a, fn))?.rank ?? 0;
+        const rb = LEVELS.find((l) => l.key === levelOf(b, fn))?.rank ?? 0;
+        return (
+          rb - ra ||
+          Number(b.unit_code === person.unit_code) - Number(a.unit_code === person.unit_code) ||
+          a.name.localeCompare(b.name)
+        );
+      });
+
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4 print:hidden">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="sm" variant={open ? "default" : "outline"} onClick={() => setOpen((v) => !v)}>
+          {open ? "Fechar férias" : "Simular férias"}
+        </Button>
+        {!open && (
+          <span className="text-sm text-muted-foreground">
+            Veja quem pode cobrir {shortName(person.name)} se ele sair de férias.
+          </span>
+        )}
+      </div>
+      {open && (
+        <>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Início das férias
+              <input
+                id="vac-from"
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className={fieldClass}
+              />
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Fim das férias
+              <input
+                id="vac-to"
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className={fieldClass}
+              />
+            </label>
+            <Button onClick={() => setShown(true)}>Sugerir substitutos</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Simulação: não grava nada. As datas só aparecem no título da sugestão.
+          </p>
+        </>
+      )}
+      {open && shown && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-extrabold">
+            {shortName(person.name)} de férias
+            {from || to ? ` · ${brDate(from) || "…"} a ${brDate(to) || "…"}` : ""}
+          </h3>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {LEVELS.map((l) => (
+              <span
+                key={l.key}
+                className={`rounded-full px-2.5 py-0.5 font-bold ${LEVEL_STYLE[l.key]}`}
+              >
+                {LEVEL_WORD[l.key]}
+              </span>
+            ))}
+          </div>
+          {duties.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Esta pessoa ainda não tem função principal ou secundária marcada. Marque as funções
+              dela primeiro.
+            </p>
+          )}
+          {duties.map(({ fn, level }) => {
+            const list = candidates(fn.key);
+            return (
+              <div key={fn.key} className="space-y-1.5">
+                <p className="text-sm font-bold">
+                  {fnLabel(fn.key)}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    ({level === "principal" ? "função principal dele" : "função secundária dele"})
+                  </span>
+                </p>
+                {list.length === 0 ? (
+                  <p className="text-sm font-semibold text-destructive">
+                    Ninguém no grupo está marcado para cobrir esta função.
+                  </p>
+                ) : (
+                  <ul className="flex flex-wrap gap-2">
+                    {list.map((x) => {
+                      const l = levelOf(x, fn.key)!;
+                      const mains = FUNCTIONS.filter((f) => levelOf(x, f.key) === "principal").map(
+                        (f) => fnLabel(f.key),
+                      );
+                      return (
+                        <li
+                          key={x.id}
+                          className={`rounded-lg px-3 py-2 ${LEVEL_STYLE[l]}`}
+                          title={
+                            mains.length ? `Hoje é principal em: ${mains.join(", ")}` : undefined
+                          }
+                        >
+                          <b className="block text-base leading-tight">{shortName(x.name)}</b>
+                          <span className="block text-xs leading-tight">
+                            {x.unit_code === person.unit_code ? "Mesma loja" : x.unit_code} ·{" "}
+                            {LEVEL_WORD[l]}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
