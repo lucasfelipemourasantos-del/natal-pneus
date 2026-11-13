@@ -84,6 +84,7 @@ const LEVEL_STYLE: Record<LevelKey, string> = {
 
 const TABS = [
   { key: "mapa", label: "Mapa mental" },
+  { key: "formacao", label: "Formação" },
   { key: "pessoas", label: "Pessoas" },
   { key: "lojas", label: "Funcionamento das lojas" },
 ] as const;
@@ -137,6 +138,7 @@ function EscalaPage() {
         </p>
       )}
       {people.data && tab === "mapa" && <MindMap people={people.data} onSaved={refresh} />}
+      {people.data && tab === "formacao" && <Formation people={people.data} />}
       {people.data && tab === "pessoas" && <PeopleTable people={people.data} onSaved={refresh} />}
       {tab === "lojas" && <StoreNotes />}
     </PortalShell>
@@ -966,6 +968,427 @@ function EditAbilities({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type LineupRow = { unit_code: string; fn: FunctionKey; person_id: string };
+
+/** Posição de cada função no campo (x e y em %), como numa formação de futebol: estoque atrás, pista no meio, venda na frente. */
+const PITCH: Record<FunctionKey, { x: number; y: number }> = {
+  estoquista: { x: 8, y: 30 },
+  asg: { x: 8, y: 70 },
+  mecanico: { x: 28, y: 13 },
+  alinhador: { x: 28, y: 38 },
+  borracheiro: { x: 28, y: 62 },
+  balanceador: { x: 28, y: 87 },
+  chefe_pista: { x: 48, y: 50 },
+  motorista: { x: 48, y: 90 },
+  caixa: { x: 68, y: 27 },
+  vendedor: { x: 68, y: 73 },
+  supervisor: { x: 89, y: 50 },
+};
+
+const FORA_COR = "oklch(0.55 0.2 25)";
+const firstName = (full: string) => shortName(full).split(" ")[0] ?? full;
+
+/** Formação do time de trabalho: arraste ou clique no nome e coloque na posição da loja. */
+function Formation({ people }: { people: PersonRow[] }) {
+  const qc = useQueryClient();
+  const key = ["workforce-lineup"];
+  const [unit, setUnit] = useState<WorkUnit>("NP4");
+  const [selId, setSelId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overFn, setOverFn] = useState<FunctionKey | null>(null);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const lineup = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from("workforce_lineup")
+        .select("unit_code,fn,person_id");
+      if (err)
+        throw new Error(
+          "Não foi possível consultar a formação. A atualização do banco (0036) já foi aplicada?",
+        );
+      return (data ?? []) as unknown as LineupRow[];
+    },
+  });
+
+  const rows = (lineup.data ?? []).filter((r) => r.unit_code === unit);
+  const byFn = new Map(rows.map((r) => [r.fn, r.person_id]));
+  const personById = (id: string | undefined) => people.find((x) => x.id === id);
+  const group = people
+    .filter((x) => x.unit_code === unit)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const drivers = people.filter((x) => x.unit_code !== unit && levelOf(x, "motorista"));
+  const found = search.trim()
+    ? people.filter(
+        (x) => x.unit_code !== unit && x.name.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : [];
+  const activeId = dragId ?? selId;
+  const active = personById(activeId ?? undefined);
+  const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
+
+  const filled = FUNCTIONS.filter((f) => byFn.has(f.key)).length;
+  const missing = FUNCTIONS.filter((f) => !byFn.has(f.key));
+  const outOfRole = FUNCTIONS.filter((f) => {
+    const p = personById(byFn.get(f.key));
+    return p && !levelOf(p, f.key);
+  });
+  const overloaded = group.filter((x) => placedCount(x.id) > 2);
+  const complete = filled === FUNCTIONS.length;
+
+  async function place(fn: FunctionKey, personId: string) {
+    setError("");
+    qc.setQueryData<LineupRow[]>(key, (cur) => [
+      ...(cur ?? []).filter((r) => !(r.unit_code === unit && r.fn === fn)),
+      { unit_code: unit, fn, person_id: personId },
+    ]);
+    const { error: err } = await supabase
+      .from("workforce_lineup")
+      .upsert({ unit_code: unit, fn, person_id: personId, updated_at: new Date().toISOString() });
+    if (err) {
+      setError("Não foi possível colocar a pessoa na posição.");
+      void lineup.refetch();
+    }
+  }
+
+  async function clearSlot(fn: FunctionKey) {
+    setError("");
+    qc.setQueryData<LineupRow[]>(key, (cur) =>
+      (cur ?? []).filter((r) => !(r.unit_code === unit && r.fn === fn)),
+    );
+    const { error: err } = await supabase
+      .from("workforce_lineup")
+      .delete()
+      .eq("unit_code", unit)
+      .eq("fn", fn);
+    if (err) {
+      setError("Não foi possível tirar a pessoa da posição.");
+      void lineup.refetch();
+    }
+  }
+
+  async function clearAll() {
+    setConfirmClear(false);
+    setError("");
+    qc.setQueryData<LineupRow[]>(key, (cur) => (cur ?? []).filter((r) => r.unit_code !== unit));
+    const { error: err } = await supabase.from("workforce_lineup").delete().eq("unit_code", unit);
+    if (err) {
+      setError("Não foi possível limpar o campo.");
+      void lineup.refetch();
+    }
+  }
+
+  function clickSlot(fn: FunctionKey) {
+    if (selId) {
+      void place(fn, selId);
+      setSelId(null);
+    }
+  }
+
+  if (lineup.isPending) return <p className="text-muted-foreground">Carregando…</p>;
+  if (lineup.error)
+    return (
+      <p role="alert" className="text-destructive">
+        {lineup.error.message}
+      </p>
+    );
+
+  const benchCard = (x: PersonRow) => {
+    const n = placedCount(x.id);
+    const isSel = selId === x.id;
+    return (
+      <li
+        key={x.id}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", x.id);
+          setDragId(x.id);
+        }}
+        onDragEnd={() => {
+          setDragId(null);
+          setOverFn(null);
+        }}
+        className="cursor-grab"
+      >
+        <button
+          type="button"
+          onClick={() => setSelId((cur) => (cur === x.id ? null : x.id))}
+          aria-pressed={isSel}
+          className={`flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border-2 bg-card px-3 py-2 text-left ${isSel ? "border-primary ring-2 ring-primary" : "border-border"}`}
+        >
+          <span className="min-w-0">
+            <span className="block truncate text-lg font-extrabold leading-tight">
+              {shortName(x.name)}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {x.unit_code !== unit ? `${x.unit_code} · ` : ""}
+              {x.role}
+            </span>
+          </span>
+          {n > 0 && (
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${n > 2 ? "bg-destructive text-white" : "bg-primary text-primary-foreground"}`}
+            >
+              ×{n}
+            </span>
+          )}
+        </button>
+      </li>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="flex flex-wrap items-center gap-2 print:hidden"
+        role="tablist"
+        aria-label="Loja"
+      >
+        {UNITS.map((u) => {
+          const n = (lineup.data ?? []).filter((r) => r.unit_code === u).length;
+          return (
+            <button
+              key={u}
+              type="button"
+              role="tab"
+              aria-selected={unit === u}
+              onClick={() => {
+                setUnit(u);
+                setSelId(null);
+              }}
+              className={`min-h-12 rounded-xl border px-4 text-left ${unit === u ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/60"}`}
+            >
+              <span className="block text-base font-extrabold">{u}</span>
+              <span className="block text-[11px] opacity-80">
+                {n} de {FUNCTIONS.length} posições
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-lg font-extrabold">
+            {complete
+              ? "Formação completa"
+              : `${filled} de ${FUNCTIONS.length} posições preenchidas`}
+          </p>
+          <div className="flex flex-wrap gap-2 print:hidden">
+            {confirmClear ? (
+              <>
+                <Button size="sm" variant="destructive" onClick={() => void clearAll()}>
+                  Confirmar: limpar o campo da {unit}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={rows.length === 0}
+                onClick={() => setConfirmClear(true)}
+              >
+                Limpar o campo
+              </Button>
+            )}
+          </div>
+        </div>
+        <div
+          className="h-3 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={filled}
+          aria-valuemin={0}
+          aria-valuemax={FUNCTIONS.length}
+        >
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${(filled / FUNCTIONS.length) * 100}%`,
+              background: complete ? LEVEL_COLOR.principal : LEVEL_COLOR.complementar,
+            }}
+          />
+        </div>
+        {!complete && (
+          <p className="text-sm text-muted-foreground">
+            Falta preencher: <b>{missing.map((f) => fnLabel(f.key)).join(", ")}</b>.
+          </p>
+        )}
+        {complete && outOfRole.length === 0 && overloaded.length === 0 && (
+          <p className="text-sm font-semibold" style={{ color: LEVEL_COLOR.principal }}>
+            Todas as áreas básicas da {unit} estão preenchidas por pessoas aptas.
+          </p>
+        )}
+        {outOfRole.length > 0 && (
+          <p className="text-sm font-semibold text-destructive">
+            Fora da função (a pessoa não tem essa função marcada):{" "}
+            {outOfRole
+              .map(
+                (f) => `${fnLabel(f.key)} (${shortName(personById(byFn.get(f.key))?.name ?? "")})`,
+              )
+              .join(", ")}
+            .
+          </p>
+        )}
+        {overloaded.length > 0 && (
+          <p className="text-sm font-semibold text-destructive">
+            Sobrecarga, mais de 2 posições: {overloaded.map((x) => shortName(x.name)).join(", ")}.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div
+          className="relative aspect-[16/10] min-h-[360px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
+          style={{
+            background:
+              "repeating-linear-gradient(90deg, oklch(0.52 0.13 150) 0 12.5%, oklch(0.56 0.13 150) 12.5% 25%)",
+          }}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 160 100"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            fill="none"
+            stroke="white"
+            strokeOpacity="0.75"
+            strokeWidth="0.7"
+            vectorEffect="non-scaling-stroke"
+          >
+            <rect x="3" y="3" width="154" height="94" />
+            <line x1="80" y1="3" x2="80" y2="97" />
+            <ellipse cx="80" cy="50" rx="13" ry="20" />
+            <rect x="3" y="26" width="22" height="48" />
+            <rect x="135" y="26" width="22" height="48" />
+            <rect x="3" y="39" width="8" height="22" />
+            <rect x="149" y="39" width="8" height="22" />
+          </svg>
+
+          {FUNCTIONS.map((fn) => {
+            const pos = PITCH[fn.key];
+            const person = personById(byFn.get(fn.key));
+            const personLevel = person ? levelOf(person, fn.key) : undefined;
+            const activeLevel = active ? levelOf(active, fn.key) : undefined;
+            const lit = active && activeLevel;
+            const dim = active && !activeLevel;
+            const bg = person ? (personLevel ? LEVEL_COLOR[personLevel] : FORA_COR) : "transparent";
+            const fg = person && (!personLevel || personLevel === "principal") ? "white" : "black";
+            return (
+              <div
+                key={fn.key}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => clickSlot(fn.key)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setOverFn(fn.key);
+                    }}
+                    onDragLeave={() => setOverFn((cur) => (cur === fn.key ? null : cur))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain") || dragId;
+                      setOverFn(null);
+                      setDragId(null);
+                      if (id) void place(fn.key, id);
+                    }}
+                    aria-label={`${fnLabel(fn.key)}${person ? `: ${person.name}` : ": vazio"}`}
+                    className={`flex size-[4.5rem] items-center justify-center rounded-full border-4 text-center text-sm font-extrabold leading-tight transition-all sm:size-24 ${person ? "border-white" : "border-dashed border-white/80 bg-black/10 text-white"} ${dim ? "opacity-40" : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                    style={{
+                      background: bg,
+                      color: person ? fg : undefined,
+                      boxShadow: lit
+                        ? `0 0 0 5px ${LEVEL_COLOR[activeLevel!]}, 0 0 22px 6px ${LEVEL_COLOR[activeLevel!]}`
+                        : undefined,
+                    }}
+                  >
+                    {person ? (
+                      <span className="px-1">
+                        {firstName(person.name)}
+                        {placedCount(person.id) > 1 && (
+                          <span className="block text-[11px] font-bold">
+                            ×{placedCount(person.id)}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-2xl font-light">+</span>
+                    )}
+                  </button>
+                  <span className="rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-bold text-white sm:text-xs">
+                    {fnLabel(fn.key)}
+                    {lit ? ` · ${LEVEL_WORD[activeLevel!]}` : ""}
+                  </span>
+                  {person && (
+                    <button
+                      type="button"
+                      onClick={() => void clearSlot(fn.key)}
+                      className="rounded-full bg-white/90 px-2 text-[11px] font-bold text-black print:hidden"
+                    >
+                      tirar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <aside className="space-y-3 print:hidden">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+            Elenco da {unit}
+          </h3>
+          <ul className="space-y-2">{group.map(benchCard)}</ul>
+          {drivers.length > 0 && (
+            <>
+              <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                Apoio do grupo (motorista)
+              </h3>
+              <ul className="space-y-2">{drivers.map(benchCard)}</ul>
+            </>
+          )}
+          <details className="rounded-xl border border-border bg-card p-3">
+            <summary className="cursor-pointer text-sm font-bold">
+              Buscar funcionário de outra loja
+            </summary>
+            <div className="mt-2 space-y-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Digite o nome"
+                aria-label="Buscar funcionário de outra loja"
+                className={fieldClass}
+              />
+              <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
+            </div>
+          </details>
+        </aside>
+      </div>
+
+      <p className="max-w-[80ch] text-xs text-muted-foreground print:hidden">
+        Arraste o nome para uma posição, ou clique no nome e depois na posição. Ao pegar uma pessoa,
+        o campo acende o que ela pode fazer: verde é totalmente apto, laranja é secundário e amarelo
+        é potencial. A mesma pessoa pode ocupar mais de uma posição. Posição vermelha: a pessoa não
+        tem aquela função marcada.
+      </p>
+    </div>
   );
 }
 

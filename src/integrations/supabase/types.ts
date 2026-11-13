@@ -311,6 +311,12 @@ export type Database = {
         Update: { hours?: string; manual?: string; unit_code?: string; updated_at?: string }
         Relationships: []
       }
+      workforce_lineup: {
+        Row: { fn: string; person_id: string; unit_code: string; updated_at: string }
+        Insert: { fn: string; person_id: string; unit_code: string; updated_at?: string }
+        Update: { fn?: string; person_id?: string; unit_code?: string; updated_at?: string }
+        Relationships: []
+      }
       customer_type_changes: {
         Row: { customer_code: number; customer_name: string | null; event_at: string | null; new_name: string | null; new_type: number | null; notice: number; old_name: string | null; old_type: number | null; received_at: string; seen_at: string | null; seen_by: string | null }
         Insert: { customer_code: number; customer_name?: string | null; event_at?: string | null; new_name?: string | null; new_type?: number | null; notice: number; old_name?: string | null; old_type?: number | null; received_at?: string; seen_at?: string | null; seen_by?: string | null }
