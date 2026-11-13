@@ -1245,14 +1245,10 @@ function Formation({ people }: { people: PersonRow[] }) {
 
   return (
     <div className="space-y-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
-      {ready && <style>{"@page { size: A4 landscape; margin: 10mm; }"}</style>}
-      <header className="hidden items-center justify-between gap-4 print:flex">
-        <img src={logo} alt="Natal Pneus" className="h-10 w-auto rounded bg-black px-2" />
-        <div className="text-right">
-          <p className="text-xl font-extrabold">Escalação da Arena {unit}</p>
-          <p className="text-sm">{monthLabel(month)}</p>
-        </div>
-      </header>
+      {ready && <style>{"@page { size: A4 landscape; margin: 8mm; }"}</style>}
+      <p className="hidden text-lg font-extrabold print:block">
+        Escalação da Arena {unit} · {monthLabel(month)}
+      </p>
       <div className="flex flex-wrap items-end gap-2 print:hidden">
         <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-2">
           {UNITS.map((u) => {
@@ -1411,7 +1407,7 @@ function Formation({ people }: { people: PersonRow[] }) {
       <div className={`grid gap-4 ${ready ? "" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
         <div className="overflow-x-auto rounded-2xl">
           <div
-            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:min-h-0 print:min-w-0"
+            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[140mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
             style={{
               background:
                 "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
@@ -1471,7 +1467,7 @@ function Formation({ people }: { people: PersonRow[] }) {
                         aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
                         disabled={ready}
                         data-print-show
-                        className={`relative size-20 transition-all disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                        className={`relative size-20 transition-all print:size-[4.5rem] disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
                       >
                         <Shirt
                           glow={
@@ -1563,7 +1559,7 @@ function Formation({ people }: { people: PersonRow[] }) {
       </div>
 
       {ready && (
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="rounded-xl border border-border bg-card p-4 print:break-before-page">
           <h3 className="mb-2 text-lg font-extrabold">Escalação · {monthLabel(month)}</h3>
           <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
             {FUNCTIONS.map((fn) => {
