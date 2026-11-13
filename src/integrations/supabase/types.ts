@@ -312,9 +312,9 @@ export type Database = {
         Relationships: []
       }
       workforce_lineup: {
-        Row: { fn: string; person_id: string; unit_code: string; updated_at: string }
-        Insert: { fn: string; person_id: string; unit_code: string; updated_at?: string }
-        Update: { fn?: string; person_id?: string; unit_code?: string; updated_at?: string }
+        Row: { authorized: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at: string }
+        Insert: { authorized?: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at?: string }
+        Update: { authorized?: boolean; fn?: string; month?: string; person_id?: string; unit_code?: string; updated_at?: string }
         Relationships: []
       }
       customer_type_changes: {

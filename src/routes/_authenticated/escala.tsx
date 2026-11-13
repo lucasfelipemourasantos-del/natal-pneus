@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Repeat2, TriangleAlert } from "lucide-react";
+import logo from "@/assets/natal-pneus-logo.png";
 import { PortalShell } from "@/components/portal-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -971,34 +972,87 @@ function EditAbilities({
   );
 }
 
-type LineupRow = { unit_code: string; fn: FunctionKey; person_id: string };
-
-/** Posição de cada função no campo (x e y em %), como numa formação de futebol: estoque atrás, pista no meio, venda na frente. */
-const PITCH: Record<FunctionKey, { x: number; y: number }> = {
-  estoquista: { x: 8, y: 30 },
-  asg: { x: 8, y: 70 },
-  mecanico: { x: 28, y: 13 },
-  alinhador: { x: 28, y: 38 },
-  borracheiro: { x: 28, y: 62 },
-  balanceador: { x: 28, y: 87 },
-  chefe_pista: { x: 48, y: 50 },
-  motorista: { x: 48, y: 90 },
-  caixa: { x: 68, y: 27 },
-  vendedor: { x: 68, y: 73 },
-  supervisor: { x: 89, y: 50 },
-};
-
-const FORA_COR = "oklch(0.55 0.2 25)";
 const firstName = (full: string) => shortName(full).split(" ")[0] ?? full;
 
-/** Formação do time de trabalho: arraste ou clique no nome e coloque na posição da loja. */
+type LineupRow = {
+  unit_code: string;
+  month: string;
+  fn: FunctionKey;
+  person_id: string;
+  authorized: boolean;
+};
+
+/** Posição de cada camisa no campo (x e y em %): estoque atrás, pista no meio, venda na frente. */
+const PITCH: Record<FunctionKey, { x: number; y: number }> = {
+  estoquista: { x: 6, y: 30 },
+  asg: { x: 6, y: 72 },
+  mecanico: { x: 27, y: 14 },
+  alinhador: { x: 27, y: 38 },
+  borracheiro: { x: 27, y: 62 },
+  balanceador: { x: 27, y: 86 },
+  chefe_pista: { x: 49, y: 50 },
+  motorista: { x: 49, y: 88 },
+  caixa: { x: 67, y: 26 },
+  vendedor: { x: 67, y: 74 },
+  supervisor: { x: 92, y: 50 },
+};
+
+const monthNow = () => new Date().toISOString().slice(0, 7);
+const prevMonth = (m: string) => {
+  const [y, mo] = m.split("-").map(Number) as [number, number];
+  const d = new Date(Date.UTC(y, mo - 2, 1));
+  return d.toISOString().slice(0, 7);
+};
+const monthLabel = (m: string) => {
+  const [y, mo] = m.split("-").map(Number) as [number, number];
+  return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
+
+/** Camisa preta da Natal Pneus, com o logo no peito. */
+function Shirt({ glow }: { glow?: string | undefined }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      className="size-full"
+      style={
+        glow ? { filter: `drop-shadow(0 0 5px ${glow}) drop-shadow(0 0 14px ${glow})` } : undefined
+      }
+    >
+      <path
+        d="M30 8 L10 22 L2 44 L20 52 L24 42 L24 94 L76 94 L76 42 L80 52 L98 44 L90 22 L70 8 Q50 24 30 8 Z"
+        fill="#101114"
+        stroke="white"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <rect x="28" y="38" width="44" height="13" rx="2.5" fill="white" />
+      <image
+        href={logo}
+        x="30"
+        y="39.5"
+        width="40"
+        height="10"
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </svg>
+  );
+}
+
+/** Arena da loja: camisas pretas com o logo, uma por função necessária. Os nomes ficam ao lado da camisa. */
 function Formation({ people }: { people: PersonRow[] }) {
   const qc = useQueryClient();
   const key = ["workforce-lineup"];
   const [unit, setUnit] = useState<WorkUnit>("NP4");
+  const [month, setMonth] = useState(monthNow());
   const [selId, setSelId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overFn, setOverFn] = useState<FunctionKey | null>(null);
+  const [ask, setAsk] = useState<{ fn: FunctionKey; personId: string } | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
@@ -1008,17 +1062,18 @@ function Formation({ people }: { people: PersonRow[] }) {
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from("workforce_lineup")
-        .select("unit_code,fn,person_id");
+        .select("unit_code,month,fn,person_id,authorized");
       if (err)
         throw new Error(
-          "Não foi possível consultar a formação. A atualização do banco (0036) já foi aplicada?",
+          "Não foi possível consultar a formação. A atualização do banco (0037) já foi aplicada?",
         );
       return (data ?? []) as unknown as LineupRow[];
     },
   });
 
-  const rows = (lineup.data ?? []).filter((r) => r.unit_code === unit);
-  const byFn = new Map(rows.map((r) => [r.fn, r.person_id]));
+  const all = lineup.data ?? [];
+  const rows = all.filter((r) => r.unit_code === unit && r.month === month);
+  const previousRows = all.filter((r) => r.unit_code === unit && r.month === prevMonth(month));
   const personById = (id: string | undefined) => people.find((x) => x.id === id);
   const group = people
     .filter((x) => x.unit_code === unit)
@@ -1029,65 +1084,107 @@ function Formation({ people }: { people: PersonRow[] }) {
         (x) => x.unit_code !== unit && x.name.toLowerCase().includes(search.trim().toLowerCase()),
       )
     : [];
-  const activeId = dragId ?? selId;
-  const active = personById(activeId ?? undefined);
+  const active = personById(dragId ?? selId ?? undefined);
   const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
+  const placedOn = (fn: FunctionKey) => rows.filter((r) => r.fn === fn);
 
-  const filled = FUNCTIONS.filter((f) => byFn.has(f.key)).length;
-  const missing = FUNCTIONS.filter((f) => !byFn.has(f.key));
-  const outOfRole = FUNCTIONS.filter((f) => {
-    const p = personById(byFn.get(f.key));
-    return p && !levelOf(p, f.key);
-  });
+  const filled = FUNCTIONS.filter((f) => placedOn(f.key).length > 0).length;
+  const missing = FUNCTIONS.filter((f) => placedOn(f.key).length === 0);
   const overloaded = group.filter((x) => placedCount(x.id) > 2);
   const complete = filled === FUNCTIONS.length;
 
-  async function place(fn: FunctionKey, personId: string) {
+  const fail = (msg: string) => {
+    setError(msg);
+    void lineup.refetch();
+  };
+
+  async function add(fn: FunctionKey, personId: string, authorized: boolean) {
     setError("");
+    setAsk(null);
     qc.setQueryData<LineupRow[]>(key, (cur) => [
-      ...(cur ?? []).filter((r) => !(r.unit_code === unit && r.fn === fn)),
-      { unit_code: unit, fn, person_id: personId },
+      ...(cur ?? []).filter(
+        (r) =>
+          !(r.unit_code === unit && r.month === month && r.fn === fn && r.person_id === personId),
+      ),
+      { unit_code: unit, month, fn, person_id: personId, authorized },
     ]);
-    const { error: err } = await supabase
-      .from("workforce_lineup")
-      .upsert({ unit_code: unit, fn, person_id: personId, updated_at: new Date().toISOString() });
-    if (err) {
-      setError("Não foi possível colocar a pessoa na posição.");
-      void lineup.refetch();
-    }
+    const { error: err } = await supabase.from("workforce_lineup").upsert({
+      unit_code: unit,
+      month,
+      fn,
+      person_id: personId,
+      authorized,
+      updated_at: new Date().toISOString(),
+    });
+    if (err) fail("Não foi possível colocar a pessoa na camisa.");
   }
 
-  async function clearSlot(fn: FunctionKey) {
+  async function remove(fn: FunctionKey, personId: string) {
     setError("");
     qc.setQueryData<LineupRow[]>(key, (cur) =>
-      (cur ?? []).filter((r) => !(r.unit_code === unit && r.fn === fn)),
+      (cur ?? []).filter(
+        (r) =>
+          !(r.unit_code === unit && r.month === month && r.fn === fn && r.person_id === personId),
+      ),
     );
     const { error: err } = await supabase
       .from("workforce_lineup")
       .delete()
       .eq("unit_code", unit)
-      .eq("fn", fn);
-    if (err) {
-      setError("Não foi possível tirar a pessoa da posição.");
-      void lineup.refetch();
-    }
+      .eq("month", month)
+      .eq("fn", fn)
+      .eq("person_id", personId);
+    if (err) fail("Não foi possível tirar a pessoa da camisa.");
   }
 
   async function clearAll() {
     setConfirmClear(false);
     setError("");
-    qc.setQueryData<LineupRow[]>(key, (cur) => (cur ?? []).filter((r) => r.unit_code !== unit));
-    const { error: err } = await supabase.from("workforce_lineup").delete().eq("unit_code", unit);
-    if (err) {
-      setError("Não foi possível limpar o campo.");
-      void lineup.refetch();
-    }
+    qc.setQueryData<LineupRow[]>(key, (cur) =>
+      (cur ?? []).filter((r) => !(r.unit_code === unit && r.month === month)),
+    );
+    const { error: err } = await supabase
+      .from("workforce_lineup")
+      .delete()
+      .eq("unit_code", unit)
+      .eq("month", month);
+    if (err) fail("Não foi possível limpar o campo.");
   }
 
-  function clickSlot(fn: FunctionKey) {
-    if (selId) {
-      void place(fn, selId);
-      setSelId(null);
+  async function copyPrevious() {
+    setError("");
+    const copy = previousRows.map((r) => ({ ...r, month }));
+    qc.setQueryData<LineupRow[]>(key, (cur) => [
+      ...(cur ?? []).filter(
+        (r) =>
+          !(
+            r.unit_code === unit &&
+            r.month === month &&
+            copy.some((c) => c.fn === r.fn && c.person_id === r.person_id)
+          ),
+      ),
+      ...copy,
+    ]);
+    const { error: err } = await supabase
+      .from("workforce_lineup")
+      .upsert(copy.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+    if (err) fail("Não foi possível copiar o mês anterior.");
+  }
+
+  /** Active person goes on a shirt: principal or parallel directly; potential only after authorization. */
+  function tryPlace(fn: FunctionKey, personId: string) {
+    const person = personById(personId);
+    if (!person) return;
+    if (rows.some((r) => r.fn === fn && r.person_id === personId)) return;
+    const level = levelOf(person, fn);
+    if (level === "principal" || level === "complementar") {
+      void add(fn, personId, false);
+    } else if (level === "potencial") {
+      setAsk({ fn, personId });
+    } else {
+      setError(
+        `${shortName(person.name)} não tem a função ${fnLabel(fn)} marcada. Marque no Mapa mental (Editar funções) para poder escalar.`,
+      );
     }
   }
 
@@ -1118,7 +1215,11 @@ function Formation({ people }: { people: PersonRow[] }) {
       >
         <button
           type="button"
-          onClick={() => setSelId((cur) => (cur === x.id ? null : x.id))}
+          onClick={() => {
+            setError("");
+            setAsk(null);
+            setSelId((cur) => (cur === x.id ? null : x.id));
+          }}
           aria-pressed={isSel}
           className={`flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border-2 bg-card px-3 py-2 text-left ${isSel ? "border-primary ring-2 ring-primary" : "border-border"}`}
         >
@@ -1143,48 +1244,66 @@ function Formation({ people }: { people: PersonRow[] }) {
     );
   };
 
+  const askPerson = personById(ask?.personId);
+
   return (
     <div className="space-y-4">
-      <div
-        className="flex flex-wrap items-center gap-2 print:hidden"
-        role="tablist"
-        aria-label="Loja"
-      >
-        {UNITS.map((u) => {
-          const n = (lineup.data ?? []).filter((r) => r.unit_code === u).length;
-          return (
-            <button
-              key={u}
-              type="button"
-              role="tab"
-              aria-selected={unit === u}
-              onClick={() => {
-                setUnit(u);
-                setSelId(null);
-              }}
-              className={`min-h-12 rounded-xl border px-4 text-left ${unit === u ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/60"}`}
-            >
-              <span className="block text-base font-extrabold">{u}</span>
-              <span className="block text-[11px] opacity-80">
-                {n} de {FUNCTIONS.length} posições
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap items-end gap-2 print:hidden">
+        <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-2">
+          {UNITS.map((u) => {
+            const n = new Set(
+              all.filter((r) => r.unit_code === u && r.month === month).map((r) => r.fn),
+            ).size;
+            return (
+              <button
+                key={u}
+                type="button"
+                role="tab"
+                aria-selected={unit === u}
+                onClick={() => {
+                  setUnit(u);
+                  setSelId(null);
+                  setAsk(null);
+                }}
+                className={`min-h-12 rounded-xl border px-4 text-left ${unit === u ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/60"}`}
+              >
+                <span className="block text-base font-extrabold">{u}</span>
+                <span className="block text-[11px] opacity-80">
+                  {n} de {FUNCTIONS.length} camisas
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <label className="ml-auto text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Mês da formação
+          <input
+            id="lineup-month"
+            type="month"
+            value={month}
+            onChange={(e) => e.target.value && setMonth(e.target.value)}
+            className={fieldClass}
+          />
+        </label>
       </div>
 
       <div className="space-y-2 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-lg font-extrabold">
             {complete
-              ? "Formação completa"
-              : `${filled} de ${FUNCTIONS.length} posições preenchidas`}
+              ? `Arena ${unit} completa em ${monthLabel(month)}`
+              : `${filled} de ${FUNCTIONS.length} camisas preenchidas em ${monthLabel(month)}`}
           </p>
           <div className="flex flex-wrap gap-2 print:hidden">
+            {previousRows.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => void copyPrevious()}>
+                Copiar de {monthLabel(prevMonth(month))}
+              </Button>
+            )}
             {confirmClear ? (
               <>
                 <Button size="sm" variant="destructive" onClick={() => void clearAll()}>
-                  Confirmar: limpar o campo da {unit}
+                  Confirmar: limpar a arena
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setConfirmClear(false)}>
                   Cancelar
@@ -1197,7 +1316,7 @@ function Formation({ people }: { people: PersonRow[] }) {
                 disabled={rows.length === 0}
                 onClick={() => setConfirmClear(true)}
               >
-                Limpar o campo
+                Limpar a arena
               </Button>
             )}
           </div>
@@ -1219,136 +1338,155 @@ function Formation({ people }: { people: PersonRow[] }) {
         </div>
         {!complete && (
           <p className="text-sm text-muted-foreground">
-            Falta preencher: <b>{missing.map((f) => fnLabel(f.key)).join(", ")}</b>.
+            Falta escalar: <b>{missing.map((f) => fnLabel(f.key)).join(", ")}</b>.
           </p>
         )}
-        {complete && outOfRole.length === 0 && overloaded.length === 0 && (
+        {complete && overloaded.length === 0 && (
           <p className="text-sm font-semibold" style={{ color: LEVEL_COLOR.principal }}>
-            Todas as áreas básicas da {unit} estão preenchidas por pessoas aptas.
-          </p>
-        )}
-        {outOfRole.length > 0 && (
-          <p className="text-sm font-semibold text-destructive">
-            Fora da função (a pessoa não tem essa função marcada):{" "}
-            {outOfRole
-              .map(
-                (f) => `${fnLabel(f.key)} (${shortName(personById(byFn.get(f.key))?.name ?? "")})`,
-              )
-              .join(", ")}
-            .
+            Todas as camisas básicas da {unit} estão vestidas.
           </p>
         )}
         {overloaded.length > 0 && (
           <p className="text-sm font-semibold text-destructive">
-            Sobrecarga, mais de 2 posições: {overloaded.map((x) => shortName(x.name)).join(", ")}.
+            Sobrecarga, mais de 2 camisas: {overloaded.map((x) => shortName(x.name)).join(", ")}.
           </p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm font-semibold text-destructive">
             {error}
           </p>
         )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      {ask && askPerson && (
         <div
-          className="relative aspect-[16/10] min-h-[360px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
-          style={{
-            background:
-              "repeating-linear-gradient(90deg, oklch(0.52 0.13 150) 0 12.5%, oklch(0.56 0.13 150) 12.5% 25%)",
-          }}
+          role="alertdialog"
+          aria-label="Autorizar potencial"
+          className="flex flex-wrap items-center gap-3 rounded-xl border-2 p-3 print:hidden"
+          style={{ borderColor: LEVEL_COLOR.potencial }}
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 160 100"
-            preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            fill="none"
-            stroke="white"
-            strokeOpacity="0.75"
-            strokeWidth="0.7"
-            vectorEffect="non-scaling-stroke"
-          >
-            <rect x="3" y="3" width="154" height="94" />
-            <line x1="80" y1="3" x2="80" y2="97" />
-            <ellipse cx="80" cy="50" rx="13" ry="20" />
-            <rect x="3" y="26" width="22" height="48" />
-            <rect x="135" y="26" width="22" height="48" />
-            <rect x="3" y="39" width="8" height="22" />
-            <rect x="149" y="39" width="8" height="22" />
-          </svg>
+          <p className="text-sm">
+            <b>{shortName(askPerson.name)}</b> tem só <b>potencial</b> em <b>{fnLabel(ask.fn)}</b>:
+            ainda não faz essa função. Autorizar nesta formação?
+          </p>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" onClick={() => void add(ask.fn, ask.personId, true)}>
+              Autorizar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setAsk(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
-          {FUNCTIONS.map((fn) => {
-            const pos = PITCH[fn.key];
-            const person = personById(byFn.get(fn.key));
-            const personLevel = person ? levelOf(person, fn.key) : undefined;
-            const activeLevel = active ? levelOf(active, fn.key) : undefined;
-            const lit = active && activeLevel;
-            const dim = active && !activeLevel;
-            const bg = person ? (personLevel ? LEVEL_COLOR[personLevel] : FORA_COR) : "transparent";
-            const fg = person && (!personLevel || personLevel === "principal") ? "white" : "black";
-            return (
-              <div
-                key={fn.key}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => clickSlot(fn.key)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setOverFn(fn.key);
-                    }}
-                    onDragLeave={() => setOverFn((cur) => (cur === fn.key ? null : cur))}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const id = e.dataTransfer.getData("text/plain") || dragId;
-                      setOverFn(null);
-                      setDragId(null);
-                      if (id) void place(fn.key, id);
-                    }}
-                    aria-label={`${fnLabel(fn.key)}${person ? `: ${person.name}` : ": vazio"}`}
-                    className={`flex size-[4.5rem] items-center justify-center rounded-full border-4 text-center text-sm font-extrabold leading-tight transition-all sm:size-24 ${person ? "border-white" : "border-dashed border-white/80 bg-black/10 text-white"} ${dim ? "opacity-40" : ""} ${overFn === fn.key ? "scale-110" : ""}`}
-                    style={{
-                      background: bg,
-                      color: person ? fg : undefined,
-                      boxShadow: lit
-                        ? `0 0 0 5px ${LEVEL_COLOR[activeLevel!]}, 0 0 22px 6px ${LEVEL_COLOR[activeLevel!]}`
-                        : undefined,
-                    }}
-                  >
-                    {person ? (
-                      <span className="px-1">
-                        {firstName(person.name)}
-                        {placedCount(person.id) > 1 && (
-                          <span className="block text-[11px] font-bold">
-                            ×{placedCount(person.id)}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="overflow-x-auto rounded-2xl">
+          <div
+            className="relative aspect-[16/10] min-h-[420px] min-w-[820px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
+            style={{
+              background:
+                "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
+            }}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 160 100"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              fill="none"
+              stroke="white"
+              strokeOpacity="0.7"
+              strokeWidth="0.6"
+            >
+              <rect x="3" y="3" width="154" height="94" />
+              <line x1="80" y1="3" x2="80" y2="97" />
+              <ellipse cx="80" cy="50" rx="13" ry="20" />
+              <rect x="3" y="26" width="22" height="48" />
+              <rect x="135" y="26" width="22" height="48" />
+            </svg>
+
+            <p className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/60 px-5 py-1 text-lg font-extrabold uppercase tracking-[0.2em] text-white">
+              Arena {unit}
+            </p>
+
+            {FUNCTIONS.map((fn) => {
+              const pos = PITCH[fn.key];
+              const placed = placedOn(fn.key);
+              const activeLevel = active ? levelOf(active, fn.key) : undefined;
+              const canLight = activeLevel === "principal" || activeLevel === "complementar";
+              const dim = active && !canLight;
+              const onLeft = pos.x > 80;
+              return (
+                <div
+                  key={fn.key}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                >
+                  <div className={`flex items-center gap-2 ${onLeft ? "flex-row-reverse" : ""}`}>
+                    <div className="flex w-24 flex-col items-center gap-1 sm:w-28">
+                      <button
+                        type="button"
+                        onClick={() => selId && tryPlace(fn.key, selId)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setOverFn(fn.key);
+                        }}
+                        onDragLeave={() => setOverFn((cur) => (cur === fn.key ? null : cur))}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const id = e.dataTransfer.getData("text/plain") || dragId;
+                          setOverFn(null);
+                          setDragId(null);
+                          if (id) tryPlace(fn.key, id);
+                        }}
+                        aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
+                        className={`relative size-20 transition-all sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? "opacity-80" : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                      >
+                        <Shirt glow={canLight ? LEVEL_COLOR[activeLevel!] : undefined} />
+                        {placed.length > 0 && (
+                          <span
+                            className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full text-sm font-extrabold text-white"
+                            style={{ background: LEVEL_COLOR.principal }}
+                            aria-hidden="true"
+                          >
+                            ✓
                           </span>
                         )}
+                      </button>
+                      <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
+                        {fnLabel(fn.key)}
+                        {canLight ? ` · ${LEVEL_WORD[activeLevel!]}` : ""}
                       </span>
-                    ) : (
-                      <span className="text-2xl font-light">+</span>
-                    )}
-                  </button>
-                  <span className="rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-bold text-white sm:text-xs">
-                    {fnLabel(fn.key)}
-                    {lit ? ` · ${LEVEL_WORD[activeLevel!]}` : ""}
-                  </span>
-                  {person && (
-                    <button
-                      type="button"
-                      onClick={() => void clearSlot(fn.key)}
-                      className="rounded-full bg-white/90 px-2 text-[11px] font-bold text-black print:hidden"
+                    </div>
+                    <ul
+                      className={`flex w-28 flex-col gap-1 ${onLeft ? "items-end" : "items-start"}`}
                     >
-                      tirar
-                    </button>
-                  )}
+                      {placed.map((r) => {
+                        const p = personById(r.person_id);
+                        if (!p) return null;
+                        const level =
+                          levelOf(p, fn.key) ?? (r.authorized ? "potencial" : undefined);
+                        return (
+                          <li key={r.person_id}>
+                            <button
+                              type="button"
+                              onClick={() => void remove(fn.key, r.person_id)}
+                              title={`${p.name} · ${level ? LEVEL_WORD[level] : "sem a função marcada"}. Clique para tirar.`}
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"} ${active?.id === p.id ? "ring-2 ring-white" : ""}`}
+                            >
+                              {firstName(p.name)}
+                              {r.authorized && levelOf(p, fn.key) === "potencial" ? " ✱" : ""}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         <aside className="space-y-3 print:hidden">
@@ -1382,12 +1520,24 @@ function Formation({ people }: { people: PersonRow[] }) {
         </aside>
       </div>
 
-      <p className="max-w-[80ch] text-xs text-muted-foreground print:hidden">
-        Arraste o nome para uma posição, ou clique no nome e depois na posição. Ao pegar uma pessoa,
-        o campo acende o que ela pode fazer: verde é totalmente apto, laranja é secundário e amarelo
-        é potencial. A mesma pessoa pode ocupar mais de uma posição. Posição vermelha: a pessoa não
-        tem aquela função marcada.
-      </p>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground print:hidden">
+        {LEVELS.map((l) => (
+          <span
+            key={l.key}
+            className={`rounded-full px-2.5 py-0.5 font-bold ${LEVEL_STYLE[l.key]}`}
+          >
+            {l.key === "complementar"
+              ? "Paralelo"
+              : LEVEL_WORD[l.key].replace("Totalmente apto", "Principal")}
+          </span>
+        ))}
+        <span>
+          Clique num funcionário do elenco: acendem as camisas que ele pode vestir (principal ou
+          paralelo). Clique na camisa ou arraste o nome até ela. O nome fica ao lado da camisa na
+          cor da função. Quem só tem potencial precisa da sua autorização (✱). Clique no nome ao
+          lado da camisa para tirar.
+        </span>
+      </div>
     </div>
   );
 }
