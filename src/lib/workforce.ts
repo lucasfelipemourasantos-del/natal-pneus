@@ -63,3 +63,29 @@ export const shortName = (full: string) => {
     ? parts.join(" ")
     : `${parts[0]} ${parts[1] === "de" || parts[1] === "da" || parts[1] === "do" ? parts[2] : parts[1]}`;
 };
+
+/** Minimum structure every store must have working (RH, 13/11/2026). The driver is shared by the 4 stores. */
+export const FUNCTIONS = [
+  { key: "supervisor", label: "Supervisor" },
+  { key: "vendedor", label: "Vendedor" },
+  { key: "chefe_pista", label: "Chefe de pista" },
+  { key: "mecanico", label: "Mecânico" },
+  { key: "alinhador", label: "Alinhador" },
+  { key: "borracheiro", label: "Borracheiro" },
+  { key: "balanceador", label: "Balanceador" },
+  { key: "estoquista", label: "Estoquista" },
+  { key: "caixa", label: "Caixa" },
+  { key: "asg", label: "ASG" },
+  { key: "motorista", label: "Motorista (apoio das 4 lojas)" },
+] as const;
+export type FunctionKey = (typeof FUNCTIONS)[number]["key"];
+
+/** principal = does it today · complementar = does when needed · potencial = could learn, doesn't do yet. */
+export const LEVELS = [
+  { key: "principal", label: "Principal", short: "P", rank: 3 },
+  { key: "complementar", label: "Complementar", short: "C", rank: 2 },
+  { key: "potencial", label: "Potencial", short: "Pot", rank: 1 },
+] as const;
+export type LevelKey = (typeof LEVELS)[number]["key"];
+
+export type Abilities = Partial<Record<FunctionKey, LevelKey>>;

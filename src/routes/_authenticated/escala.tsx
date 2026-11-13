@@ -16,11 +16,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { fieldClass } from "@/lib/portal-data";
 import {
   DEFAULT_HOURS,
+  FUNCTIONS,
+  LEVELS,
   SECTORS,
   UNITS,
   UNIT_NAME,
   bySector,
   shortName,
+  type Abilities,
+  type FunctionKey,
+  type LevelKey,
   type SectorKey,
   type WorkUnit,
 } from "@/lib/workforce";
@@ -59,10 +64,18 @@ type PersonRow = {
   rotation_note: string;
   status: string;
   notes: string;
+  abilities: Abilities | null;
 };
 
 const COLUMNS =
-  "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes";
+  "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities";
+
+const levelOf = (x: PersonRow, fn: FunctionKey): LevelKey | undefined => x.abilities?.[fn];
+const LEVEL_STYLE: Record<LevelKey, string> = {
+  principal: "bg-primary text-primary-foreground",
+  complementar: "bg-primary/20 text-foreground",
+  potencial: "border border-dashed border-primary/60 text-muted-foreground",
+};
 
 const TABS = [
   { key: "mapa", label: "Mapa mental" },
@@ -84,9 +97,9 @@ function EscalaPage() {
         .order("name");
       if (error)
         throw new Error(
-          "Não foi possível consultar o quadro. A atualização do banco (0034) já foi aplicada?",
+          "Não foi possível consultar o quadro. As atualizações do banco (0034 e 0035) já foram aplicadas?",
         );
-      return (data ?? []) as PersonRow[];
+      return (data ?? []) as unknown as PersonRow[];
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["workforce-people"] });
@@ -118,7 +131,7 @@ function EscalaPage() {
           {people.error.message}
         </p>
       )}
-      {people.data && tab === "mapa" && <MindMap people={people.data} />}
+      {people.data && tab === "mapa" && <MindMap people={people.data} onSaved={refresh} />}
       {people.data && tab === "pessoas" && <PeopleTable people={people.data} onSaved={refresh} />}
       {tab === "lojas" && <StoreNotes />}
     </PortalShell>
@@ -126,7 +139,11 @@ function EscalaPage() {
 }
 
 /** Mind map: the group in the center, the 4 stores around it, each store with its sectors and people. */
-function MindMap({ people }: { people: PersonRow[] }) {
+function MindMap({ people, onSaved }: { people: PersonRow[]; onSaved: () => void }) {
+  const [selPerson, setSelPerson] = useState<string | null>(null);
+  const [selFn, setSelFn] = useState<FunctionKey | null>(null);
+  const [editing, setEditing] = useState<PersonRow | null>(null);
+  const picked = people.find((x) => x.id === selPerson) ?? null;
   const unconfirmed = people.filter((x) => x.status === "a_confirmar");
   const special = people.filter((x) => x.rotates || x.rotation_note);
   return (
@@ -153,6 +170,13 @@ function MindMap({ people }: { people: PersonRow[] }) {
                   {UNIT_NAME[u].split(" · ")[1]} · {group.length} pessoas
                 </p>
               </header>
+              <StructurePanel
+                group={group}
+                all={people}
+                picked={picked}
+                selFn={selFn}
+                onPickFn={(k) => setSelFn((cur) => (cur === k ? null : k))}
+              />
               {bySector(group).map((s) => (
                 <div
                   key={s.key}
@@ -169,12 +193,19 @@ function MindMap({ people }: { people: PersonRow[] }) {
                     {s.people.map((x) => (
                       <li
                         key={x.id}
-                        className="rounded-md bg-muted/60 px-2 py-1.5 text-sm"
+                        className={`rounded-md bg-muted/60 px-2 py-1.5 text-sm ${selFn && levelOf(x, selFn) ? "ring-2 ring-primary" : ""} ${picked?.id === x.id ? "outline outline-2 outline-primary" : ""}`}
                         title={[x.name, x.role, x.skills.join(", "), x.rotation_note]
                           .filter(Boolean)
                           .join(" · ")}
                       >
-                        <span className="font-semibold">{shortName(x.name)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelPerson((cur) => (cur === x.id ? null : x.id))}
+                          aria-pressed={picked?.id === x.id}
+                          className="font-semibold underline-offset-2 hover:underline"
+                        >
+                          {shortName(x.name)}
+                        </button>
                         {x.rotates && (
                           <Repeat2
                             size={13}
@@ -192,6 +223,23 @@ function MindMap({ people }: { people: PersonRow[] }) {
                           <span className="block text-[11px] text-muted-foreground/80">
                             também: {x.skills.join(", ")}
                           </span>
+                        )}
+                        {selFn && levelOf(x, selFn) && (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 text-[10px] font-bold ${LEVEL_STYLE[levelOf(x, selFn)!]}`}
+                          >
+                            {LEVELS.find((l) => l.key === levelOf(x, selFn))?.label}
+                          </span>
+                        )}
+                        {picked?.id === x.id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-1.5 print:hidden"
+                            onClick={() => setEditing(x)}
+                          >
+                            Editar funções
+                          </Button>
                         )}
                       </li>
                     ))}
@@ -218,6 +266,17 @@ function MindMap({ people }: { people: PersonRow[] }) {
         </section>
       )}
 
+      {editing && (
+        <EditAbilities
+          person={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            onSaved();
+          }}
+        />
+      )}
+
       {unconfirmed.length > 0 && (
         <p className="flex items-start gap-2 text-sm text-muted-foreground print:hidden">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
@@ -226,6 +285,147 @@ function MindMap({ people }: { people: PersonRow[] }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** Minimum structure of one store: how many people cover each function; lights up for the picked person. */
+function StructurePanel({
+  group,
+  all,
+  picked,
+  selFn,
+  onPickFn,
+}: {
+  group: PersonRow[];
+  all: PersonRow[];
+  picked: PersonRow | null;
+  selFn: FunctionKey | null;
+  onPickFn: (k: FunctionKey) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-2">
+      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        Estrutura mínima {picked ? `· funções de ${shortName(picked.name)}` : ""}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {FUNCTIONS.map((fn) => {
+          const pool = fn.key === "motorista" ? all : group;
+          const cover = pool.filter((x) => {
+            const l = levelOf(x, fn.key);
+            return l === "principal" || l === "complementar";
+          }).length;
+          const potential = pool.filter((x) => levelOf(x, fn.key) === "potencial").length;
+          const mine = picked ? levelOf(picked, fn.key) : undefined;
+          const tone =
+            cover === 0
+              ? "border-destructive/50 text-destructive"
+              : cover === 1
+                ? "border-warning/60"
+                : "border-border";
+          return (
+            <button
+              key={fn.key}
+              type="button"
+              onClick={() => onPickFn(fn.key)}
+              aria-pressed={selFn === fn.key}
+              title={
+                cover === 0
+                  ? "Ninguém cobre esta função"
+                  : cover === 1
+                    ? "Só 1 pessoa cobre: sem reserva"
+                    : `${cover} pessoas cobrem`
+              }
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tone} ${mine ? LEVEL_STYLE[mine] : ""} ${selFn === fn.key ? "ring-2 ring-primary" : ""}`}
+            >
+              {fn.label.replace(" (apoio das 4 lojas)", "")} · {cover}
+              {potential > 0 ? ` (+${potential})` : ""}
+              {mine ? ` · ${LEVELS.find((l) => l.key === mine)?.short}` : ""}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1.5 text-[10px] text-muted-foreground">
+        Número = pessoas que cobrem (principal ou complementar); (+n) = potencial. Vermelho: ninguém;
+        amarelo: sem reserva. Clique numa função ou numa pessoa para acender.
+      </p>
+    </div>
+  );
+}
+
+function EditAbilities({
+  person,
+  onClose,
+  onSaved,
+}: {
+  person: PersonRow;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [ab, setAb] = useState<Abilities>({ ...(person.abilities ?? {}) });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function save() {
+    setBusy(true);
+    setError("");
+    const { error: err } = await supabase
+      .from("workforce_people")
+      .update({ abilities: ab, updated_at: new Date().toISOString() })
+      .eq("id", person.id);
+    setBusy(false);
+    if (err) return setError("Não foi possível salvar. A atualização do banco (0035) já foi aplicada?");
+    onSaved();
+  }
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Funções de {person.name}</DialogTitle>
+          <DialogDescription>
+            Principal: faz hoje. Complementar: faz quando precisa. Potencial: pode aprender, ainda não
+            faz.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          {FUNCTIONS.map((fn) => (
+            <label key={fn.key} className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-semibold">{fn.label}</span>
+              <select
+                value={ab[fn.key] ?? ""}
+                onChange={(e) =>
+                  setAb((cur) => {
+                    const next = { ...cur };
+                    if (e.target.value) next[fn.key] = e.target.value as LevelKey;
+                    else delete next[fn.key];
+                    return next;
+                  })
+                }
+                className={`${fieldClass} !w-44`}
+              >
+                <option value="">Não faz</option>
+                {LEVELS.map((l) => (
+                  <option key={l.key} value={l.key}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={save} disabled={busy}>
+            {busy ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

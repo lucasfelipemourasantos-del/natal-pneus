@@ -300,9 +300,9 @@ export type Database = {
         Relationships: []
       }
       workforce_people: {
-        Row: { active: boolean; cbo: string; cbo_title: string; employer: string; id: string; name: string; notes: string; role: string; rotates: boolean; rotation_note: string; sector: string; skills: string[]; status: string; unit_code: string; updated_at: string }
-        Insert: { active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector: string; skills?: string[]; status?: string; unit_code: string; updated_at?: string }
-        Update: { active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name?: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector?: string; skills?: string[]; status?: string; unit_code?: string; updated_at?: string }
+        Row: { abilities: Json; active: boolean; cbo: string; cbo_title: string; employer: string; id: string; name: string; notes: string; role: string; rotates: boolean; rotation_note: string; sector: string; skills: string[]; status: string; unit_code: string; updated_at: string }
+        Insert: { abilities?: Json; active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector: string; skills?: string[]; status?: string; unit_code: string; updated_at?: string }
+        Update: { abilities?: Json; active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name?: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector?: string; skills?: string[]; status?: string; unit_code?: string; updated_at?: string }
         Relationships: []
       }
       workforce_unit_notes: {
