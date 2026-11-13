@@ -984,17 +984,17 @@ type LineupRow = {
 
 /** Posição de cada camisa no campo (x e y em %): estoque atrás, pista no meio, venda na frente. */
 const PITCH: Record<FunctionKey, { x: number; y: number }> = {
-  estoquista: { x: 6, y: 30 },
-  asg: { x: 6, y: 72 },
-  mecanico: { x: 27, y: 14 },
-  alinhador: { x: 27, y: 38 },
-  borracheiro: { x: 27, y: 62 },
-  balanceador: { x: 27, y: 86 },
-  chefe_pista: { x: 49, y: 50 },
-  motorista: { x: 49, y: 88 },
-  caixa: { x: 67, y: 26 },
-  vendedor: { x: 67, y: 74 },
-  supervisor: { x: 92, y: 50 },
+  estoquista: { x: 11, y: 30 },
+  asg: { x: 11, y: 72 },
+  mecanico: { x: 30, y: 15 },
+  alinhador: { x: 30, y: 39 },
+  borracheiro: { x: 30, y: 63 },
+  balanceador: { x: 30, y: 85 },
+  chefe_pista: { x: 52, y: 50 },
+  motorista: { x: 52, y: 85 },
+  caixa: { x: 70, y: 26 },
+  vendedor: { x: 70, y: 74 },
+  supervisor: { x: 89, y: 50 },
 };
 
 const monthNow = () => new Date().toISOString().slice(0, 7);
@@ -1025,20 +1025,12 @@ function Shirt({ glow }: { glow?: string | undefined }) {
     >
       <path
         d="M30 8 L10 22 L2 44 L20 52 L24 42 L24 94 L76 94 L76 42 L80 52 L98 44 L90 22 L70 8 Q50 24 30 8 Z"
-        fill="#101114"
+        fill="#000"
         stroke="white"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
-      <rect x="28" y="38" width="44" height="13" rx="2.5" fill="white" />
-      <image
-        href={logo}
-        x="30"
-        y="39.5"
-        width="40"
-        height="10"
-        preserveAspectRatio="xMidYMid meet"
-      />
+      <image href={logo} x="21" y="38" width="58" height="12" preserveAspectRatio="xMidYMid meet" />
     </svg>
   );
 }
@@ -1383,7 +1375,7 @@ function Formation({ people }: { people: PersonRow[] }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="overflow-x-auto rounded-2xl">
           <div
-            className="relative aspect-[16/10] min-h-[420px] min-w-[820px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
+            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md"
             style={{
               background:
                 "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
@@ -1423,7 +1415,7 @@ function Formation({ people }: { people: PersonRow[] }) {
                   className="absolute -translate-x-1/2 -translate-y-1/2"
                   style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                 >
-                  <div className={`flex items-center gap-2 ${onLeft ? "flex-row-reverse" : ""}`}>
+                  <div className="relative">
                     <div className="flex w-24 flex-col items-center gap-1 sm:w-28">
                       <button
                         type="button"
@@ -1460,7 +1452,7 @@ function Formation({ people }: { people: PersonRow[] }) {
                       </span>
                     </div>
                     <ul
-                      className={`flex w-28 flex-col gap-1 ${onLeft ? "items-end" : "items-start"}`}
+                      className={`absolute top-6 flex w-28 flex-col gap-1 sm:top-8 ${onLeft ? "right-full mr-1 items-end" : "left-full ml-1 items-start"}`}
                     >
                       {placed.map((r) => {
                         const p = personById(r.person_id);
