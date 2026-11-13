@@ -88,4 +88,18 @@ export const LEVELS = [
 ] as const;
 export type LevelKey = (typeof LEVELS)[number]["key"];
 
-export type Abilities = Partial<Record<FunctionKey, LevelKey>>;
+/** Comissão técnica: funções de gerência e administrativas. Ficam fora do campo (não entram nas 11 camisas). */
+export const STAFF = [
+  { key: "gerente", label: "Gerente" },
+  { key: "gerente_atacado", label: "Gerente de atacado" },
+  { key: "comprador", label: "Comprador" },
+  { key: "financeiro", label: "Financeiro" },
+  { key: "rh", label: "RH" },
+  { key: "dp", label: "DP" },
+] as const;
+export type StaffKey = (typeof STAFF)[number]["key"];
+
+/** Qualquer função que uma pessoa pode ter: as 11 do campo ou as da comissão técnica. */
+export type AbilityKey = FunctionKey | StaffKey;
+
+export type Abilities = Partial<Record<AbilityKey, LevelKey>>;

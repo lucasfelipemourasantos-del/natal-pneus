@@ -20,10 +20,12 @@ import {
   FUNCTIONS,
   LEVELS,
   SECTORS,
+  STAFF,
   UNITS,
   UNIT_NAME,
   shortName,
   type Abilities,
+  type AbilityKey,
   type FunctionKey,
   type LevelKey,
   type SectorKey,
@@ -70,7 +72,7 @@ type PersonRow = {
 const COLUMNS =
   "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities";
 
-const levelOf = (x: PersonRow, fn: FunctionKey): LevelKey | undefined => x.abilities?.[fn];
+const levelOf = (x: PersonRow, fn: AbilityKey): LevelKey | undefined => x.abilities?.[fn];
 // Verde = principal, laranja = complementar, amarelo = potencial (linhas e etiquetas usam as mesmas cores).
 const LEVEL_COLOR: Record<LevelKey, string> = {
   principal: "oklch(0.6 0.17 150)",
@@ -157,8 +159,11 @@ const NEXT_LEVEL: Record<string, LevelKey | undefined> = {
   potencial: undefined,
 };
 
-const fnLabel = (k: FunctionKey) =>
-  (FUNCTIONS.find((f) => f.key === k)?.label ?? k).replace(" (apoio das 4 lojas)", "");
+const fnLabel = (k: AbilityKey) =>
+  ([...FUNCTIONS, ...STAFF].find((f) => f.key === k)?.label ?? k).replace(
+    " (apoio das 4 lojas)",
+    "",
+  );
 
 /** Pessoas que cobrem uma função (principal ou complementar); motorista conta o grupo todo. */
 function coverOf(fn: FunctionKey, group: PersonRow[], all: PersonRow[]) {
@@ -929,29 +934,36 @@ function EditAbilities({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
-          {FUNCTIONS.map((fn) => (
-            <label key={fn.key} className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-semibold">{fn.label}</span>
-              <select
-                value={ab[fn.key] ?? ""}
-                onChange={(e) =>
-                  setAb((cur) => {
-                    const next = { ...cur };
-                    if (e.target.value) next[fn.key] = e.target.value as LevelKey;
-                    else delete next[fn.key];
-                    return next;
-                  })
-                }
-                className={`${fieldClass} !w-44`}
-              >
-                <option value="">Não faz</option>
-                {LEVELS.map((l) => (
-                  <option key={l.key} value={l.key}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {[...FUNCTIONS, ...STAFF].map((fn, i) => (
+            <div key={fn.key} className="contents">
+              {i === FUNCTIONS.length && (
+                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  Comissão técnica (fora do campo)
+                </p>
+              )}
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold">{fn.label}</span>
+                <select
+                  value={ab[fn.key] ?? ""}
+                  onChange={(e) =>
+                    setAb((cur) => {
+                      const next = { ...cur };
+                      if (e.target.value) next[fn.key] = e.target.value as LevelKey;
+                      else delete next[fn.key];
+                      return next;
+                    })
+                  }
+                  className={`${fieldClass} !w-44`}
+                >
+                  <option value="">Não faz</option>
+                  {LEVELS.map((l) => (
+                    <option key={l.key} value={l.key}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           ))}
         </div>
         {error && (
@@ -977,7 +989,7 @@ const firstName = (full: string) => shortName(full).split(" ")[0] ?? full;
 type LineupRow = {
   unit_code: string;
   month: string;
-  fn: FunctionKey;
+  fn: AbilityKey;
   person_id: string;
   authorized: boolean;
 };
@@ -1047,8 +1059,8 @@ function Formation({ people }: { people: PersonRow[] }) {
   const [month, setMonth] = useState(monthNow());
   const [selId, setSelId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [overFn, setOverFn] = useState<FunctionKey | null>(null);
-  const [ask, setAsk] = useState<{ fn: FunctionKey; personId: string } | null>(null);
+  const [overFn, setOverFn] = useState<AbilityKey | null>(null);
+  const [ask, setAsk] = useState<{ fn: AbilityKey; personId: string } | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
@@ -1090,7 +1102,7 @@ function Formation({ people }: { people: PersonRow[] }) {
     : [];
   const active = ready ? undefined : personById(dragId ?? selId ?? undefined);
   const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
-  const placedOn = (fn: FunctionKey) => rows.filter((r) => r.fn === fn);
+  const placedOn = (fn: AbilityKey) => rows.filter((r) => r.fn === fn);
 
   const filled = FUNCTIONS.filter((f) => placedOn(f.key).length > 0).length;
   const missing = FUNCTIONS.filter((f) => placedOn(f.key).length === 0);
@@ -1102,7 +1114,7 @@ function Formation({ people }: { people: PersonRow[] }) {
     void lineup.refetch();
   };
 
-  async function add(fn: FunctionKey, personId: string, authorized: boolean) {
+  async function add(fn: AbilityKey, personId: string, authorized: boolean) {
     setError("");
     setAsk(null);
     qc.setQueryData<LineupRow[]>(key, (cur) => [
@@ -1123,7 +1135,7 @@ function Formation({ people }: { people: PersonRow[] }) {
     if (err) fail("Não foi possível colocar a pessoa na camisa.");
   }
 
-  async function remove(fn: FunctionKey, personId: string) {
+  async function remove(fn: AbilityKey, personId: string) {
     setError("");
     qc.setQueryData<LineupRow[]>(key, (cur) =>
       (cur ?? []).filter(
@@ -1176,7 +1188,7 @@ function Formation({ people }: { people: PersonRow[] }) {
   }
 
   /** Active person goes on a shirt: principal or parallel directly; potential only after authorization. */
-  function tryPlace(fn: FunctionKey, personId: string) {
+  function tryPlace(fn: AbilityKey, personId: string) {
     const person = personById(personId);
     if (!person) return;
     if (rows.some((r) => r.fn === fn && r.person_id === personId)) return;
@@ -1568,6 +1580,82 @@ function Formation({ people }: { people: PersonRow[] }) {
         )}
       </div>
 
+      <section
+        aria-label="Comissão técnica"
+        className="rounded-2xl border-2 border-dashed border-border bg-card p-4 print:hidden"
+      >
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+          Comissão técnica · fora do campo
+        </h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Gerência e funções administrativas. Não entram nas 11 camisas.
+        </p>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {STAFF.map((st) => {
+            const placed = placedOn(st.key);
+            const activeLevel = active ? levelOf(active, st.key) : undefined;
+            const canLight = activeLevel === "principal" || activeLevel === "complementar";
+            return (
+              <li
+                key={st.key}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setOverFn(st.key);
+                }}
+                onDragLeave={() => setOverFn((cur) => (cur === st.key ? null : cur))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("text/plain") || dragId;
+                  setOverFn(null);
+                  setDragId(null);
+                  if (id) tryPlace(st.key, id);
+                }}
+                className={`rounded-xl border-2 bg-muted/40 p-3 transition-all ${active && !canLight ? "opacity-40" : ""} ${overFn === st.key ? "scale-[1.02]" : ""}`}
+                style={{
+                  borderColor: canLight ? LEVEL_COLOR[activeLevel!] : undefined,
+                  boxShadow: canLight ? `0 0 14px 2px ${LEVEL_COLOR[activeLevel!]}` : undefined,
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={ready}
+                  data-print-show
+                  onClick={() => selId && tryPlace(st.key, selId)}
+                  className="flex w-full items-center justify-between gap-2 text-left disabled:opacity-100"
+                >
+                  <span className="text-base font-extrabold">{fnLabel(st.key)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {canLight ? LEVEL_WORD[activeLevel!] : placed.length === 0 ? "vazio" : ""}
+                  </span>
+                </button>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {placed.map((r) => {
+                    const p = personById(r.person_id);
+                    if (!p) return null;
+                    const level = levelOf(p, st.key) ?? (r.authorized ? "potencial" : undefined);
+                    return (
+                      <li key={r.person_id}>
+                        <button
+                          type="button"
+                          disabled={ready}
+                          data-print-show
+                          onClick={() => void remove(st.key, r.person_id)}
+                          title={`${p.name}. Clique para tirar.`}
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
+                        >
+                          {firstName(p.name)}
+                          {r.authorized && levelOf(p, st.key) === "potencial" ? " ✱" : ""}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
       {ready && (
         <section className="rounded-xl border border-border bg-card p-4 print:break-before-page">
           <h3 className="mb-2 text-lg font-extrabold">Escalação · {monthLabel(month)}</h3>
@@ -1602,6 +1690,37 @@ function Formation({ people }: { people: PersonRow[] }) {
               );
             })}
           </ul>
+          {STAFF.some((s) => placedOn(s.key).length > 0) && (
+            <>
+              <h4 className="mb-1 mt-4 text-sm font-extrabold uppercase tracking-wide">
+                Comissão técnica
+              </h4>
+              <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
+                {STAFF.filter((s) => placedOn(s.key).length > 0).map((st) => (
+                  <li
+                    key={st.key}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border pb-1.5"
+                  >
+                    <b className="w-36 shrink-0">{fnLabel(st.key)}</b>
+                    {placedOn(st.key).map((r) => {
+                      const p = personById(r.person_id);
+                      if (!p) return null;
+                      const level = levelOf(p, st.key) ?? (r.authorized ? "potencial" : undefined);
+                      return (
+                        <span
+                          key={r.person_id}
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
+                        >
+                          {shortName(p.name)}
+                          {r.authorized && levelOf(p, st.key) === "potencial" ? " ✱" : ""}
+                        </span>
+                      );
+                    })}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">
             Verde: função principal · Laranja: função paralela · Amarelo ✱: potencial autorizado.
           </p>
