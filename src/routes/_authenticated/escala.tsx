@@ -70,10 +70,16 @@ const COLUMNS =
   "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities";
 
 const levelOf = (x: PersonRow, fn: FunctionKey): LevelKey | undefined => x.abilities?.[fn];
+// Verde = principal, laranja = complementar, amarelo = potencial (linhas e etiquetas usam as mesmas cores).
+const LEVEL_COLOR: Record<LevelKey, string> = {
+  principal: "oklch(0.6 0.17 150)",
+  complementar: "oklch(0.72 0.18 55)",
+  potencial: "oklch(0.86 0.16 95)",
+};
 const LEVEL_STYLE: Record<LevelKey, string> = {
-  principal: "bg-primary text-primary-foreground",
-  complementar: "bg-primary/20 text-foreground",
-  potencial: "border border-dashed border-primary/60 text-muted-foreground",
+  principal: "bg-[oklch(0.6_0.17_150)] text-white",
+  complementar: "bg-[oklch(0.72_0.18_55)] text-black",
+  potencial: "bg-[oklch(0.86_0.16_95)] text-black",
 };
 
 const TABS = [
@@ -404,9 +410,9 @@ function StoreBoard({
   });
 
   const LINE_STYLE: Record<LevelKey, { w: number; o: number; dash?: string }> = {
-    principal: { w: 4, o: 1 },
-    complementar: { w: 3, o: 0.65 },
-    potencial: { w: 2.5, o: 0.7, dash: "7 6" },
+    principal: { w: 5, o: 1 },
+    complementar: { w: 4, o: 1 },
+    potencial: { w: 4, o: 1 },
   };
 
   return (
@@ -430,8 +436,7 @@ function StoreBoard({
                   y1="4"
                   x2="27"
                   y2="4"
-                  stroke="currentColor"
-                  className="text-primary"
+                  stroke={LEVEL_COLOR[l.key]}
                   strokeWidth={LINE_STYLE[l.key].w}
                   strokeOpacity={LINE_STYLE[l.key].o}
                   strokeDasharray={LINE_STYLE[l.key].dash}
@@ -592,14 +597,14 @@ function StoreBoard({
 
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-primary"
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
         >
           {lines.map((l) => (
             <g key={l.key}>
               <path
                 d={l.d}
                 fill="none"
-                stroke="currentColor"
+                stroke={LEVEL_COLOR[l.level]}
                 strokeWidth={LINE_STYLE[l.level].w}
                 strokeOpacity={LINE_STYLE[l.level].o}
                 strokeDasharray={LINE_STYLE[l.level].dash}
