@@ -982,19 +982,23 @@ type LineupRow = {
   authorized: boolean;
 };
 
-/** Posição de cada camisa no campo (x e y em %): estoque atrás, pista no meio, venda na frente. */
+/** Posição de cada camisa no campo (x e y em %), em 1-4-3-3 da esquerda para a direita: goleiro, 4 na defesa, 3 no meio e 3 no ataque. */
 const PITCH: Record<FunctionKey, { x: number; y: number }> = {
-  estoquista: { x: 11, y: 30 },
-  asg: { x: 11, y: 72 },
-  mecanico: { x: 30, y: 15 },
-  alinhador: { x: 30, y: 39 },
-  borracheiro: { x: 30, y: 63 },
-  balanceador: { x: 30, y: 85 },
+  // Goleiro: quem guarda o estoque.
+  estoquista: { x: 9, y: 50 },
+  // Defesa (4): a equipe técnica da pista.
+  mecanico: { x: 29, y: 14 },
+  alinhador: { x: 29, y: 38 },
+  borracheiro: { x: 29, y: 62 },
+  balanceador: { x: 29, y: 86 },
+  // Meio-campo (3): quem organiza e dá apoio.
+  asg: { x: 52, y: 22 },
   chefe_pista: { x: 52, y: 50 },
-  motorista: { x: 52, y: 85 },
-  caixa: { x: 70, y: 26 },
-  vendedor: { x: 70, y: 74 },
-  supervisor: { x: 89, y: 50 },
+  motorista: { x: 52, y: 78 },
+  // Ataque (3): quem fala com o cliente.
+  vendedor: { x: 77, y: 20 },
+  supervisor: { x: 77, y: 50 },
+  caixa: { x: 77, y: 80 },
 };
 
 const monthNow = () => new Date().toISOString().slice(0, 7);
