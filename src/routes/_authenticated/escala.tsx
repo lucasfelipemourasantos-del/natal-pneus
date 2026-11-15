@@ -1042,6 +1042,8 @@ const PITCH: Record<FunctionKey, { x: number; y: number }> = {
   caixa: { x: 77, y: 80 },
 };
 
+const isStaffFn = (fn: string) => STAFF.some((s) => s.key === fn);
+
 const monthNow = () => new Date().toISOString().slice(0, 7);
 const prevMonth = (m: string) => {
   const [y, mo] = m.split("-").map(Number) as [number, number];
@@ -1117,8 +1119,24 @@ function Formation({ people }: { people: PersonRow[] }) {
   });
 
   const all = lineup.data ?? [];
-  const rows = all.filter((r) => r.unit_code === unit && r.month === month);
-  const previousRows = all.filter((r) => r.unit_code === unit && r.month === prevMonth(month));
+  const rows = all.filter((r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn));
+  // Bastidor (comissão técnica): trabalha para as 4 lojas, então aparece igual em todos os campos.
+  const staffRowsOf = (m: string) => {
+    const seen = new Set<string>();
+    return all
+      .filter((r) => r.month === m && isStaffFn(r.fn))
+      .filter((r) => {
+        const k = `${r.fn}:${r.person_id}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+  };
+  const staffRows = staffRowsOf(month);
+  const previousRows = [
+    ...all.filter((r) => r.unit_code === unit && r.month === prevMonth(month) && !isStaffFn(r.fn)),
+    ...staffRowsOf(prevMonth(month)),
+  ];
   const personById = (id: string | undefined) => people.find((x) => x.id === id);
   const group = people
     .filter((x) => x.unit_code === unit)
@@ -1133,7 +1151,8 @@ function Formation({ people }: { people: PersonRow[] }) {
     : [];
   const active = ready ? undefined : personById(dragId ?? selId ?? undefined);
   const placedCount = (id: string) => rows.filter((r) => r.person_id === id).length;
-  const placedOn = (fn: AbilityKey) => rows.filter((r) => r.fn === fn);
+  const placedOn = (fn: AbilityKey) =>
+    isStaffFn(fn) ? staffRows.filter((r) => r.fn === fn) : rows.filter((r) => r.fn === fn);
 
   const required = FUNCTIONS.filter((f) => isOffered(unit, f.key));
   const filled = required.filter((f) => placedOn(f.key).length > 0).length;
@@ -1149,13 +1168,26 @@ function Formation({ people }: { people: PersonRow[] }) {
   async function add(fn: AbilityKey, personId: string, authorized: boolean) {
     setError("");
     setAsk(null);
+    const staff = isStaffFn(fn);
     qc.setQueryData<LineupRow[]>(key, (cur) => [
       ...(cur ?? []).filter(
         (r) =>
-          !(r.unit_code === unit && r.month === month && r.fn === fn && r.person_id === personId),
+          !(
+            (staff || r.unit_code === unit) &&
+            r.month === month &&
+            r.fn === fn &&
+            r.person_id === personId
+          ),
       ),
       { unit_code: unit, month, fn, person_id: personId, authorized },
     ]);
+    if (staff)
+      await supabase
+        .from("workforce_lineup")
+        .delete()
+        .eq("month", month)
+        .eq("fn", fn)
+        .eq("person_id", personId);
     const { error: err } = await supabase.from("workforce_lineup").upsert({
       unit_code: unit,
       month,
@@ -1169,19 +1201,26 @@ function Formation({ people }: { people: PersonRow[] }) {
 
   async function remove(fn: AbilityKey, personId: string) {
     setError("");
+    const staff = isStaffFn(fn);
     qc.setQueryData<LineupRow[]>(key, (cur) =>
       (cur ?? []).filter(
         (r) =>
-          !(r.unit_code === unit && r.month === month && r.fn === fn && r.person_id === personId),
+          !(
+            (staff || r.unit_code === unit) &&
+            r.month === month &&
+            r.fn === fn &&
+            r.person_id === personId
+          ),
       ),
     );
-    const { error: err } = await supabase
+    let del = supabase
       .from("workforce_lineup")
       .delete()
-      .eq("unit_code", unit)
       .eq("month", month)
       .eq("fn", fn)
       .eq("person_id", personId);
+    if (!staff) del = del.eq("unit_code", unit);
+    const { error: err } = await del;
     if (err) fail("Não foi possível tirar a pessoa da camisa.");
   }
 
@@ -1189,25 +1228,30 @@ function Formation({ people }: { people: PersonRow[] }) {
     setConfirmClear(false);
     setError("");
     qc.setQueryData<LineupRow[]>(key, (cur) =>
-      (cur ?? []).filter((r) => !(r.unit_code === unit && r.month === month)),
+      (cur ?? []).filter((r) => !(r.unit_code === unit && r.month === month && !isStaffFn(r.fn))),
     );
+    // Só limpa as camisas desta loja: o bastidor é das 4 lojas e fica.
     const { error: err } = await supabase
       .from("workforce_lineup")
       .delete()
       .eq("unit_code", unit)
-      .eq("month", month);
+      .eq("month", month)
+      .in(
+        "fn",
+        FUNCTIONS.map((x) => x.key),
+      );
     if (err) fail("Não foi possível limpar o campo.");
   }
 
   async function copyPrevious() {
     setError("");
-    const copy = previousRows.map((r) => ({ ...r, month }));
+    const copy = previousRows.map((r) => ({ ...r, month, unit_code: unit }));
     qc.setQueryData<LineupRow[]>(key, (cur) => [
       ...(cur ?? []).filter(
         (r) =>
           !(
-            r.unit_code === unit &&
             r.month === month &&
+            (isStaffFn(r.fn) || r.unit_code === unit) &&
             copy.some((c) => c.fn === r.fn && c.person_id === r.person_id)
           ),
       ),
@@ -1307,7 +1351,9 @@ function Formation({ people }: { people: PersonRow[] }) {
         <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-2">
           {UNITS.map((u) => {
             const n = new Set(
-              all.filter((r) => r.unit_code === u && r.month === month).map((r) => r.fn),
+              all
+                .filter((r) => r.unit_code === u && r.month === month && !isStaffFn(r.fn))
+                .map((r) => r.fn),
             ).size;
             return (
               <button
@@ -1458,7 +1504,7 @@ function Formation({ people }: { people: PersonRow[] }) {
         </div>
       )}
 
-      <div className={`grid gap-4 ${ready ? "" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="overflow-x-auto rounded-2xl">
           <div
             className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[162mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
@@ -1598,114 +1644,116 @@ function Formation({ people }: { people: PersonRow[] }) {
           </div>
         </div>
 
-        {!ready && (
-          <aside className="space-y-3 print:hidden">
+        <div className="space-y-3 print:hidden">
+          <section
+            aria-label="Comissão técnica"
+            className="rounded-2xl border-2 border-dashed border-border bg-card p-3"
+          >
             <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-              Elenco da {unit}
+              Bastidor · comissão técnica
             </h3>
-            <ul className="space-y-2">{group.map(benchCard)}</ul>
-            {drivers.length > 0 && (
-              <>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                  Apoio do grupo (motoristas e volantes)
-                </h3>
-                <ul className="space-y-2">{drivers.map(benchCard)}</ul>
-              </>
-            )}
-            <details className="rounded-xl border border-border bg-card p-3">
-              <summary className="cursor-pointer text-sm font-bold">
-                Buscar funcionário de outra loja
-              </summary>
-              <div className="mt-2 space-y-2">
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Digite o nome"
-                  aria-label="Buscar funcionário de outra loja"
-                  className={fieldClass}
-                />
-                <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
-              </div>
-            </details>
-          </aside>
-        )}
+            <p className="mb-3 text-xs text-muted-foreground">
+              Trabalha para as 4 lojas: aparece em todos os campos. Não entra nas 11 camisas.
+            </p>
+            <ul className="grid gap-2">
+              {STAFF.map((st) => {
+                const placed = placedOn(st.key);
+                const activeLevel = active ? levelOf(active, st.key) : undefined;
+                const canLight = activeLevel === "principal" || activeLevel === "complementar";
+                return (
+                  <li
+                    key={st.key}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setOverFn(st.key);
+                    }}
+                    onDragLeave={() => setOverFn((cur) => (cur === st.key ? null : cur))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain") || dragId;
+                      setOverFn(null);
+                      setDragId(null);
+                      if (id) tryPlace(st.key, id);
+                    }}
+                    className={`rounded-xl border-2 bg-muted/40 p-3 transition-all ${active && !canLight ? "opacity-40" : ""} ${overFn === st.key ? "scale-[1.02]" : ""}`}
+                    style={{
+                      borderColor: canLight ? LEVEL_COLOR[activeLevel!] : undefined,
+                      boxShadow: canLight ? `0 0 14px 2px ${LEVEL_COLOR[activeLevel!]}` : undefined,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={ready}
+                      data-print-show
+                      onClick={() => selId && tryPlace(st.key, selId)}
+                      className="flex w-full items-center justify-between gap-2 text-left disabled:opacity-100"
+                    >
+                      <span className="text-base font-extrabold">{fnLabel(st.key)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {canLight ? LEVEL_WORD[activeLevel!] : placed.length === 0 ? "vazio" : ""}
+                      </span>
+                    </button>
+                    <ul className="mt-2 flex flex-wrap gap-1.5">
+                      {placed.map((r) => {
+                        const p = personById(r.person_id);
+                        if (!p) return null;
+                        const level =
+                          levelOf(p, st.key) ?? (r.authorized ? "potencial" : undefined);
+                        return (
+                          <li key={r.person_id}>
+                            <button
+                              type="button"
+                              disabled={ready}
+                              data-print-show
+                              onClick={() => void remove(st.key, r.person_id)}
+                              title={`${p.name}. Clique para tirar.`}
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
+                            >
+                              {firstName(p.name)}
+                              {r.authorized && levelOf(p, st.key) === "potencial" ? " ✱" : ""}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+          {!ready && (
+            <aside className="space-y-3">
+              <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                Elenco da {unit}
+              </h3>
+              <ul className="space-y-2">{group.map(benchCard)}</ul>
+              {drivers.length > 0 && (
+                <>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                    Apoio do grupo (motoristas e volantes)
+                  </h3>
+                  <ul className="space-y-2">{drivers.map(benchCard)}</ul>
+                </>
+              )}
+              <details className="rounded-xl border border-border bg-card p-3">
+                <summary className="cursor-pointer text-sm font-bold">
+                  Buscar funcionário de outra loja
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Digite o nome"
+                    aria-label="Buscar funcionário de outra loja"
+                    className={fieldClass}
+                  />
+                  <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
+                </div>
+              </details>
+            </aside>
+          )}
+        </div>
       </div>
-
-      <section
-        aria-label="Comissão técnica"
-        className="rounded-2xl border-2 border-dashed border-border bg-card p-4 print:hidden"
-      >
-        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-          Comissão técnica · fora do campo
-        </h3>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Gerência e funções administrativas. Não entram nas 11 camisas.
-        </p>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {STAFF.map((st) => {
-            const placed = placedOn(st.key);
-            const activeLevel = active ? levelOf(active, st.key) : undefined;
-            const canLight = activeLevel === "principal" || activeLevel === "complementar";
-            return (
-              <li
-                key={st.key}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setOverFn(st.key);
-                }}
-                onDragLeave={() => setOverFn((cur) => (cur === st.key ? null : cur))}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const id = e.dataTransfer.getData("text/plain") || dragId;
-                  setOverFn(null);
-                  setDragId(null);
-                  if (id) tryPlace(st.key, id);
-                }}
-                className={`rounded-xl border-2 bg-muted/40 p-3 transition-all ${active && !canLight ? "opacity-40" : ""} ${overFn === st.key ? "scale-[1.02]" : ""}`}
-                style={{
-                  borderColor: canLight ? LEVEL_COLOR[activeLevel!] : undefined,
-                  boxShadow: canLight ? `0 0 14px 2px ${LEVEL_COLOR[activeLevel!]}` : undefined,
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={ready}
-                  data-print-show
-                  onClick={() => selId && tryPlace(st.key, selId)}
-                  className="flex w-full items-center justify-between gap-2 text-left disabled:opacity-100"
-                >
-                  <span className="text-base font-extrabold">{fnLabel(st.key)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {canLight ? LEVEL_WORD[activeLevel!] : placed.length === 0 ? "vazio" : ""}
-                  </span>
-                </button>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {placed.map((r) => {
-                    const p = personById(r.person_id);
-                    if (!p) return null;
-                    const level = levelOf(p, st.key) ?? (r.authorized ? "potencial" : undefined);
-                    return (
-                      <li key={r.person_id}>
-                        <button
-                          type="button"
-                          disabled={ready}
-                          data-print-show
-                          onClick={() => void remove(st.key, r.person_id)}
-                          title={`${p.name}. Clique para tirar.`}
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
-                        >
-                          {firstName(p.name)}
-                          {r.authorized && levelOf(p, st.key) === "potencial" ? " ✱" : ""}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
 
       {ready && (
         <section className="rounded-xl border border-border bg-card p-4 print:break-before-page">
