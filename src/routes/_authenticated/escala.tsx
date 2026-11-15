@@ -1504,158 +1504,159 @@ function Formation({ people }: { people: PersonRow[] }) {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="overflow-x-auto rounded-2xl">
-          <div
-            className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[162mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
-            style={{
-              background:
-                "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
-            }}
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 160 100"
-              preserveAspectRatio="none"
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              fill="none"
-              stroke="white"
-              strokeOpacity="0.7"
-              strokeWidth="0.6"
+      <div className={`grid gap-4 ${ready ? "" : "xl:grid-cols-[minmax(0,1fr)_300px]"}`}>
+        <div className="min-w-0 space-y-3">
+          <div className="overflow-x-auto rounded-2xl">
+            <div
+              className="relative aspect-[16/11] min-h-[520px] min-w-[900px] w-full overflow-hidden rounded-2xl border-4 border-white/70 shadow-md print:aspect-auto print:h-[162mm] print:min-h-0 print:min-w-0 print:break-inside-avoid"
+              style={{
+                background:
+                  "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
+              }}
             >
-              <rect x="3" y="3" width="154" height="94" />
-              <line x1="80" y1="3" x2="80" y2="97" />
-              <ellipse cx="80" cy="50" rx="13" ry="20" />
-              <rect x="3" y="26" width="22" height="48" />
-              <rect x="135" y="26" width="22" height="48" />
-            </svg>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 160 100"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                fill="none"
+                stroke="white"
+                strokeOpacity="0.7"
+                strokeWidth="0.6"
+              >
+                <rect x="3" y="3" width="154" height="94" />
+                <line x1="80" y1="3" x2="80" y2="97" />
+                <ellipse cx="80" cy="50" rx="13" ry="20" />
+                <rect x="3" y="26" width="22" height="48" />
+                <rect x="135" y="26" width="22" height="48" />
+              </svg>
 
-            <p className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/60 px-5 py-1 text-lg font-extrabold uppercase tracking-[0.2em] text-white">
-              Arena {unit}
-            </p>
+              <p className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/60 px-5 py-1 text-lg font-extrabold uppercase tracking-[0.2em] text-white">
+                Arena {unit}
+              </p>
 
-            {FUNCTIONS.map((fn) => {
-              if (!isOffered(unit, fn.key)) {
-                const gp = PITCH[fn.key];
+              {FUNCTIONS.map((fn) => {
+                if (!isOffered(unit, fn.key)) {
+                  const gp = PITCH[fn.key];
+                  return (
+                    <div
+                      key={fn.key}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${gp.x}%`, top: `${gp.y}%` }}
+                    >
+                      <div className="flex w-24 flex-col items-center gap-1 opacity-40 sm:w-28">
+                        <div className="size-20 grayscale sm:size-24 print:size-[5.5rem]">
+                          <Shirt />
+                        </div>
+                        <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
+                          {fnLabel(fn.key)} · vaga, sem este serviço
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                const pos = PITCH[fn.key];
+                const placed = placedOn(fn.key);
+                const activeLevel = active ? levelOf(active, fn.key) : undefined;
+                const canLight = activeLevel === "principal" || activeLevel === "complementar";
+                const dim = active && !canLight;
+                const onLeft = pos.x > 80;
                 return (
                   <div
                     key={fn.key}
                     className="absolute -translate-x-1/2 -translate-y-1/2"
-                    style={{ left: `${gp.x}%`, top: `${gp.y}%` }}
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                   >
-                    <div className="flex w-24 flex-col items-center gap-1 opacity-40 sm:w-28">
-                      <div className="size-20 grayscale sm:size-24 print:size-[5.5rem]">
-                        <Shirt />
+                    <div className="relative">
+                      <div className="flex w-24 flex-col items-center gap-1 sm:w-28">
+                        <button
+                          type="button"
+                          onClick={() => selId && tryPlace(fn.key, selId)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setOverFn(fn.key);
+                          }}
+                          onDragLeave={() => setOverFn((cur) => (cur === fn.key ? null : cur))}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const id = e.dataTransfer.getData("text/plain") || dragId;
+                            setOverFn(null);
+                            setDragId(null);
+                            if (id) tryPlace(fn.key, id);
+                          }}
+                          aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
+                          disabled={ready}
+                          data-print-show
+                          className={`relative size-20 transition-all print:size-[5.5rem] disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
+                        >
+                          <Shirt
+                            glow={
+                              canLight
+                                ? LEVEL_COLOR[activeLevel!]
+                                : ready && placed.length > 0
+                                  ? LEVEL_COLOR.principal
+                                  : undefined
+                            }
+                          />
+                          {placed.length > 0 && (
+                            <span
+                              className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full text-sm font-extrabold text-white"
+                              style={{ background: LEVEL_COLOR.principal }}
+                              aria-hidden="true"
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                        <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
+                          {fnLabel(fn.key)}
+                          {canLight ? ` · ${LEVEL_WORD[activeLevel!]}` : ""}
+                        </span>
                       </div>
-                      <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
-                        {fnLabel(fn.key)} · vaga, sem este serviço
-                      </span>
+                      <ul
+                        className={`absolute top-6 flex w-28 flex-col gap-1 sm:top-8 ${onLeft ? "right-full mr-1 items-end" : "left-full ml-1 items-start"}`}
+                      >
+                        {placed.map((r) => {
+                          const p = personById(r.person_id);
+                          if (!p) return null;
+                          const level =
+                            levelOf(p, fn.key) ?? (r.authorized ? "potencial" : undefined);
+                          return (
+                            <li key={r.person_id}>
+                              <button
+                                type="button"
+                                disabled={ready}
+                                data-print-show
+                                onClick={() => void remove(fn.key, r.person_id)}
+                                title={`${p.name} · ${level ? LEVEL_WORD[level] : "sem a função marcada"}. Clique para tirar.`}
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"} ${active?.id === p.id ? "ring-2 ring-white" : ""}`}
+                              >
+                                {firstName(p.name)}
+                                {r.authorized && levelOf(p, fn.key) === "potencial" ? " ✱" : ""}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </div>
                   </div>
                 );
-              }
-              const pos = PITCH[fn.key];
-              const placed = placedOn(fn.key);
-              const activeLevel = active ? levelOf(active, fn.key) : undefined;
-              const canLight = activeLevel === "principal" || activeLevel === "complementar";
-              const dim = active && !canLight;
-              const onLeft = pos.x > 80;
-              return (
-                <div
-                  key={fn.key}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                >
-                  <div className="relative">
-                    <div className="flex w-24 flex-col items-center gap-1 sm:w-28">
-                      <button
-                        type="button"
-                        onClick={() => selId && tryPlace(fn.key, selId)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setOverFn(fn.key);
-                        }}
-                        onDragLeave={() => setOverFn((cur) => (cur === fn.key ? null : cur))}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const id = e.dataTransfer.getData("text/plain") || dragId;
-                          setOverFn(null);
-                          setDragId(null);
-                          if (id) tryPlace(fn.key, id);
-                        }}
-                        aria-label={`Camisa ${fnLabel(fn.key)}${placed.length ? `: ${placed.map((r) => personById(r.person_id)?.name).join(", ")}` : ": vazia"}`}
-                        disabled={ready}
-                        data-print-show
-                        className={`relative size-20 transition-all print:size-[5.5rem] disabled:opacity-100 sm:size-24 ${dim ? "opacity-35" : placed.length === 0 && !canLight ? (ready ? "opacity-40" : "opacity-80") : ""} ${overFn === fn.key ? "scale-110" : ""}`}
-                      >
-                        <Shirt
-                          glow={
-                            canLight
-                              ? LEVEL_COLOR[activeLevel!]
-                              : ready && placed.length > 0
-                                ? LEVEL_COLOR.principal
-                                : undefined
-                          }
-                        />
-                        {placed.length > 0 && (
-                          <span
-                            className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full text-sm font-extrabold text-white"
-                            style={{ background: LEVEL_COLOR.principal }}
-                            aria-hidden="true"
-                          >
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                      <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white sm:text-xs">
-                        {fnLabel(fn.key)}
-                        {canLight ? ` · ${LEVEL_WORD[activeLevel!]}` : ""}
-                      </span>
-                    </div>
-                    <ul
-                      className={`absolute top-6 flex w-28 flex-col gap-1 sm:top-8 ${onLeft ? "right-full mr-1 items-end" : "left-full ml-1 items-start"}`}
-                    >
-                      {placed.map((r) => {
-                        const p = personById(r.person_id);
-                        if (!p) return null;
-                        const level =
-                          levelOf(p, fn.key) ?? (r.authorized ? "potencial" : undefined);
-                        return (
-                          <li key={r.person_id}>
-                            <button
-                              type="button"
-                              disabled={ready}
-                              data-print-show
-                              onClick={() => void remove(fn.key, r.person_id)}
-                              title={`${p.name} · ${level ? LEVEL_WORD[level] : "sem a função marcada"}. Clique para tirar.`}
-                              className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"} ${active?.id === p.id ? "ring-2 ring-white" : ""}`}
-                            >
-                              {firstName(p.name)}
-                              {r.authorized && levelOf(p, fn.key) === "potencial" ? " ✱" : ""}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })}
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-3 print:hidden">
           <section
             aria-label="Comissão técnica"
-            className="rounded-2xl border-2 border-dashed border-border bg-card p-3"
+            className="rounded-2xl border-2 border-dashed border-border bg-card p-3 print:hidden"
           >
             <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
               Bastidor · comissão técnica
             </h3>
             <p className="mb-3 text-xs text-muted-foreground">
-              Trabalha para as 4 lojas: aparece em todos os campos. Não entra nas 11 camisas.
+              Trabalha para as 4 lojas: aparece embaixo do campo de todas elas. Não entra nas 11
+              camisas.
             </p>
-            <ul className="grid gap-2">
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {STAFF.map((st) => {
                 const placed = placedOn(st.key);
                 const activeLevel = active ? levelOf(active, st.key) : undefined;
@@ -1721,38 +1722,39 @@ function Formation({ people }: { people: PersonRow[] }) {
               })}
             </ul>
           </section>
-          {!ready && (
-            <aside className="space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                Elenco da {unit}
-              </h3>
-              <ul className="space-y-2">{group.map(benchCard)}</ul>
-              {drivers.length > 0 && (
-                <>
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                    Apoio do grupo (motoristas e volantes)
-                  </h3>
-                  <ul className="space-y-2">{drivers.map(benchCard)}</ul>
-                </>
-              )}
-              <details className="rounded-xl border border-border bg-card p-3">
-                <summary className="cursor-pointer text-sm font-bold">
-                  Buscar funcionário de outra loja
-                </summary>
-                <div className="mt-2 space-y-2">
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Digite o nome"
-                    aria-label="Buscar funcionário de outra loja"
-                    className={fieldClass}
-                  />
-                  <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
-                </div>
-              </details>
-            </aside>
-          )}
         </div>
+
+        {!ready && (
+          <aside className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+              Elenco da {unit}
+            </h3>
+            <ul className="space-y-2">{group.map(benchCard)}</ul>
+            {drivers.length > 0 && (
+              <>
+                <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                  Apoio do grupo (motoristas e volantes)
+                </h3>
+                <ul className="space-y-2">{drivers.map(benchCard)}</ul>
+              </>
+            )}
+            <details className="rounded-xl border border-border bg-card p-3">
+              <summary className="cursor-pointer text-sm font-bold">
+                Buscar funcionário de outra loja
+              </summary>
+              <div className="mt-2 space-y-2">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Digite o nome"
+                  aria-label="Buscar funcionário de outra loja"
+                  className={fieldClass}
+                />
+                <ul className="space-y-2">{found.slice(0, 8).map(benchCard)}</ul>
+              </div>
+            </details>
+          </aside>
+        )}
       </div>
 
       {ready && (
