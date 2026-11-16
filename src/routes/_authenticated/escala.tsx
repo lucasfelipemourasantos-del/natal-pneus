@@ -1118,6 +1118,33 @@ function Formation({ people }: { people: PersonRow[] }) {
     },
   });
 
+  // Férias do mês: quem está de férias aparece marcado no elenco e nas camisas.
+  const vacationsQ = useQuery({
+    queryKey: ["workforce-vacations-month"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("workforce_vacations")
+        .select("person_id,planned_month,start_date,end_date");
+      return (data ?? []) as {
+        person_id: string;
+        planned_month: string;
+        start_date: string | null;
+        end_date: string | null;
+      }[];
+    },
+  });
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-31`;
+  const onVacation = new Set(
+    (vacationsQ.data ?? [])
+      .filter((v) =>
+        v.start_date && v.end_date
+          ? v.start_date <= monthEnd && v.end_date >= monthStart
+          : v.planned_month === month,
+      )
+      .map((v) => v.person_id),
+  );
+
   const all = lineup.data ?? [];
   const rows = all.filter((r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn));
   // Bastidor (comissão técnica): trabalha para as 4 lojas, então aparece igual em todos os campos.
@@ -1324,6 +1351,11 @@ function Formation({ people }: { people: PersonRow[] }) {
               {x.role}
             </span>
           </span>
+          {onVacation.has(x.id) && (
+            <span className="shrink-0 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-bold">
+              férias
+            </span>
+          )}
           {n > 0 && (
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${n > 2 ? "bg-destructive text-white" : "bg-primary text-primary-foreground"}`}
@@ -1475,6 +1507,20 @@ function Formation({ people }: { people: PersonRow[] }) {
             Sobrecarga, mais de 2 camisas: {overloaded.map((x) => shortName(x.name)).join(", ")}.
           </p>
         )}
+        {(() => {
+          const away = people.filter(
+            (x) =>
+              onVacation.has(x.id) &&
+              (rows.some((r) => r.person_id === x.id) ||
+                staffRows.some((r) => r.person_id === x.id)),
+          );
+          return away.length > 0 ? (
+            <p className="text-sm font-semibold text-destructive">
+              De férias em {monthLabel(month)} e escalados:{" "}
+              {away.map((x) => shortName(x.name)).join(", ")}. Troque por um substituto.
+            </p>
+          ) : null;
+        })()}
         {error && (
           <p role="alert" className="text-sm font-semibold text-destructive">
             {error}

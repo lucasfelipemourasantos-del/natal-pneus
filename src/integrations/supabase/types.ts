@@ -317,6 +317,12 @@ export type Database = {
         Update: { authorized?: boolean; fn?: string; month?: string; person_id?: string; unit_code?: string; updated_at?: string }
         Relationships: []
       }
+      workforce_vacations: {
+        Row: { days: number | null; end_date: string | null; id: string; note: string; person_id: string; planned_month: string; start_date: string | null; status: string; updated_at: string }
+        Insert: { days?: number | null; end_date?: string | null; id?: string; note?: string; person_id: string; planned_month: string; start_date?: string | null; status?: string; updated_at?: string }
+        Update: { days?: number | null; end_date?: string | null; id?: string; note?: string; person_id?: string; planned_month?: string; start_date?: string | null; status?: string; updated_at?: string }
+        Relationships: []
+      }
       customer_type_changes: {
         Row: { customer_code: number; customer_name: string | null; event_at: string | null; new_name: string | null; new_type: number | null; notice: number; old_name: string | null; old_type: number | null; received_at: string; seen_at: string | null; seen_by: string | null }
         Insert: { customer_code: number; customer_name?: string | null; event_at?: string | null; new_name?: string | null; new_type?: number | null; notice: number; old_name?: string | null; old_type?: number | null; received_at?: string; seen_at?: string | null; seen_by?: string | null }
