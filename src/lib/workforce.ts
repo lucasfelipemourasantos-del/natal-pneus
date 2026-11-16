@@ -97,7 +97,7 @@ export const isOffered = (unit: string, fn: FunctionKey) =>
 
 /** Comissão técnica: funções de gerência e administrativas. Ficam fora do campo (não entram nas 11 camisas). */
 export const STAFF = [
-  { key: "gerente", label: "Gerente" },
+  { key: "gerente", label: "Gerente geral" },
   { key: "gerente_atacado", label: "Gerente de atacado" },
   { key: "comprador", label: "Comprador" },
   { key: "financeiro", label: "Financeiro" },
