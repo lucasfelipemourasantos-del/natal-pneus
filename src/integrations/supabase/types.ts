@@ -300,9 +300,9 @@ export type Database = {
         Relationships: []
       }
       workforce_people: {
-        Row: { abilities: Json; active: boolean; cbo: string; cbo_title: string; employer: string; id: string; name: string; notes: string; role: string; rotates: boolean; rotation_note: string; sector: string; skills: string[]; status: string; unit_code: string; updated_at: string }
-        Insert: { abilities?: Json; active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector: string; skills?: string[]; status?: string; unit_code: string; updated_at?: string }
-        Update: { abilities?: Json; active?: boolean; cbo?: string; cbo_title?: string; employer?: string; id?: string; name?: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector?: string; skills?: string[]; status?: string; unit_code?: string; updated_at?: string }
+        Row: { abilities: Json; active: boolean; day_off: number | null; cbo: string; cbo_title: string; employer: string; id: string; name: string; notes: string; role: string; rotates: boolean; rotation_note: string; sector: string; skills: string[]; status: string; unit_code: string; updated_at: string }
+        Insert: { abilities?: Json; active?: boolean; day_off?: number | null; cbo?: string; cbo_title?: string; employer?: string; id?: string; name: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector: string; skills?: string[]; status?: string; unit_code: string; updated_at?: string }
+        Update: { abilities?: Json; active?: boolean; day_off?: number | null; cbo?: string; cbo_title?: string; employer?: string; id?: string; name?: string; notes?: string; role?: string; rotates?: boolean; rotation_note?: string; sector?: string; skills?: string[]; status?: string; unit_code?: string; updated_at?: string }
         Relationships: []
       }
       workforce_unit_notes: {
@@ -312,9 +312,9 @@ export type Database = {
         Relationships: []
       }
       workforce_lineup: {
-        Row: { authorized: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at: string }
-        Insert: { authorized?: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at?: string }
-        Update: { authorized?: boolean; fn?: string; month?: string; person_id?: string; unit_code?: string; updated_at?: string }
+        Row: { authorized: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at: string; weekday: number }
+        Insert: { authorized?: boolean; fn: string; month: string; person_id: string; unit_code: string; updated_at?: string; weekday?: number }
+        Update: { authorized?: boolean; fn?: string; month?: string; person_id?: string; unit_code?: string; updated_at?: string; weekday?: number }
         Relationships: []
       }
       workforce_vacations: {

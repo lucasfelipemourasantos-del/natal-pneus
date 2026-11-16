@@ -180,6 +180,9 @@
   size: A4;
   margin: 12mm;
 }
+.week-print {
+  display: none;
+}
 @media print {
   :root,
   :root.dark,
@@ -267,6 +270,14 @@
   html[data-print-lineup] main > div[data-print-keep],
   html[data-print-lineup] main > footer {
     display: none !important;
+  }
+
+  /* Impressão da semana (6 folhas por loja): só as folhas do campo de cada dia. */
+  html[data-print-week] .formation-root > *:not(.week-print) {
+    display: none !important;
+  }
+  html[data-print-week] .week-print {
+    display: block !important;
   }
 
   /* Opções de "Gerar PDF": a página marca as partes com data-print-block ("grafico", "itens"). */

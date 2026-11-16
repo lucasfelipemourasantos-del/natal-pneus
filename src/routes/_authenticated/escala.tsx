@@ -68,10 +68,11 @@ type PersonRow = {
   status: string;
   notes: string;
   abilities: Abilities | null;
+  day_off: number | null;
 };
 
 const COLUMNS =
-  "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities";
+  "id,name,unit_code,employer,cbo,cbo_title,role,sector,skills,rotates,rotation_note,status,notes,abilities,day_off";
 
 /** Suporte volante: a pessoa não é fixa numa loja e aparece em todas (marcada com "volante" na observação do rodízio). */
 const isVolante = (x: PersonRow) => x.rotates && /volante/i.test(x.rotation_note);
@@ -1018,6 +1019,7 @@ const firstName = (full: string) => shortName(full).split(" ")[0] ?? full;
 type LineupRow = {
   unit_code: string;
   month: string;
+  weekday: number;
   fn: AbilityKey;
   person_id: string;
   authorized: boolean;
@@ -1041,6 +1043,8 @@ const PITCH: Record<FunctionKey, { x: number; y: number }> = {
   supervisor: { x: 77, y: 50 },
   caixa: { x: 77, y: 80 },
 };
+
+const WEEKDAYS = ["Padrão", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 const isStaffFn = (fn: string) => STAFF.some((s) => s.key === fn);
 
@@ -1096,6 +1100,7 @@ function Formation({ people }: { people: PersonRow[] }) {
   const [error, setError] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [ready, setReady] = useState(false);
+  const [day, setDay] = useState(0);
 
   // Marks the page so the print CSS hides the portal header and the field gets the whole sheet.
   useEffect(() => {
@@ -1109,10 +1114,10 @@ function Formation({ people }: { people: PersonRow[] }) {
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from("workforce_lineup")
-        .select("unit_code,month,fn,person_id,authorized");
+        .select("unit_code,month,weekday,fn,person_id,authorized");
       if (err)
         throw new Error(
-          "Não foi possível consultar a formação. A atualização do banco (0037) já foi aplicada?",
+          "Não foi possível consultar a formação. A atualização do banco (0040) já foi aplicada?",
         );
       return (data ?? []) as unknown as LineupRow[];
     },
@@ -1146,7 +1151,21 @@ function Formation({ people }: { people: PersonRow[] }) {
   );
 
   const all = lineup.data ?? [];
-  const rows = all.filter((r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn));
+  const rows = all.filter(
+    (r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn) && r.weekday === day,
+  );
+  const baseRows = all.filter(
+    (r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn) && r.weekday === 0,
+  );
+  /** Formação de um dia para impressão: a do dia, ou a base do mês sem quem folga naquele dia. */
+  const rowsOfDay = (d: number) => {
+    const own = all.filter(
+      (r) => r.unit_code === unit && r.month === month && !isStaffFn(r.fn) && r.weekday === d,
+    );
+    return own.length
+      ? own
+      : baseRows.filter((r) => people.find((x) => x.id === r.person_id)?.day_off !== d);
+  };
   // Bastidor (comissão técnica): trabalha para as 4 lojas, então aparece igual em todos os campos.
   const staffRowsOf = (m: string) => {
     const seen = new Set<string>();
@@ -1161,7 +1180,13 @@ function Formation({ people }: { people: PersonRow[] }) {
   };
   const staffRows = staffRowsOf(month);
   const previousRows = [
-    ...all.filter((r) => r.unit_code === unit && r.month === prevMonth(month) && !isStaffFn(r.fn)),
+    ...all.filter(
+      (r) =>
+        r.unit_code === unit &&
+        r.month === prevMonth(month) &&
+        !isStaffFn(r.fn) &&
+        r.weekday === day,
+    ),
     ...staffRowsOf(prevMonth(month)),
   ];
   const personById = (id: string | undefined) => people.find((x) => x.id === id);
@@ -1169,7 +1194,7 @@ function Formation({ people }: { people: PersonRow[] }) {
     .filter((x) => x.unit_code === unit)
     .sort((a, b) => a.name.localeCompare(b.name));
   const drivers = people.filter(
-    (x) => x.unit_code !== unit && (levelOf(x, "motorista") || isVolante(x)),
+    (x) => x.unit_code !== unit && (levelOf(x, "motorista") || levelOf(x, "asg") || isVolante(x)),
   );
   const found = search.trim()
     ? people.filter(
@@ -1196,17 +1221,19 @@ function Formation({ people }: { people: PersonRow[] }) {
     setError("");
     setAsk(null);
     const staff = isStaffFn(fn);
+    const wd = staff ? 0 : day;
     qc.setQueryData<LineupRow[]>(key, (cur) => [
       ...(cur ?? []).filter(
         (r) =>
           !(
             (staff || r.unit_code === unit) &&
             r.month === month &&
+            r.weekday === wd &&
             r.fn === fn &&
             r.person_id === personId
           ),
       ),
-      { unit_code: unit, month, fn, person_id: personId, authorized },
+      { unit_code: unit, month, weekday: wd, fn, person_id: personId, authorized },
     ]);
     if (staff)
       await supabase
@@ -1218,6 +1245,7 @@ function Formation({ people }: { people: PersonRow[] }) {
     const { error: err } = await supabase.from("workforce_lineup").upsert({
       unit_code: unit,
       month,
+      weekday: wd,
       fn,
       person_id: personId,
       authorized,
@@ -1229,12 +1257,14 @@ function Formation({ people }: { people: PersonRow[] }) {
   async function remove(fn: AbilityKey, personId: string) {
     setError("");
     const staff = isStaffFn(fn);
+    const wd = staff ? 0 : day;
     qc.setQueryData<LineupRow[]>(key, (cur) =>
       (cur ?? []).filter(
         (r) =>
           !(
             (staff || r.unit_code === unit) &&
             r.month === month &&
+            r.weekday === wd &&
             r.fn === fn &&
             r.person_id === personId
           ),
@@ -1244,6 +1274,7 @@ function Formation({ people }: { people: PersonRow[] }) {
       .from("workforce_lineup")
       .delete()
       .eq("month", month)
+      .eq("weekday", wd)
       .eq("fn", fn)
       .eq("person_id", personId);
     if (!staff) del = del.eq("unit_code", unit);
@@ -1255,14 +1286,18 @@ function Formation({ people }: { people: PersonRow[] }) {
     setConfirmClear(false);
     setError("");
     qc.setQueryData<LineupRow[]>(key, (cur) =>
-      (cur ?? []).filter((r) => !(r.unit_code === unit && r.month === month && !isStaffFn(r.fn))),
+      (cur ?? []).filter(
+        (r) =>
+          !(r.unit_code === unit && r.month === month && r.weekday === day && !isStaffFn(r.fn)),
+      ),
     );
-    // Só limpa as camisas desta loja: o bastidor é das 4 lojas e fica.
+    // Só limpa as camisas desta loja e deste dia: o bastidor é das 4 lojas e fica.
     const { error: err } = await supabase
       .from("workforce_lineup")
       .delete()
       .eq("unit_code", unit)
       .eq("month", month)
+      .eq("weekday", day)
       .in(
         "fn",
         FUNCTIONS.map((x) => x.key),
@@ -1272,14 +1307,21 @@ function Formation({ people }: { people: PersonRow[] }) {
 
   async function copyPrevious() {
     setError("");
-    const copy = previousRows.map((r) => ({ ...r, month, unit_code: unit }));
+    const copy = previousRows.map((r) => ({
+      ...r,
+      month,
+      unit_code: unit,
+      weekday: isStaffFn(r.fn) ? 0 : day,
+    }));
     qc.setQueryData<LineupRow[]>(key, (cur) => [
       ...(cur ?? []).filter(
         (r) =>
           !(
             r.month === month &&
             (isStaffFn(r.fn) || r.unit_code === unit) &&
-            copy.some((c) => c.fn === r.fn && c.person_id === r.person_id)
+            copy.some(
+              (c) => c.fn === r.fn && c.person_id === r.person_id && c.weekday === r.weekday,
+            )
           ),
       ),
       ...copy,
@@ -1290,10 +1332,48 @@ function Formation({ people }: { people: PersonRow[] }) {
     if (err) fail("Não foi possível copiar o mês anterior.");
   }
 
+  /** Monta o dia a partir da formação base do mês, sem quem folga naquele dia. */
+  async function buildDay() {
+    setError("");
+    const copy = baseRows
+      .filter((r) => personById(r.person_id)?.day_off !== day)
+      .map((r) => ({ ...r, weekday: day }));
+    qc.setQueryData<LineupRow[]>(key, (cur) => [
+      ...(cur ?? []).filter(
+        (r) =>
+          !(
+            r.unit_code === unit &&
+            r.month === month &&
+            r.weekday === day &&
+            copy.some((c) => c.fn === r.fn && c.person_id === r.person_id)
+          ),
+      ),
+      ...copy,
+    ]);
+    const { error: err } = await supabase
+      .from("workforce_lineup")
+      .upsert(copy.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+    if (err) fail("Não foi possível montar o dia.");
+  }
+
+  /** Imprime as 6 folhas da loja (segunda a sábado). */
+  function printWeek() {
+    const clean = () => document.documentElement.removeAttribute("data-print-week");
+    document.documentElement.setAttribute("data-print-week", "");
+    window.addEventListener("afterprint", clean, { once: true });
+    window.print();
+  }
+
   /** Active person goes on a shirt: principal or parallel directly; potential only after authorization. */
   function tryPlace(fn: AbilityKey, personId: string) {
     const person = personById(personId);
     if (!person) return;
+    if (!isStaffFn(fn) && day > 0 && person.day_off === day) {
+      setError(
+        `${shortName(person.name)} está de folga na ${WEEKDAYS[day]!.toLowerCase()} e não pode ser escalado neste dia.`,
+      );
+      return;
+    }
     if (rows.some((r) => r.fn === fn && r.person_id === personId)) return;
     const level = levelOf(person, fn);
     if (level === "principal" || level === "complementar") {
@@ -1340,7 +1420,7 @@ function Formation({ people }: { people: PersonRow[] }) {
             setSelId((cur) => (cur === x.id ? null : x.id));
           }}
           aria-pressed={isSel}
-          className={`flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border-2 bg-card px-3 py-2 text-left ${isSel ? "border-primary ring-2 ring-primary" : "border-border"}`}
+          className={`flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border-2 bg-card px-3 py-2 text-left ${isSel ? "border-primary ring-2 ring-primary" : "border-border"} ${day > 0 && x.day_off === day ? "opacity-50" : ""}`}
         >
           <span className="min-w-0">
             <span className="block truncate text-lg font-extrabold leading-tight">
@@ -1351,6 +1431,11 @@ function Formation({ people }: { people: PersonRow[] }) {
               {x.role}
             </span>
           </span>
+          {day > 0 && x.day_off === day && (
+            <span className="shrink-0 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-white">
+              folga
+            </span>
+          )}
           {onVacation.has(x.id) && (
             <span className="shrink-0 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-bold">
               férias
@@ -1371,12 +1456,13 @@ function Formation({ people }: { people: PersonRow[] }) {
   const askPerson = personById(ask?.personId);
 
   return (
-    <div className="space-y-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
+    <div className="formation-root space-y-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
       {ready && <style>{"@page { size: A4 landscape; margin: 8mm; }"}</style>}
       <div className="hidden items-center justify-between gap-4 print:flex">
         <img src={logo} alt="Natal Pneus" className="h-9 w-auto rounded bg-black px-2" />
         <p className="text-xl font-extrabold">
-          Escalação da Arena {unit} · {monthLabel(month)}
+          Escalação da Arena {unit} · {day > 0 ? `${WEEKDAYS[day]} · ` : ""}
+          {monthLabel(month)}
         </p>
       </div>
       <div className="flex flex-wrap items-end gap-2 print:hidden">
@@ -1420,6 +1506,45 @@ function Formation({ people }: { people: PersonRow[] }) {
         </label>
       </div>
 
+      <div className="space-y-2 print:hidden">
+        <div role="tablist" aria-label="Dia da semana" className="flex flex-wrap gap-2">
+          {WEEKDAYS.map((n, i) => (
+            <button
+              key={n}
+              type="button"
+              role="tab"
+              aria-selected={day === i}
+              onClick={() => {
+                setDay(i);
+                setSelId(null);
+                setAsk(null);
+                setError("");
+              }}
+              className={`min-h-10 rounded-lg border px-4 text-sm font-bold ${day === i ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/60"}`}
+            >
+              {i === 0 ? "Padrão do mês" : n}
+            </button>
+          ))}
+          {day > 0 && !ready && (
+            <Button size="sm" variant="outline" onClick={() => void buildDay()}>
+              Montar o dia, sem quem folga
+            </Button>
+          )}
+        </div>
+        {day > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Folga na {WEEKDAYS[day]!.toLowerCase()}:{" "}
+            <b>
+              {group
+                .filter((x) => x.day_off === day)
+                .map((x) => shortName(x.name))
+                .join(", ") || "ninguém"}
+            </b>
+            . {rows.length === 0 ? "Este dia ainda não foi montado: use o botão acima." : ""}
+          </p>
+        )}
+      </div>
+
       <div className="space-y-2 rounded-xl border border-border bg-card p-4 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-lg font-extrabold">
@@ -1431,7 +1556,10 @@ function Formation({ people }: { people: PersonRow[] }) {
             {ready ? (
               <>
                 <Button size="sm" onClick={() => window.print()}>
-                  Imprimir a escalação
+                  Imprimir este dia
+                </Button>
+                <Button size="sm" onClick={() => printWeek()}>
+                  Imprimir a semana (6 folhas)
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setReady(false)}>
                   Voltar a editar
@@ -1902,7 +2030,147 @@ function Formation({ people }: { people: PersonRow[] }) {
           lado da camisa para tirar.
         </span>
       </div>
+      <div className="week-print">
+        {[1, 2, 3, 4, 5, 6].map((d) => (
+          <PrintDay
+            key={d}
+            unit={unit}
+            month={month}
+            weekday={d}
+            rows={rowsOfDay(d)}
+            people={people}
+            staffRows={staffRows}
+            onVacation={onVacation}
+            last={d === 6}
+          />
+        ))}
+      </div>
     </div>
+  );
+}
+
+/** Folha de um dia (segunda a sábado) para imprimir: o campo, quem folga e quem está de férias. */
+function PrintDay({
+  unit,
+  month,
+  weekday,
+  rows,
+  people,
+  staffRows,
+  onVacation,
+  last,
+}: {
+  unit: WorkUnit;
+  month: string;
+  weekday: number;
+  rows: LineupRow[];
+  people: PersonRow[];
+  staffRows: LineupRow[];
+  onVacation: Set<string>;
+  last: boolean;
+}) {
+  const person = (id: string) => people.find((x) => x.id === id);
+  const off = people.filter((x) => x.unit_code === unit && x.day_off === weekday);
+  const vac = people.filter((x) => x.unit_code === unit && onVacation.has(x.id));
+  return (
+    <section style={last ? undefined : { breakAfter: "page" }} className="space-y-2">
+      <div className="flex items-center justify-between gap-4">
+        <img src={logo} alt="Natal Pneus" className="h-9 w-auto rounded bg-black px-2" />
+        <p className="text-xl font-extrabold">
+          {unit} · {WEEKDAYS[weekday]} · {monthLabel(month)}
+        </p>
+      </div>
+      <div
+        className="relative h-[140mm] w-full overflow-hidden rounded-xl border-4 border-white/70"
+        style={{
+          background:
+            "repeating-linear-gradient(90deg, oklch(0.5 0.12 150) 0 12.5%, oklch(0.54 0.12 150) 12.5% 25%)",
+        }}
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 160 100"
+          preserveAspectRatio="none"
+          className="absolute inset-0 h-full w-full"
+          fill="none"
+          stroke="white"
+          strokeOpacity="0.7"
+          strokeWidth="0.6"
+        >
+          <rect x="3" y="3" width="154" height="94" />
+          <line x1="80" y1="3" x2="80" y2="97" />
+          <ellipse cx="80" cy="50" rx="13" ry="20" />
+          <rect x="3" y="26" width="22" height="48" />
+          <rect x="135" y="26" width="22" height="48" />
+        </svg>
+        <p className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-0.5 text-base font-extrabold uppercase tracking-[0.2em] text-white">
+          Arena {unit} · {WEEKDAYS[weekday]}
+        </p>
+        {FUNCTIONS.map((fn) => {
+          const pos = PITCH[fn.key];
+          const offered = isOffered(unit, fn.key);
+          const placed = rows.filter((r) => r.fn === fn.key);
+          return (
+            <div
+              key={fn.key}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            >
+              <div className="relative">
+                <div
+                  className={`flex w-24 flex-col items-center gap-1 ${offered ? "" : "opacity-40"}`}
+                >
+                  <div className="size-[5.5rem]">
+                    <Shirt
+                      glow={offered && placed.length > 0 ? LEVEL_COLOR.principal : undefined}
+                    />
+                  </div>
+                  <span className="rounded-full bg-black/60 px-2 py-0.5 text-center text-[11px] font-bold leading-tight text-white">
+                    {fnLabel(fn.key)}
+                    {offered ? "" : " · sem este serviço"}
+                  </span>
+                </div>
+                <ul className="absolute left-full top-6 ml-1 flex w-28 flex-col items-start gap-1">
+                  {placed.map((r) => {
+                    const p = person(r.person_id);
+                    if (!p) return null;
+                    const level = levelOf(p, fn.key) ?? (r.authorized ? "potencial" : undefined);
+                    return (
+                      <li
+                        key={r.person_id}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${level ? LEVEL_STYLE[level] : "bg-destructive text-white"}`}
+                      >
+                        {firstName(p.name)}
+                        {r.authorized && levelOf(p, fn.key) === "potencial" ? " ✱" : ""}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-sm">
+        <b>Folga hoje:</b> {off.map((x) => shortName(x.name)).join(", ") || "ninguém"}
+        {"  ·  "}
+        <b>De férias no mês:</b> {vac.map((x) => shortName(x.name)).join(", ") || "ninguém"}
+      </p>
+      {STAFF.some((s) => staffRows.some((r) => r.fn === s.key)) && (
+        <p className="text-sm">
+          <b>Bastidor:</b>{" "}
+          {STAFF.filter((s) => staffRows.some((r) => r.fn === s.key))
+            .map(
+              (s) =>
+                `${s.label}: ${staffRows
+                  .filter((r) => r.fn === s.key)
+                  .map((r) => firstName(person(r.person_id)?.name ?? ""))
+                  .join(", ")}`,
+            )
+            .join(" · ")}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -1963,6 +2231,7 @@ function PeopleTable({ people, onSaved }: { people: PersonRow[]; onSaved: () => 
               <th className="px-2 font-semibold">CBO</th>
               <th className="px-2 font-semibold">Empregador</th>
               <th className="px-2 font-semibold">Também faz</th>
+              <th className="px-2 font-semibold">Folga</th>
               <th className="px-2" />
             </tr>
           </thead>
@@ -1985,6 +2254,7 @@ function PeopleTable({ people, onSaved }: { people: PersonRow[]; onSaved: () => 
                 </td>
                 <td className="px-2 text-muted-foreground">{x.employer}</td>
                 <td className="px-2 text-muted-foreground">{x.skills.join(", ") || "—"}</td>
+                <td className="px-2">{x.day_off ? WEEKDAYS[x.day_off] : "—"}</td>
                 <td className="px-2">
                   <Button size="sm" variant="outline" onClick={() => setEditing(x)}>
                     Editar
@@ -2026,6 +2296,7 @@ function EditPerson({
   const [rotationNote, setRotationNote] = useState(person.rotation_note);
   const [status, setStatus] = useState(person.status);
   const [notes, setNotes] = useState(person.notes);
+  const [dayOff, setDayOff] = useState(person.day_off ? String(person.day_off) : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -2046,6 +2317,7 @@ function EditPerson({
         rotation_note: rotationNote.trim(),
         status,
         notes: notes.trim(),
+        day_off: dayOff ? Number(dayOff) : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", person.id);
@@ -2128,6 +2400,22 @@ function EditPerson({
             >
               <option value="confirmado">Confirmado</option>
               <option value="a_confirmar">A confirmar com o RH</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Dia de folga na semana (domingo a loja fecha)
+            <select
+              id="day-off"
+              value={dayOff}
+              onChange={(e) => setDayOff(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">Sem dia definido</option>
+              {WEEKDAYS.slice(1).map((n, i) => (
+                <option key={n} value={i + 1}>
+                  {n}
+                </option>
+              ))}
             </select>
           </label>
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:col-span-2">
