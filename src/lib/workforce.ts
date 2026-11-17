@@ -11,7 +11,8 @@ export const UNIT_NAME: Record<WorkUnit, string> = {
 };
 
 /** Opening hours given by the RH (all four stores): Monday to Friday 7h30-17h30, Saturday 8h-12h, Sunday closed. */
-export const DEFAULT_HOURS = "Segunda a sexta, 7h30 às 17h30 · sábado, 8h às 12h · domingo fechado";
+export const DEFAULT_HOURS =
+  "Segunda a sábado, 7h30 às 17h30 · domingo fechado · almoço de 1h36 · 42h semanais";
 
 export const SECTORS = [
   { key: "gerencia", label: "Gerência", color: "oklch(0.55 0.13 300)" },
